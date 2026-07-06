@@ -1,30 +1,29 @@
-TODO:
-Now add the SepSol2, PushSol2 and SepSol3, PushSol3
-So that on the HMI will be three columns SepSolx, PushSolx
+# Flower — project TODO / open issues
 
-DeviceName	Tag	IO type	Desc
-PushSol1	DiPushSol11	DI	Pin Push RETRACT
-PushSol1	DiPushSol12	DI	Pin Push EXTEND
-SepSol2	DiSepSol21	DI	Pin separotr RETRACT
-SepSol2	DiSepSol22	DI	Pin separotr  EXTEND
-SepSol3	DiSepSol31	DI	Pin separotr RETRACT
-SepSol3	DiSepSol32	DI	Pin separotr  EXTEND
-PushSol1	DoPushSol11	DO	Pin Push RETRACT
-PushSol1	DoPushSol12	DO	Pin Push EXTEND
-PushSol2	DiPushSol21	DI	Pin Push RETRACT
-PushSol2	DiPushSol22	DI	Pin Push EXTEND
-PushSol3	DiPushSol31	DI	Pin Push RETRACT
-PushSol3	DiPushSol32	DI	Pin Push EXTEND
-SepSol1	DiSepSol11	DI	Pin separotr RETRACT
-SepSol1	DiSepSol12	DI	Pin separotr  EXTEND
-SepSol2	DoSepSol21	DO	Pin separotr RETRACT
-SepSol2	DoSepSol22	DO	Pin separotr  EXTEND
-SepSol3	DoSepSol31	DO	Pin separotr RETRACT
-SepSol3	DoSepSol32	DO	Pin separotr  EXTEND
-SepSol1	DoSepSol11	DO	Pin separotr RETRACT
-SepSol1	DoSepSol12	DO	Pin separotr  EXTEND
-PushSol2	DoPushSol21	DO	Pin Push RETRACT
-PushSol2	DoPushSol22	DO	Pin Push EXTEND
-PushSol3	DoPushSol31	DO	Pin Push RETRACT
-PushSol3	DoPushSol32	DO	Pin Push EXTEND
+## OPEN ISSUE: physical IO channel assignment for SepSol2/3 + PushSol2/3
 
+`GVL_IO.dIn/dOut` now sized `ARRAY[1..16] OF BOOL`. The System Manager
+EtherCAT links for slots 1..8 must be re-verified after the array grew;
+slots 9..16 are unassigned.
+
+Software already wired (FBs run, HMI reactive), waiting on channel numbers:
+
+| Actuator  | DI (Retract) | DI (Extend) | DO (Retract) | DO (Extend) |
+|-----------|--------------|-------------|--------------|-------------|
+| SepSol1   | dIn[1]       | dIn[2]      | dOut[1]      | dOut[2]     |
+| SepSol2   | **TBD**      | **TBD**     | **TBD**      | **TBD**     |
+| SepSol3   | **TBD**      | **TBD**     | **TBD**      | **TBD**     |
+| PushSol1  | dIn[7]       | dIn[8]      | dOut[7]      | dOut[8]     |
+| PushSol2  | **TBD**      | **TBD**     | **TBD**      | **TBD**     |
+| PushSol3  | **TBD**      | **TBD**     | **TBD**      | **TBD**     |
+
+The four unassigned pistons currently run soft-only: HMI operator can
+drive them and see UI feedback, but the FB outputs never reach hardware
+(GVL_App aliases stay in software; the copies in MAIN's READ INPUTS /
+WRITE OUTPUTS bookends are commented out with `TODO` markers).
+
+When channels are decided, fill in `GVL_IO.dIn[??]` / `dOut[??]` in
+`Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU` — the ten commented `// GVL_App…`
+lines are placeholders.
+
+Tag convention: `<Device>Sol<N><slot>` where slot 1 = RETRACT, slot 2 = EXTEND.

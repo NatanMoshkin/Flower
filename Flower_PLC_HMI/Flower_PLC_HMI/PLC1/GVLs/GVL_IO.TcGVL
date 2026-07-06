@@ -3,8 +3,8 @@
   <GVL Name="GVL_IO" Id="{b17cdcaf-0338-4dc3-b0f8-36248c1bde3a}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 VAR_GLOBAL
-	dOut AT%Q* :ARRAY[1..8]OF BOOL;
-	dIn  AT%I* :ARRAY[1..8]OF BOOL;
+	dOut AT%Q* :ARRAY[1..16]OF BOOL;
+	dIn  AT%I* :ARRAY[1..16]OF BOOL;
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

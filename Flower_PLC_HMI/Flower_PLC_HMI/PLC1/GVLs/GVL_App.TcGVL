@@ -6,21 +6,48 @@
 // in MAIN's read-inputs / write-outputs bookends. No AT %*: these are plain
 // BOOLs the FBs consume — the actual hardware wiring lives in GVL_IO.
 //
-// Tag convention: <Device>Sol1<slot>  where slot 1 = RETRACT, slot 2 = EXTEND.
-//   SepSol1 : Pin separator — DI/DO channels 1..2
-//   PushSol1: Pin push      — DI/DO channels 7..8
+// Tag convention: <Device>Sol<N><slot>  where slot 1 = RETRACT, slot 2 = EXTEND.
+//   SepSolN : Pin separator N
+//   PushSolN: Pin push N
+// GVL_IO channel assignments live in MAIN — see the READ INPUTS / WRITE OUTPUTS
+// bookends. Aliases for actuators without a channel assignment yet remain at
+// their default value (FALSE); the corresponding FB runs but stays soft-only.
 VAR_GLOBAL
-    // SepSol1 (Pin separator)
-    bSensorSepRetracted  : BOOL;   // <-  GVL_IO.dIn[1]   (DiSepSol11)
-    bSensorSepExtended   : BOOL;   // <-  GVL_IO.dIn[2]   (DiSepSol12)
-    bValveSepRetract     : BOOL;   //  -> GVL_IO.dOut[1]  (DoSepSol11)
-    bValveSepExtend      : BOOL;   //  -> GVL_IO.dOut[2]  (DoSepSol12)
+    // SepSol1 (Pin separator 1) — DI/DO 1..2
+    bSensorSepRetracted1  : BOOL;
+    bSensorSepExtended1   : BOOL;
+    bValveSepRetract1     : BOOL;
+    bValveSepExtend1      : BOOL;
 
-    // PushSol1 (Pin push)
-    bSensorPushRetracted : BOOL;   // <-  GVL_IO.dIn[7]   (DiPushSol11)
-    bSensorPushExtended  : BOOL;   // <-  GVL_IO.dIn[8]   (DiPushSol12)
-    bValvePushRetract    : BOOL;   //  -> GVL_IO.dOut[7]  (DoPushSol11)
-    bValvePushExtend     : BOOL;   //  -> GVL_IO.dOut[8]  (DoPushSol12)
+    // SepSol2 (Pin separator 2) — channels TBD
+    bSensorSepRetracted2  : BOOL;
+    bSensorSepExtended2   : BOOL;
+    bValveSepRetract2     : BOOL;
+    bValveSepExtend2      : BOOL;
+
+    // SepSol3 (Pin separator 3) — channels TBD
+    bSensorSepRetracted3  : BOOL;
+    bSensorSepExtended3   : BOOL;
+    bValveSepRetract3     : BOOL;
+    bValveSepExtend3      : BOOL;
+
+    // PushSol1 (Pin push 1) — DI/DO 7..8
+    bSensorPushRetracted1 : BOOL;
+    bSensorPushExtended1  : BOOL;
+    bValvePushRetract1    : BOOL;
+    bValvePushExtend1     : BOOL;
+
+    // PushSol2 (Pin push 2) — channels TBD
+    bSensorPushRetracted2 : BOOL;
+    bSensorPushExtended2  : BOOL;
+    bValvePushRetract2    : BOOL;
+    bValvePushExtend2     : BOOL;
+
+    // PushSol3 (Pin push 3) — channels TBD
+    bSensorPushRetracted3 : BOOL;
+    bSensorPushExtended3  : BOOL;
+    bValvePushRetract3    : BOOL;
+    bValvePushExtend3     : BOOL;
 END_VAR
 ]]></Declaration>
   </GVL>

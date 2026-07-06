@@ -2,12 +2,12 @@
 <TcSmProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.beckhoff.com/schemas/2012/07/TcSmProject" TcSmVersion="1.0" TcVersion="3.1.4026.22">
 	<DataTypes>
 		<DataType>
-			<Name GUID="{71B58F72-0E49-50EB-B8E4-1CCD027538EC}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..8] OF BOOL</Name>
-			<BitSize>64</BitSize>
+			<Name GUID="{46C950DA-5D6E-6516-D69B-F24F38546D38}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..16] OF BOOL</Name>
+			<BitSize>128</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
 			<ArrayInfo>
 				<LBound>1</LBound>
-				<Elements>8</Elements>
+				<Elements>16</Elements>
 			</ArrayInfo>
 		</DataType>
 	</DataTypes>
@@ -31,21 +31,21 @@
 		</System>
 		<Plc>
 			<Project GUID="{CDA13425-DE55-41D1-8B6D-E32BEAC7D966}" Name="PLC1" PrjFilePath="PLC1\PLC1.plcproj" TmcFilePath="PLC1\PLC1.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{1926FAC6-9157-D641-6DEA-DFB3B03AA2B8}" TmcPath="PLC1\PLC1.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{F81CE7DA-DA63-52AC-6CEC-6EE2D1E18453}" TmcPath="PLC1\PLC1.tmc">
 					<Name>PLC1 Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
 						<Name>PlcTask Outputs</Name>
 						<Var>
 							<Name>GVL_IO.dOut</Name>
-							<Type GUID="{71B58F72-0E49-50EB-B8E4-1CCD027538EC}">ARRAY [1..8] OF BOOL</Type>
+							<Type GUID="{46C950DA-5D6E-6516-D69B-F24F38546D38}">ARRAY [1..16] OF BOOL</Type>
 						</Var>
 					</Vars>
 					<Vars VarGrpType="1">
 						<Name>PlcTask Inputs</Name>
 						<Var>
 							<Name>GVL_IO.dIn</Name>
-							<Type GUID="{71B58F72-0E49-50EB-B8E4-1CCD027538EC}">ARRAY [1..8] OF BOOL</Type>
+							<Type GUID="{46C950DA-5D6E-6516-D69B-F24F38546D38}">ARRAY [1..16] OF BOOL</Type>
 						</Var>
 					</Vars>
 					<Contexts>

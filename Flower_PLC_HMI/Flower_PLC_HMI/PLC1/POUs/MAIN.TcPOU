@@ -4,53 +4,117 @@
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
     fbSepSol1  : FB_SolSolPiston_2Pos;
+    fbSepSol2  : FB_SolSolPiston_2Pos;
+    fbSepSol3  : FB_SolSolPiston_2Pos;
     fbPushSol1 : FB_SolSolPiston_2Pos;
+    fbPushSol2 : FB_SolSolPiston_2Pos;
+    fbPushSol3 : FB_SolSolPiston_2Pos;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
    READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases
-   Tag map: SepSol11=Retract, SepSol12=Extend, PushSol11=Retract, PushSol12=Extend
+   Tag map: SepSolN1=Retract, SepSolN2=Extend, PushSolN1=Retract, PushSolN2=Extend
+   ==========================================
+   OPEN ISSUE: physical IO channels for SepSol2/3 and PushSol2/3 are not
+   yet assigned. Their GVL_App sensor aliases stay FALSE until wired,
+   so those FBs run soft-only (HMI works, no hardware output).
    ========================================== *)
-GVL_App.bSensorSepRetracted  := GVL_IO.dIn[1];
-GVL_App.bSensorSepExtended   := GVL_IO.dIn[2];
-GVL_App.bSensorPushRetracted := GVL_IO.dIn[7];
-GVL_App.bSensorPushExtended  := GVL_IO.dIn[8];
+GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
+GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
+// GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[??];   // TODO: assign SepSol2 DI
+// GVL_App.bSensorSepExtended2   := GVL_IO.dIn[??];
+// GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[??];   // TODO: assign SepSol3 DI
+// GVL_App.bSensorSepExtended3   := GVL_IO.dIn[??];
+GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[7];
+GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
+// GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[??];   // TODO: assign PushSol2 DI
+// GVL_App.bSensorPushExtended2  := GVL_IO.dIn[??];
+// GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[??];   // TODO: assign PushSol3 DI
+// GVL_App.bSensorPushExtended3  := GVL_IO.dIn[??];
 
 (* ==========================================
-   SepSol1 — Pin separator (SOL-SOL, 2 limit switches)
-   bAutoCmd* wired to FALSE until a sequencer (FB_Auto) exists.
+   Pin separators (SOL-SOL, 2 limit switches). bAutoCmd* FALSE until FB_Auto exists.
    ========================================== *)
 fbSepSol1(
     bAutoCmdExtend      := FALSE,
     bAutoCmdRetract     := FALSE,
-    bSwitchExtended     := GVL_App.bSensorSepExtended,
-    bSwitchRetracted    := GVL_App.bSensorSepRetracted,
+    bSwitchExtended     := GVL_App.bSensorSepExtended1,
+    bSwitchRetracted    := GVL_App.bSensorSepRetracted1,
     stHmi               := GVL_HMI.stSepSol1,
-    bOutSolenoidExtend  => GVL_App.bValveSepExtend,
-    bOutSolenoidRetract => GVL_App.bValveSepRetract
+    bOutSolenoidExtend  => GVL_App.bValveSepExtend1,
+    bOutSolenoidRetract => GVL_App.bValveSepRetract1
+);
+
+fbSepSol2(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorSepExtended2,
+    bSwitchRetracted    := GVL_App.bSensorSepRetracted2,
+    stHmi               := GVL_HMI.stSepSol2,
+    bOutSolenoidExtend  => GVL_App.bValveSepExtend2,
+    bOutSolenoidRetract => GVL_App.bValveSepRetract2
+);
+
+fbSepSol3(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorSepExtended3,
+    bSwitchRetracted    := GVL_App.bSensorSepRetracted3,
+    stHmi               := GVL_HMI.stSepSol3,
+    bOutSolenoidExtend  => GVL_App.bValveSepExtend3,
+    bOutSolenoidRetract => GVL_App.bValveSepRetract3
 );
 
 (* ==========================================
-   PushSol1 — Pin push (SOL-SOL, 2 limit switches)
+   Pin pushers
    ========================================== *)
 fbPushSol1(
     bAutoCmdExtend      := FALSE,
     bAutoCmdRetract     := FALSE,
-    bSwitchExtended     := GVL_App.bSensorPushExtended,
-    bSwitchRetracted    := GVL_App.bSensorPushRetracted,
+    bSwitchExtended     := GVL_App.bSensorPushExtended1,
+    bSwitchRetracted    := GVL_App.bSensorPushRetracted1,
     stHmi               := GVL_HMI.stPushSol1,
-    bOutSolenoidExtend  => GVL_App.bValvePushExtend,
-    bOutSolenoidRetract => GVL_App.bValvePushRetract
+    bOutSolenoidExtend  => GVL_App.bValvePushExtend1,
+    bOutSolenoidRetract => GVL_App.bValvePushRetract1
+);
+
+fbPushSol2(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorPushExtended2,
+    bSwitchRetracted    := GVL_App.bSensorPushRetracted2,
+    stHmi               := GVL_HMI.stPushSol2,
+    bOutSolenoidExtend  => GVL_App.bValvePushExtend2,
+    bOutSolenoidRetract => GVL_App.bValvePushRetract2
+);
+
+fbPushSol3(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorPushExtended3,
+    bSwitchRetracted    := GVL_App.bSensorPushRetracted3,
+    stHmi               := GVL_HMI.stPushSol3,
+    bOutSolenoidExtend  => GVL_App.bValvePushExtend3,
+    bOutSolenoidRetract => GVL_App.bValvePushRetract3
 );
 
 (* ==========================================
    WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels
+   Same OPEN ISSUE: unassigned actuators skip the copy, coils stay soft-only.
    ========================================== *)
-GVL_IO.dOut[1] := GVL_App.bValveSepRetract;
-GVL_IO.dOut[2] := GVL_App.bValveSepExtend;
-GVL_IO.dOut[7] := GVL_App.bValvePushRetract;
-GVL_IO.dOut[8] := GVL_App.bValvePushExtend;
+GVL_IO.dOut[1] := GVL_App.bValveSepRetract1;
+GVL_IO.dOut[2] := GVL_App.bValveSepExtend1;
+// GVL_IO.dOut[??] := GVL_App.bValveSepRetract2;   // TODO: assign SepSol2 DO
+// GVL_IO.dOut[??] := GVL_App.bValveSepExtend2;
+// GVL_IO.dOut[??] := GVL_App.bValveSepRetract3;   // TODO: assign SepSol3 DO
+// GVL_IO.dOut[??] := GVL_App.bValveSepExtend3;
+GVL_IO.dOut[7] := GVL_App.bValvePushRetract1;
+GVL_IO.dOut[8] := GVL_App.bValvePushExtend1;
+// GVL_IO.dOut[??] := GVL_App.bValvePushRetract2;  // TODO: assign PushSol2 DO
+// GVL_IO.dOut[??] := GVL_App.bValvePushExtend2;
+// GVL_IO.dOut[??] := GVL_App.bValvePushRetract3;  // TODO: assign PushSol3 DO
+// GVL_IO.dOut[??] := GVL_App.bValvePushExtend3;
 ]]></ST>
     </Implementation>
   </POU>

@@ -5,7 +5,11 @@
 {attribute 'TcHmiSymbol.AddSymbol'}
 VAR_GLOBAL
     stSepSol1  : ST_HmiPiston := (Name := 'SepSol1');
+    stSepSol2  : ST_HmiPiston := (Name := 'SepSol2');
+    stSepSol3  : ST_HmiPiston := (Name := 'SepSol3');
     stPushSol1 : ST_HmiPiston := (Name := 'PushSol1');
+    stPushSol2 : ST_HmiPiston := (Name := 'PushSol2');
+    stPushSol3 : ST_HmiPiston := (Name := 'PushSol3');
 END_VAR
 ]]></Declaration>
   </GVL>
