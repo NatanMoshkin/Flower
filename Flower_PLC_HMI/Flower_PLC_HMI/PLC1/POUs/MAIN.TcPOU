@@ -3,35 +3,54 @@
   <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
-    fbPiston1 : FB_SolSolPiston_2Pos;
+    fbSepSol1  : FB_SolSolPiston_2Pos;
+    fbPushSol1 : FB_SolSolPiston_2Pos;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
    READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases
+   Tag map: SepSol11=Retract, SepSol12=Extend, PushSol11=Retract, PushSol12=Extend
    ========================================== *)
-GVL_App.bSensorExtended  := GVL_IO.dIn[1];
-GVL_App.bSensorRetracted := GVL_IO.dIn[2];
+GVL_App.bSensorSepRetracted  := GVL_IO.dIn[1];
+GVL_App.bSensorSepExtended   := GVL_IO.dIn[2];
+GVL_App.bSensorPushRetracted := GVL_IO.dIn[7];
+GVL_App.bSensorPushExtended  := GVL_IO.dIn[8];
 
 (* ==========================================
-   PISTON 1 — SOL-SOL, 2 limit switches
+   SepSol1 — Pin separator (SOL-SOL, 2 limit switches)
    bAutoCmd* wired to FALSE until a sequencer (FB_Auto) exists.
    ========================================== *)
-fbPiston1(
+fbSepSol1(
     bAutoCmdExtend      := FALSE,
     bAutoCmdRetract     := FALSE,
-    bSwitchExtended     := GVL_App.bSensorExtended,
-    bSwitchRetracted    := GVL_App.bSensorRetracted,
-    stHmi               := GVL_HMI.stPiston1,
-    bOutSolenoidExtend  => GVL_App.bValveExtend,
-    bOutSolenoidRetract => GVL_App.bValveRetract
+    bSwitchExtended     := GVL_App.bSensorSepExtended,
+    bSwitchRetracted    := GVL_App.bSensorSepRetracted,
+    stHmi               := GVL_HMI.stSepSol1,
+    bOutSolenoidExtend  => GVL_App.bValveSepExtend,
+    bOutSolenoidRetract => GVL_App.bValveSepRetract
+);
+
+(* ==========================================
+   PushSol1 — Pin push (SOL-SOL, 2 limit switches)
+   ========================================== *)
+fbPushSol1(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorPushExtended,
+    bSwitchRetracted    := GVL_App.bSensorPushRetracted,
+    stHmi               := GVL_HMI.stPushSol1,
+    bOutSolenoidExtend  => GVL_App.bValvePushExtend,
+    bOutSolenoidRetract => GVL_App.bValvePushRetract
 );
 
 (* ==========================================
    WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels
    ========================================== *)
-GVL_IO.dOut[1] := GVL_App.bValveExtend;
-GVL_IO.dOut[2] := GVL_App.bValveRetract;
+GVL_IO.dOut[1] := GVL_App.bValveSepRetract;
+GVL_IO.dOut[2] := GVL_App.bValveSepExtend;
+GVL_IO.dOut[7] := GVL_App.bValvePushRetract;
+GVL_IO.dOut[8] := GVL_App.bValvePushExtend;
 ]]></ST>
     </Implementation>
   </POU>

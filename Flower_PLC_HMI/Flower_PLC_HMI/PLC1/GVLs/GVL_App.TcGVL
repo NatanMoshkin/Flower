@@ -5,12 +5,22 @@
 // Cooked IO aliases. Bound to the raw GVL_IO.dIn[i]/dOut[i] hardware arrays
 // in MAIN's read-inputs / write-outputs bookends. No AT %*: these are plain
 // BOOLs the FBs consume — the actual hardware wiring lives in GVL_IO.
+//
+// Tag convention: <Device>Sol1<slot>  where slot 1 = RETRACT, slot 2 = EXTEND.
+//   SepSol1 : Pin separator — DI/DO channels 1..2
+//   PushSol1: Pin push      — DI/DO channels 7..8
 VAR_GLOBAL
-    // Piston 1
-    bSensorExtended   : BOOL;   // <- GVL_IO.dIn[1]
-    bSensorRetracted  : BOOL;   // <- GVL_IO.dIn[2]
-    bValveExtend      : BOOL;   //  -> GVL_IO.dOut[1]
-    bValveRetract     : BOOL;   //  -> GVL_IO.dOut[2]
+    // SepSol1 (Pin separator)
+    bSensorSepRetracted  : BOOL;   // <-  GVL_IO.dIn[1]   (DiSepSol11)
+    bSensorSepExtended   : BOOL;   // <-  GVL_IO.dIn[2]   (DiSepSol12)
+    bValveSepRetract     : BOOL;   //  -> GVL_IO.dOut[1]  (DoSepSol11)
+    bValveSepExtend      : BOOL;   //  -> GVL_IO.dOut[2]  (DoSepSol12)
+
+    // PushSol1 (Pin push)
+    bSensorPushRetracted : BOOL;   // <-  GVL_IO.dIn[7]   (DiPushSol11)
+    bSensorPushExtended  : BOOL;   // <-  GVL_IO.dIn[8]   (DiPushSol12)
+    bValvePushRetract    : BOOL;   //  -> GVL_IO.dOut[7]  (DoPushSol11)
+    bValvePushExtend     : BOOL;   //  -> GVL_IO.dOut[8]  (DoPushSol12)
 END_VAR
 ]]></Declaration>
   </GVL>

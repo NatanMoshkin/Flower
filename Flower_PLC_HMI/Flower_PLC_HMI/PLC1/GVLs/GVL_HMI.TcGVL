@@ -4,7 +4,8 @@
     <Declaration><![CDATA[{attribute 'qualified_only'}
 {attribute 'TcHmiSymbol.AddSymbol'}
 VAR_GLOBAL
-    stPiston1 : ST_HmiPiston := (Name := 'Piston 1');
+    stSepSol1  : ST_HmiPiston := (Name := 'SepSol1');
+    stPushSol1 : ST_HmiPiston := (Name := 'PushSol1');
 END_VAR
 ]]></Declaration>
   </GVL>
