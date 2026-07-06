@@ -75,20 +75,46 @@ ELSE
 END_IF;
 
 (* ==========================================
+   1a. JOG OVERRIDE — clear latched selection while either jog is held
+   ========================================== *)
+// Section 1 above already copied stHmi.bSelected* into bTarget*. The stale
+// bTarget* is harmless because Section 2's jog branches sit ahead of the
+// bTarget* branches in the IF/ELSIF ladder and preempt them.
+IF stHmi.bManJogExtend OR stHmi.bManJogRetract THEN
+    stHmi.bSelectedExtend := FALSE; stHmi.bSelectedRetract := FALSE;
+END_IF;
+
+(* ==========================================
    1b. TARGET-REACHED RESET — clear bSelected* once the piston arrives
    ========================================== *)
 IF stHmi.bSelectedExtend  AND bSwitchExtended_eff  THEN stHmi.bSelectedExtend  := FALSE; END_IF;
 IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract := FALSE; END_IF;
 
 (* ==========================================
-   2. SOLENOID CONTROL
+   2. SOLENOID CONTROL — Jog takes priority over latched target
    ========================================== *)
-// CASE 1: Move to EXTENDED position
-IF bTargetExtend AND NOT bSwitchExtended_eff THEN
+// Jog branches first, gated by Manual mode. If both jogs are held
+// simultaneously, Retract wins (matching the same-cycle collision rule
+// in Section 0). Each branch still respects the corresponding effective
+// sensor. In Automatic mode the jog branches are skipped entirely so
+// bAutoCmd* controls the piston.
+
+// JOG EXTEND: while held in Manual, drive Extend coil until end sensor
+IF stHmi.bManJogExtend AND NOT bSwitchExtended_eff AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoidExtend  := TRUE;
     bOutSolenoidRetract := FALSE;
 
-// CASE 2: Move to RETRACTED position
+// JOG RETRACT: while held in Manual, drive Retract coil until end sensor
+ELSIF stHmi.bManJogRetract AND NOT bSwitchRetracted_eff AND stHmi.eMode = E_ControlMode.Manual THEN
+    bOutSolenoidRetract := TRUE;
+    bOutSolenoidExtend  := FALSE;
+
+// CASE 1: Move to EXTENDED position (latched target)
+ELSIF bTargetExtend AND NOT bSwitchExtended_eff THEN
+    bOutSolenoidExtend  := TRUE;
+    bOutSolenoidRetract := FALSE;
+
+// CASE 2: Move to RETRACTED position (latched target)
 ELSIF bTargetRetract AND NOT bSwitchRetracted_eff THEN
     bOutSolenoidRetract := TRUE;
     bOutSolenoidExtend  := FALSE;

@@ -85,7 +85,7 @@
                             },
                             {
                                 "comment": "HMI reads (FB writes) — effective sensor = real OR simulate",
-                                "propertyOrder": 9
+                                "propertyOrder": 11
                             }
                         ]
                     },
@@ -95,7 +95,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 11
+                                "propertyOrder": 13
                             }
                         ]
                     },
@@ -105,7 +105,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 10
+                                "propertyOrder": 12
                             }
                         ]
                     },
@@ -130,6 +130,27 @@
                             }
                         ]
                     },
+                    "bManJogExtend": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "HMI writes — jog while held (TRUE while operator holds the JOG button)",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "bManJogRetract": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 6
+                            }
+                        ]
+                    },
                     "bOutSolenoidExtend": {
                         "allOf": [
                             {
@@ -137,7 +158,7 @@
                             },
                             {
                                 "comment": "HMI reads — physical solenoid coil states (FB mirrors them every cycle)",
-                                "propertyOrder": 12
+                                "propertyOrder": 14
                             }
                         ]
                     },
@@ -147,7 +168,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 13
+                                "propertyOrder": 15
                             }
                         ]
                     },
@@ -158,7 +179,7 @@
                             },
                             {
                                 "comment": "HMI reads (FB writes) — latched-target highlight",
-                                "propertyOrder": 7
+                                "propertyOrder": 9
                             }
                         ]
                     },
@@ -168,7 +189,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 8
+                                "propertyOrder": 10
                             }
                         ]
                     },
@@ -179,7 +200,7 @@
                             },
                             {
                                 "comment": "HMI writes — simulate sensor inputs (OR-merged with real). Future Sim checkbox hook.",
-                                "propertyOrder": 5
+                                "propertyOrder": 7
                             }
                         ]
                     },
@@ -189,7 +210,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 6
+                                "propertyOrder": 8
                             }
                         ]
                     },
@@ -210,6 +231,8 @@
                     "eMode",
                     "bManCmdExtend",
                     "bManCmdRetract",
+                    "bManJogExtend",
+                    "bManJogRetract",
                     "bSimulateExtended",
                     "bSimulateRetracted",
                     "bSelectedExtend",

@@ -13,6 +13,10 @@ STRUCT
     bManCmdExtend      : BOOL;
     bManCmdRetract     : BOOL;
 
+    // HMI writes — jog while held (TRUE while operator holds the JOG button)
+    bManJogExtend      : BOOL;
+    bManJogRetract     : BOOL;
+
     // HMI writes — simulate sensor inputs (OR-merged with real). Future Sim checkbox hook.
     bSimulateExtended  : BOOL;
     bSimulateRetracted : BOOL;

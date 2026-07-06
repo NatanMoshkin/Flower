@@ -73,6 +73,10 @@
 ]</script>
 </div>
 
+<!-- JOG EXTEND: momentary — drives bManJogExtend TRUE while pressed. FB moves the piston while held, stops on release or at end sensor. -->
+<div id="JogExtend" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="295" data-tchmi-left-unit="px" data-tchmi-text="JOG" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="40" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManJogExtend|BindingMode=TwoWay%/pp%">
+</div>
+
 <!-- Extend solenoid coil indicator (right): green when bOutSolenoidExtend -->
 <div id="SolenoidExtend" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="266" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">
 <script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
@@ -134,6 +138,10 @@
     ]
   }
 ]</script>
+</div>
+
+<!-- JOG RETRACT: momentary — drives bManJogRetract TRUE while pressed. -->
+<div id="JogRetract" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="295" data-tchmi-left-unit="px" data-tchmi-text="JOG" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="40" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManJogRetract|BindingMode=TwoWay%/pp%">
 </div>
 
 <div id="SolenoidRetract" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="266" data-tchmi-left-unit="px" data-tchmi-top="200" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">

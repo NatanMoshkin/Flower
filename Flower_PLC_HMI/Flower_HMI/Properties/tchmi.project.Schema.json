@@ -71,6 +71,27 @@
             }
           ]
         },
+        "bManJogExtend": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "HMI writes — jog while held (TRUE while operator holds JOG button)",
+              "propertyOrder": 5
+            }
+          ]
+        },
+        "bManJogRetract": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 6
+            }
+          ]
+        },
         "bSimulateExtended": {
           "allOf": [
             {
@@ -78,7 +99,7 @@
             },
             {
               "comment": "HMI writes — simulate sensor input (OR-merged with real)",
-              "propertyOrder": 5
+              "propertyOrder": 7
             }
           ]
         },
@@ -88,7 +109,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 6
+              "propertyOrder": 8
             }
           ]
         },
@@ -99,7 +120,7 @@
             },
             {
               "comment": "FB writes — radio-button highlight",
-              "propertyOrder": 7
+              "propertyOrder": 9
             }
           ]
         },
@@ -109,7 +130,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 8
+              "propertyOrder": 10
             }
           ]
         },
@@ -120,7 +141,7 @@
             },
             {
               "comment": "FB writes — effective sensor = real OR simulate",
-              "propertyOrder": 9
+              "propertyOrder": 11
             }
           ]
         },
@@ -130,7 +151,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 10
+              "propertyOrder": 12
             }
           ]
         },
@@ -140,7 +161,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 11
+              "propertyOrder": 13
             }
           ]
         },
@@ -151,7 +172,7 @@
             },
             {
               "comment": "FB writes — coil mirror",
-              "propertyOrder": 12
+              "propertyOrder": 14
             }
           ]
         },
@@ -161,7 +182,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 13
+              "propertyOrder": 15
             }
           ]
         }
@@ -172,6 +193,8 @@
         "eMode",
         "bManCmdExtend",
         "bManCmdRetract",
+        "bManJogExtend",
+        "bManJogRetract",
         "bSimulateExtended",
         "bSimulateRetracted",
         "bSelectedExtend",
