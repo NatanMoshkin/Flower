@@ -3,11 +3,36 @@
   <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
+    fbPiston1 : FB_SolSolPiston_2Pos;
 END_VAR
-]]>
-    </Declaration>
+]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[(* ==========================================
+   READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases
+   ========================================== *)
+GVL_App.bSensorExtended  := GVL_IO.dIn[1];
+GVL_App.bSensorRetracted := GVL_IO.dIn[2];
+
+(* ==========================================
+   PISTON 1 — SOL-SOL, 2 limit switches
+   bAutoCmd* wired to FALSE until a sequencer (FB_Auto) exists.
+   ========================================== *)
+fbPiston1(
+    bAutoCmdExtend      := FALSE,
+    bAutoCmdRetract     := FALSE,
+    bSwitchExtended     := GVL_App.bSensorExtended,
+    bSwitchRetracted    := GVL_App.bSensorRetracted,
+    stHmi               := GVL_HMI.stPiston1,
+    bOutSolenoidExtend  => GVL_App.bValveExtend,
+    bOutSolenoidRetract => GVL_App.bValveRetract
+);
+
+(* ==========================================
+   WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels
+   ========================================== *)
+GVL_IO.dOut[1] := GVL_App.bValveExtend;
+GVL_IO.dOut[2] := GVL_App.bValveRetract;
+]]></ST>
     </Implementation>
   </POU>
 </TcPlcObject>

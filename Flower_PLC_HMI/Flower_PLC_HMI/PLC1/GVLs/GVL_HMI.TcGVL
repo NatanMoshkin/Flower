@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_HMI" Id="{84707bcf-3378-4833-8d7b-1dd8328a77ca}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'TcHmiSymbol.AddSymbol'}
+VAR_GLOBAL
+    stPiston1 : ST_HmiPiston := (Name := 'Piston 1');
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,41 @@
+{
+  "parameters": [
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setPiston",
+      "propertyGetterName": "getPiston",
+      "refTo": "",
+      "name": "data-tchmi-piston",
+      "displayName": "piston",
+      "visible": true,
+      "type": "tchmi:project#/definitions/PLC1.ST_HmiPiston",
+      "category": "",
+      "description": "",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "piston"
+    },
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setBModeAuto",
+      "propertyGetterName": "getBModeAuto",
+      "refTo": "",
+      "name": "data-tchmi-bmodeauto",
+      "displayName": "bModeAuto",
+      "visible": true,
+      "type": "tchmi:general#/definitions/BOOL",
+      "category": "",
+      "description": "Local BOOL mirror of piston::eMode for the Man/Auto ToggleSwitch (TRUE=Automatic). A boolean ToggleSwitch bound to E_ControlMode pins ON, so two triggers sync bModeAuto <-> eMode. Not host-bound.",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "bModeAuto"
+    }
+  ],
+  "virtualRights": [],
+  "$schema": "./../../Packages/Beckhoff.TwinCAT.HMI.Framework.14.4.5/runtimes/native1.12-tchmi/Schema/UserControlConfig.Schema.json",
+  "description": ""
+}

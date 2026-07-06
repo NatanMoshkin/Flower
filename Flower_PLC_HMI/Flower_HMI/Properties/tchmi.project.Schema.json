@@ -1,4 +1,187 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
-  "definitions": {}
+  "definitions": {
+    "PLC1.E_ControlMode": {
+      "attributes": {
+        "generate_implicit_init_function": "",
+        "qualified_only": "",
+        "strict": "",
+        "to_string": ""
+      },
+      "type": "integer",
+      "enum": [
+        0,
+        1
+      ],
+      "options": [
+        {
+          "value": 0,
+          "label": "Manual"
+        },
+        {
+          "value": 1,
+          "label": "Automatic"
+        }
+      ]
+    },
+    "PLC1.ST_HmiPiston": {
+      "additionalProperties": {},
+      "properties": {
+        "Name": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 30,
+              "comment": "Display label ('Piston 1', 'Ejector', ...). Set from GVL_HMI, never written by FB.",
+              "propertyOrder": 1
+            }
+          ]
+        },
+        "eMode": {
+          "allOf": [
+            {
+              "$ref": "tchmi:project#/definitions/PLC1.E_ControlMode"
+            },
+            {
+              "comment": "HMI writes — mode",
+              "propertyOrder": 2
+            }
+          ]
+        },
+        "bManCmdExtend": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "HMI writes — latched command, momentary rising edge selects",
+              "propertyOrder": 3
+            }
+          ]
+        },
+        "bManCmdRetract": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 4
+            }
+          ]
+        },
+        "bSimulateExtended": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "HMI writes — simulate sensor input (OR-merged with real)",
+              "propertyOrder": 5
+            }
+          ]
+        },
+        "bSimulateRetracted": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 6
+            }
+          ]
+        },
+        "bSelectedExtend": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "FB writes — radio-button highlight",
+              "propertyOrder": 7
+            }
+          ]
+        },
+        "bSelectedRetract": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 8
+            }
+          ]
+        },
+        "bIsExtended": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "FB writes — effective sensor = real OR simulate",
+              "propertyOrder": 9
+            }
+          ]
+        },
+        "bIsRetracted": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 10
+            }
+          ]
+        },
+        "bIsMoving": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 11
+            }
+          ]
+        },
+        "bOutSolenoidExtend": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "comment": "FB writes — coil mirror",
+              "propertyOrder": 12
+            }
+          ]
+        },
+        "bOutSolenoidRetract": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 13
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "Name",
+        "eMode",
+        "bManCmdExtend",
+        "bManCmdRetract",
+        "bSimulateExtended",
+        "bSimulateRetracted",
+        "bSelectedExtend",
+        "bSelectedRetract",
+        "bIsExtended",
+        "bIsRetracted",
+        "bIsMoving",
+        "bOutSolenoidExtend",
+        "bOutSolenoidRetract"
+      ]
+    }
+  }
 }

@@ -166,6 +166,13 @@
  "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
  "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
 {
+ "id": "Piston",
+ "name": "%l%L_Piston%/l%",
+ "content": "Pages/Piston.content",
+ "icon": "%tr%TR_Icon_StartPage_normal%/tr%",
+ "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
+ "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
+{
  "id": "Events",
  "name": "%l%L_Events%/l%",
  "content": "Pages/Events.content",

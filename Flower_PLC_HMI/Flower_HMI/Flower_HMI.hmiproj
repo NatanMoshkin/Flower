@@ -12,7 +12,7 @@
     <HmiTitle>Flower_HMI</HmiTitle>
     <HmiVerboseLevel>2</HmiVerboseLevel>
     <HmiVersion>1.0.0.0</HmiVersion>
-    <HmiCommunicationServerPort>3000</HmiCommunicationServerPort>
+    <HmiCommunicationServerPort>3003</HmiCommunicationServerPort>
     <HmiLogTcHmiServerMessages>false</HmiLogTcHmiServerMessages>
     <HmiLogDesignerModeComMessages>false</HmiLogDesignerModeComMessages>
     <HmiDefaultLanguage>client</HmiDefaultLanguage>
@@ -22,7 +22,7 @@
     <AzureFunctionsVersion>v2</AzureFunctionsVersion>
     <TcHmi_Beckhoff_TwinCAT_HMI_Server_Engineering_IncludeInArchive>False</TcHmi_Beckhoff_TwinCAT_HMI_Server_Engineering_IncludeInArchive>
     <Name>Flower_HMI</Name>
-    <HmiCommunicationServerAuthPort>13000</HmiCommunicationServerAuthPort>
+    <HmiCommunicationServerAuthPort>13001</HmiCommunicationServerAuthPort>
     <HmiCommunicationServerPublicPort>3443</HmiCommunicationServerPublicPort>
     <HmiInitial>14.3.870.1</HmiInitial>
     <HmiRecent>14.3.870.1</HmiRecent>
@@ -131,6 +131,7 @@
     <Folder Include="KeyboardLayouts\" />
     <Folder Include="Localization" />
     <Folder Include="Pages\" />
+    <Folder Include="UserControls\" />
     <Folder Include="Server\ADS\" />
     <Folder Include="Server\TcHmiLua\" />
     <Folder Include="Server\TcHmiSqliteLogger\" />
@@ -155,11 +156,21 @@
     <Content Include="Pages\Events.content">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Pages\Piston.content">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Pages\Settings.content">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Pages\StartPage.content">
       <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_Piston.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_Piston.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_Piston.usercontrol</DependentUpon>
     </Content>
     <Content Include="Server\ADS\ADS.Config.default.json">
       <SubType>Content</SubType>

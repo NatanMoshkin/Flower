@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_App" Id="{f7ee3213-c403-4290-aff3-682ca99b3920}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+// Cooked IO aliases. Bound to the raw GVL_IO.dIn[i]/dOut[i] hardware arrays
+// in MAIN's read-inputs / write-outputs bookends. No AT %*: these are plain
+// BOOLs the FBs consume — the actual hardware wiring lives in GVL_IO.
+VAR_GLOBAL
+    // Piston 1
+    bSensorExtended   : BOOL;   // <- GVL_IO.dIn[1]
+    bSensorRetracted  : BOOL;   // <- GVL_IO.dIn[2]
+    bValveExtend      : BOOL;   //  -> GVL_IO.dOut[1]
+    bValveRetract     : BOOL;   //  -> GVL_IO.dOut[2]
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

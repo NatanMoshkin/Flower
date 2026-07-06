@@ -3,6 +3,7 @@
   "locale": "de",
   "localizedText": {
     "L_StartPage": "Startseite",
+    "L_Piston": "Kolben",
     "L_Events": "Meldungen",
     "L_Localization": "Lokalisierung",
     "L_Theme": "Farbschema",
