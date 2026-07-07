@@ -11,4 +11,12 @@
        data-tchmi-robot="%s%ADS.PLC1.GVL_Robot.stRobot%/s%">
   </div>
 
+  <!-- Diagnostics strip: runtime toggle for DEBUG-level PLC logging.
+       When ON, F_LogEvent stops dropping DBG entries — they flow through
+       the Python bridge's log_pump into today's CSV in RobotBridge/logs/. -->
+  <div id="DebugLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="24" data-tchmi-height-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-top="380" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Debug logging (verbose CSV):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+  </div>
+  <div id="DebugToggle" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiToggleSwitch" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="230" data-tchmi-left-unit="px" data-tchmi-top="378" data-tchmi-top-unit="px" data-tchmi-width="120" data-tchmi-width-unit="px" data-tchmi-text="off / on" data-tchmi-state-symbol="%s%ADS.PLC1.GVL_Log.bDebugMode|BindingMode=TwoWay%/s%" data-tchmi-text-position="Right" data-tchmi-zindex="1">
+  </div>
+
 </div>

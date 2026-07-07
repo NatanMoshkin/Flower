@@ -30,3 +30,24 @@ robot:
 reconnect:
   # Seconds to wait after a disconnect or error before reconnecting.
   delay_seconds: 2
+
+logger:
+  # Directory where daily CSVs are written. Relative paths resolve from
+  # the bridge's working directory (usually RobotBridge/).
+  dir: "./logs"
+
+  # Retention caps — files are deleted when either is exceeded. Retention
+  # runs once at startup and once per hour after that.
+  retention_days: 30
+  retention_mb: 500
+
+  # Minimum severity written to the CSV. One of DEBUG / INFO / WARNING /
+  # ERROR. Runtime override for DEBUG events is available via the HMI
+  # (GVL_Log.bDebugMode) so operators can toggle without a restart.
+  level: "INFO"
+
+  # How often the log_pump polls GVL_Log.nWriteIdx on the PLC. Lower =
+  # tighter latency; higher = fewer ADS reads. 500 ms is a good default.
+  # The PLC ring holds 256 entries, so if the PLC produces more than
+  # that between polls, oldest events are lost (a warning is logged).
+  plc_ring_poll_ms: 500

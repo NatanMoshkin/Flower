@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_Log" Id="{364bb45e-a498-4daa-a47c-ed8ea18daa8b}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'TcHmiSymbol.AddSymbol'}
+VAR_GLOBAL
+    // Ring buffer of the most recent log entries the PLC has produced.
+    // The Python bridge polls nWriteIdx via ADS and drains new slots.
+    //   write slot at any moment = (nWriteIdx MOD 256)
+    //   overflow detected when (nWriteIdx - lastReadIdx) > 256
+    aLog       : ARRAY[0..255] OF ST_LogEntry;
+
+    // Monotonic write counter (never wraps in practice — UDINT overflows
+    // after 2^32 writes ≈ 4.3 billion, decades even at 1 kHz logging).
+    nWriteIdx  : UDINT;
+
+    // Runtime toggle for DEBUG severity. F_LogEvent drops DBG entries
+    // when this is FALSE. Operator can flip it from the HMI without a
+    // rebuild. HMI ToggleSwitch on the Robot page binds here.
+    bDebugMode : BOOL := FALSE;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

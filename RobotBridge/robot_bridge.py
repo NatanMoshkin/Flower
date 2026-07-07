@@ -24,6 +24,10 @@ from typing import Optional
 import pyads
 import yaml
 
+from csv_logger import DailyCsvHandler
+from log_pump import PlcLogPump
+from retention import run_retention, start_periodic_retention
+
 
 # ---------------------------------------------------------------------------
 # ST_HmiRobot mirror — E_RobotConnState values must match E_RobotConnState.TcDUT
@@ -61,11 +65,18 @@ class Config:
     port: int
     encoding: str
     reconnect_delay: float
+    # Logger settings — see csv_logger.py / log_pump.py / retention.py
+    log_dir: Path
+    log_retention_days: int
+    log_retention_mb: int
+    log_level: str
+    log_plc_ring_poll_ms: int
 
     @classmethod
     def load(cls, path: Path) -> "Config":
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)
+        logger_cfg = raw.get("logger", {}) or {}
         return cls(
             ams_net_id=raw["plc"]["ams_net_id"],
             ams_port=int(raw["plc"]["ams_port"]),
@@ -75,6 +86,11 @@ class Config:
             port=int(raw["robot"]["port"]),
             encoding=raw["robot"].get("encoding", "ascii"),
             reconnect_delay=float(raw.get("reconnect", {}).get("delay_seconds", 2.0)),
+            log_dir=Path(logger_cfg.get("dir", "./logs")),
+            log_retention_days=int(logger_cfg.get("retention_days", 30)),
+            log_retention_mb=int(logger_cfg.get("retention_mb", 500)),
+            log_level=str(logger_cfg.get("level", "INFO")).upper(),
+            log_plc_ring_poll_ms=int(logger_cfg.get("plc_ring_poll_ms", 500)),
         )
 
 
@@ -233,9 +249,29 @@ def main(argv: list[str] | None = None) -> int:
     cfg = Config.load(cfg_path)
     logging.info("loaded config: role=%s port=%d ams=%s", cfg.role, cfg.port, cfg.ams_net_id)
 
+    # ---- Attach the daily CSV handler and enforce the configured level.
+    # Both PLC-side events (via log_pump) and Python-side bridge events
+    # (via logging.info/error/etc.) flow through this handler.
+    root_logger = logging.getLogger()
+    csv_handler = DailyCsvHandler(cfg.log_dir)
+    csv_handler.setLevel(getattr(logging, cfg.log_level, logging.INFO))
+    root_logger.addHandler(csv_handler)
+    root_logger.setLevel(min(root_logger.level, csv_handler.level))
+    logging.info("csv logger: dir=%s level=%s", cfg.log_dir, cfg.log_level)
+
+    # ---- Initial retention sweep, then a daemon thread that reruns hourly.
+    run_retention(cfg.log_dir, cfg.log_retention_days, cfg.log_retention_mb)
+    retention_stop = start_periodic_retention(
+        cfg.log_dir, cfg.log_retention_days, cfg.log_retention_mb, interval_s=3600.0
+    )
+
     plc = pyads.Connection(cfg.ams_net_id, cfg.ams_port)
     plc.open()
     logging.info("ADS opened to %s:%d", cfg.ams_net_id, cfg.ams_port)
+
+    # ---- Start pumping PLC ring buffer into our logging pipeline.
+    log_pump = PlcLogPump(plc, poll_ms=cfg.log_plc_ring_poll_ms)
+    log_pump.start()
 
     symbol = PlcRobotSymbol(plc, cfg.symbol_prefix)
     symbol.set_conn_state(ConnState.DISCONNECTED)
@@ -255,7 +291,10 @@ def main(argv: list[str] | None = None) -> int:
             symbol.set_conn_state(ConnState.DISCONNECTED)
         except Exception:  # noqa: BLE001
             pass
+        log_pump.stop()
+        retention_stop.set()
         plc.close()
+        csv_handler.close()
 
     return 0
 

@@ -2,6 +2,13 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_PistonAutoCycle" Id="{3c33d53e-5cde-4f33-bae3-ab323c98dcf0}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_PistonAutoCycle
+VAR_INPUT
+    (* Instance name used as the log source (e.g. 'SepSol1Auto').
+       Kept as VAR_INPUT so the FB is reusable across pistons — MAIN passes
+       the actual name at each call site. *)
+    sName : STRING(20);
+END_VAR
+
 VAR_IN_OUT
     (* Reads bIs* effective sensors, writes eMode := Automatic while running. *)
     stHmi  : ST_HmiPiston;
@@ -161,13 +168,30 @@ CASE stAuto.eStep OF
 END_CASE
 
 (* ==========================================
-   4. STEP-CHANGE DETECTION & ELAPSED TIMER
+   4. STEP-CHANGE DETECTION, LOGGING & ELAPSED TIMER
    Placed AFTER the state machine so we detect this cycle's transitions.
    fbStepTimer.IN := NOT bStepChanged pulses its ET back to 0 for one cycle
    on transition, then counts up until the next transition.
    ========================================== *)
 bStepChanged := (stAuto.eStep <> ePrevStep);
-ePrevStep    := stAuto.eStep;
+
+(* Log every transition. ERR entries carry the human-readable sErrorText;
+   all other transitions produce "PREV -> NEW" (relies on E_AutoStep's
+   'to_string' attribute for label lookup). Runs AFTER bStepChanged is set
+   but BEFORE ePrevStep is overwritten so we still have both endpoints. *)
+IF bStepChanged THEN
+    IF stAuto.eStep = E_AutoStep.ERR THEN
+        F_LogEvent(eSev := E_LogSev.ERR, sSource := sName, sMsg := stAuto.sErrorText);
+    ELSE
+        F_LogEvent(
+            eSev    := E_LogSev.INFO,
+            sSource := sName,
+            sMsg    := CONCAT(CONCAT(TO_STRING(ePrevStep), ' -> '), TO_STRING(stAuto.eStep))
+        );
+    END_IF
+END_IF
+
+ePrevStep := stAuto.eStep;
 
 fbStepTimer(IN := NOT bStepChanged, PT := T#1D);
 stAuto.tElapsedS := DINT_TO_LREAL(TIME_TO_DINT(fbStepTimer.ET)) * 0.001;

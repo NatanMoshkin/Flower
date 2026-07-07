@@ -46,6 +46,7 @@ GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
    sequencer instance.
    ========================================== *)
 fbSepSol1Auto(
+    sName        := 'SepSol1Auto',
     stHmi        := GVL_HMI.stSepSol1,
     stAuto       := GVL_HMI.stSepSol1Auto,
     stCfg        := GVL_HmiPersistent.stSepSol1AutoCfg

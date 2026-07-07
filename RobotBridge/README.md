@@ -132,6 +132,10 @@ Alternatives (if you don't want to use `sim_robot.py`):
 | `robot_bridge.py`      | The bridge. Single file, no framework.                           |
 | `sim_robot.py`         | TCP client that sends POS frames for smoke testing.              |
 | `bridge_gui.py`        | Desktop GUI: monitor + tester with contextual TCP/IP tutorial.   |
+| `csv_logger.py`        | Daily CSV `logging.Handler` used by both PLC + Python events.    |
+| `log_pump.py`          | Background thread that drains the PLC's `GVL_Log` ring into logging. |
+| `retention.py`         | Enforces `retention_days` + `retention_mb` caps on `logs/`.      |
+| `logs/`                | Daily CSV output; **gitignored**.                                |
 | `config.example.yaml`  | Template; committed to git.                                      |
 | `config.yaml`          | Your real endpoints; **gitignored**.                             |
 | `requirements.txt`     | `pyads` + `pyyaml`.                                              |

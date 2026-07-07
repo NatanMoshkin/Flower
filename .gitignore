@@ -372,4 +372,5 @@ __pycache__/
 RobotBridge/config.yaml
 RobotBridge/__pycache__/
 RobotBridge/.venv/
+RobotBridge/logs/
 *.pyc
