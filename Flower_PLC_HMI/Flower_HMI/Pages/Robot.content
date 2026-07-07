@@ -1,0 +1,14 @@
+<div id="RobotPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730">
+
+  <!-- Single Robot user-control card; page reserved for future comms (Modbus, second robot, MQTT, etc.) -->
+  <div id="RobotHost"
+       data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost"
+       data-tchmi-target-user-control="UserControls/UC_Robot.usercontrol"
+       data-tchmi-top="20" data-tchmi-top-unit="px"
+       data-tchmi-left="20" data-tchmi-left-unit="px"
+       data-tchmi-width="337" data-tchmi-width-unit="px"
+       data-tchmi-height="340" data-tchmi-height-unit="px"
+       data-tchmi-robot="%s%ADS.PLC1.GVL_Robot.stRobot%/s%">
+  </div>
+
+</div>

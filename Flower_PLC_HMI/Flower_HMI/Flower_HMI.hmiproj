@@ -159,6 +159,9 @@
     <Content Include="Pages\Piston.content">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Pages\Robot.content">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Pages\Settings.content">
       <SubType>Content</SubType>
     </Content>
@@ -171,6 +174,13 @@
     <Content Include="UserControls\UC_Piston.usercontrol.json">
       <SubType>Content</SubType>
       <DependentUpon>UserControls\UC_Piston.usercontrol</DependentUpon>
+    </Content>
+    <Content Include="UserControls\UC_Robot.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_Robot.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_Robot.usercontrol</DependentUpon>
     </Content>
     <Content Include="Server\ADS\ADS.Config.default.json">
       <SubType>Content</SubType>

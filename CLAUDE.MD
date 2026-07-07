@@ -1,5 +1,31 @@
 # Flower — project TODO / open issues
 
+## TODO:
+
+ - create Docs web style, similar to C:\Users\Natan.Moshkin\source\repos\BS\BS_HMI_PLC_DB and the script that will run the http://127.0.0.1:8765/docs/index.html (or different port as needed)
+
+## OPEN ISSUE: robot TCP/IP role (server vs client)
+
+The robot comms are done via a **Python bridge** in `RobotBridge/` that
+talks TCP/IP to the robot and ADS to the PLC. This sidesteps Beckhoff's
+paid TF6310 TCP/IP supplement — see
+`.claude/projects/…/memory/feedback_avoid_licensed_beckhoff_libs.md`
+for the rationale.
+
+The choice of whether the **PLC-side bridge is the TCP server** (robot
+dials in) or the **TCP client** (bridge dials the robot) is deferred
+until commissioning. It's a one-line flip in `RobotBridge/config.yaml`:
+
+```yaml
+robot:
+  role: "server"   # or "client"
+  host: "192.168.1.50"   # ignored when role=server
+  port: 2000
+```
+
+Default committed value: `server`, port 2000, placeholder IP. Update at
+integration time.
+
 ## OPEN ISSUE: physical IO channel assignment for SepSol2/3 + PushSol2/3
 
 `GVL_IO.dIn/dOut` now sized `ARRAY[1..16] OF BOOL`. The System Manager

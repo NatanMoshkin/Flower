@@ -1,6 +1,138 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
+    "PLC1.E_RobotConnState": {
+      "attributes": {
+        "generate_implicit_init_function": "",
+        "qualified_only": "",
+        "strict": "",
+        "to_string": ""
+      },
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "options": [
+        {
+          "value": 0,
+          "label": "Disconnected"
+        },
+        {
+          "value": 1,
+          "label": "Connecting"
+        },
+        {
+          "value": 2,
+          "label": "Connected"
+        },
+        {
+          "value": 3,
+          "label": "Error"
+        }
+      ]
+    },
+    "PLC1.ST_HmiRobot": {
+      "additionalProperties": {},
+      "properties": {
+        "Name": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 30,
+              "propertyOrder": 1
+            }
+          ]
+        },
+        "eConnState": {
+          "allOf": [
+            {
+              "$ref": "tchmi:project#/definitions/PLC1.E_RobotConnState"
+            },
+            {
+              "propertyOrder": 2
+            }
+          ]
+        },
+        "sConnStateText": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 20,
+              "propertyOrder": 3
+            }
+          ]
+        },
+        "bAtPos1": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 4
+            }
+          ]
+        },
+        "bAtPos2": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 5
+            }
+          ]
+        },
+        "bAtPos3": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 6
+            }
+          ]
+        },
+        "nPacketsRx": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 7
+            }
+          ]
+        },
+        "sLastMessage": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 80,
+              "propertyOrder": 8
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "Name",
+        "eConnState",
+        "sConnStateText",
+        "bAtPos1",
+        "bAtPos2",
+        "bAtPos3",
+        "nPacketsRx",
+        "sLastMessage"
+      ]
+    },
     "PLC1.E_ControlMode": {
       "attributes": {
         "generate_implicit_init_function": "",

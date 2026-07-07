@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiRobot" Id="{527dd88d-da12-40b1-8b68-95016637935a}">
+    <Declaration><![CDATA[TYPE ST_HmiRobot :
+STRUCT
+    // Display label ('Robot'). Set from GVL_Robot, never written by bridge.
+    Name           : STRING(30);
+
+    // Bridge writes — connection state (enum + string mirror for HMI text binding)
+    eConnState     : E_RobotConnState;
+    sConnStateText : STRING(20);
+
+    // Bridge writes — latched "in position N" flags. Bridge holds the last-seen
+    // position TRUE and clears the other two when a new POS frame arrives.
+    bAtPos1        : BOOL;
+    bAtPos2        : BOOL;
+    bAtPos3        : BOOL;
+
+    // Bridge writes — diagnostics
+    nPacketsRx     : UDINT;
+    sLastMessage   : STRING(80);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

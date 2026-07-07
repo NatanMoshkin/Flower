@@ -1,0 +1,32 @@
+# Flower robot TCP <-> PLC ADS bridge configuration.
+#
+# Copy this file to `config.yaml` and edit the placeholder values.
+# `config.yaml` is gitignored so real endpoints stay out of version control.
+
+plc:
+  # AMS Net ID of the TwinCAT runtime. Use 127.0.0.1.1.1 when the bridge
+  # runs on the same machine as TwinCAT; for a remote machine, first add
+  # a route in the TwinCAT AMS Router and use that machine's AMS Net ID.
+  ams_net_id: "127.0.0.1.1.1"
+
+  # PLC1 uses AMS port 851 by default.
+  ams_port: 851
+
+  # Root symbol path of the ST_HmiRobot instance the bridge writes into.
+  symbol_prefix: "GVL_Robot.stRobot"
+
+robot:
+  # "server" = the bridge listens on `port`, robot dials in.
+  # "client" = the bridge dials `host`:`port` on the robot.
+  role: "server"
+
+  # Robot's TCP endpoint. `host` is ignored when role = "server".
+  host: "192.168.1.50"
+  port: 2000
+
+  # Character encoding used by the robot's ASCII frames.
+  encoding: "ascii"
+
+reconnect:
+  # Seconds to wait after a disconnect or error before reconnecting.
+  delay_seconds: 2
