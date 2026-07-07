@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flower — Configuration Reference</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d30; --border: #3e3e42;
+    --text: #e0e0e0; --muted: #a0a0a0;
+    --accent: #4fc3f7; --accent2: #81c784; --warn: #ffb74d; --danger: #e57373;
+    --plc: #ce93d8; --hmi: #4fc3f7; --bridge: #81c784; --robot: #f48fb1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 20px 30px; }
+  header h1 { margin: 0 0 6px 0; font-size: 22px; color: var(--accent); }
+  header .meta { color: var(--muted); font-size: 12px; }
+  header .meta a { color: var(--accent); text-decoration: none; }
+  nav.tabs { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 30px; display: flex; gap: 4px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; }
+  nav.tabs button { background: transparent; border: none; color: var(--muted); padding: 12px 18px; cursor: pointer; border-bottom: 2px solid transparent; font: inherit; }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  nav.tabs button:hover { color: var(--text); }
+  main { padding: 24px 30px; max-width: 1400px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  h2 { color: var(--accent); font-size: 18px; margin: 24px 0 12px 0; }
+  h2:first-of-type { margin-top: 0; }
+  h3 { color: var(--accent2); font-size: 13px; margin: 18px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  p { line-height: 1.6; }
+  code { background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--accent); font-family: 'Consolas', 'Cascadia Code', monospace; font-size: 12.5px; }
+  pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-family: 'Consolas', monospace; font-size: 12px; color: var(--accent2); overflow-x: auto; line-height: 1.5; }
+  .mermaid-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin: 12px 0 20px 0; overflow-x: auto; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border-left: 4px solid var(--accent); }
+  .card[data-c=plc]    { border-left-color: var(--plc); }
+  .card[data-c=hmi]    { border-left-color: var(--hmi); }
+  .card[data-c=bridge] { border-left-color: var(--bridge); }
+  .card[data-c=robot]  { border-left-color: var(--robot); }
+  .card h3 { margin: 0 0 10px 0; text-transform: none; letter-spacing: 0; color: var(--accent); font-size: 14px; }
+  .kv-table { width: 100%; border-collapse: collapse; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .kv-table th { background: var(--bg3); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .kv-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+  .kv-table tr:last-child td { border-bottom: 0; }
+  .kv-table .k { color: var(--muted); font-family: 'Consolas', monospace; white-space: nowrap; }
+  .kv-table .v { color: var(--accent2); font-family: 'Consolas', monospace; }
+  .kv-table .n { color: var(--text); }
+  .callout { background: rgba(129, 199, 132, 0.08); border-left: 4px solid var(--accent2); padding: 12px 16px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+  .callout.warn { background: rgba(255, 183, 77, 0.08); border-left-color: var(--warn); }
+  .callout.warn b { color: var(--warn); }
+  .callout b { color: var(--accent2); }
+  ul.compact { margin: 6px 0 12px 20px; padding: 0; }
+  ul.compact li { margin: 3px 0; font-size: 13px; }
+  .two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Flower — Configuration Reference</h1>
+  <div class="meta">
+    Branch <b>master</b> &middot; docs generated <b>2026-07-07</b>
+    &middot; <a href="index.html">← Doc index</a>
+    &middot; <a href="operation.html">Operation guide →</a>
+    &middot; <a href="open-issues.html">Open issues</a>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="active" data-tab="arch">Architecture</button>
+  <button data-tab="plc">PLC (TwinCAT)</button>
+  <button data-tab="hmi">HMI (TcHmi)</button>
+  <button data-tab="bridge">Robot Bridge (Python)</button>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<!-- ARCHITECTURE                                                 -->
+<!-- ============================================================ -->
+<section class="panel active" id="panel-arch">
+  <h2>System architecture</h2>
+  <p>Single-panel PC hosts the whole stack. The TwinCAT runtime drives 6 SOL-SOL pneumatic pistons over EtherCAT; the TcHmi runtime serves the web HMI over WebSocket; and a small Python bridge (<code>RobotBridge/robot_bridge.py</code>) translates the robot's ASCII TCP/IP frames into ADS writes on the PLC.</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart LR
+  subgraph Robot["Industrial robot"]
+    Rp["Emits 'POS1\n' /<br/>'POS2\n' /<br/>'POS3\n' on TCP"]
+  end
+  subgraph Bridge["Python bridge (RobotBridge)"]
+    Py["robot_bridge.py<br/>socket + pyads<br/>config.yaml"]
+  end
+  subgraph PLC["TwinCAT PLC (PLC1, AMS 851)"]
+    GVLR["GVL_Robot.stRobot<br/>(ST_HmiRobot)"]
+    GVLH["GVL_HMI.stSepSol1..3<br/>GVL_HMI.stPushSol1..3<br/>(ST_HmiPiston x6)"]
+    GVLA["GVL_App<br/>(sensor / valve aliases)"]
+    GVLIO["GVL_IO<br/>dIn[1..16] AT %I*<br/>dOut[1..16] AT %Q*"]
+    MAIN["MAIN<br/>calls FB_SolSolPiston_2Pos x6"]
+    MAIN --> GVLH
+    MAIN --> GVLA
+    GVLA -.-> GVLIO
+  end
+  subgraph HMI["TcHmi runtime (:3003 WS / :1010 HTTP)"]
+    UCp["UC_Piston x6<br/>(Piston page)"]
+    UCr["UC_Robot<br/>(Robot page)"]
+  end
+  subgraph EC["EtherCAT slice"]
+    IO["Digital IN / OUT<br/>(sensors, solenoid valves)"]
+  end
+
+  Rp -- "TCP :2000" --> Py
+  Py -- "ADS write_by_name" --> GVLR
+  GVLR -- "ADS symbol subscription" --> UCr
+  GVLH -- "ADS symbol subscription" --> UCp
+  GVLIO -- "EtherCAT" --> IO
+    </pre>
+  </div>
+
+  <div class="callout">
+    <b>Key design choice.</b> The PLC has zero networking code. The whole TCP/IP layer lives in <code>RobotBridge/</code> as ~230 lines of Python. This deliberately sidesteps Beckhoff's paid <b>TF6310 TCP/IP</b> supplement.
+  </div>
+
+  <h3>Ports &amp; endpoints</h3>
+  <table class="kv-table">
+    <tr><th>Endpoint</th><th>Port</th><th>Notes</th></tr>
+    <tr><td class="k">TwinCAT ADS (PLC1)</td><td class="v">AMS 851</td><td class="n">Default PLC1 port. Bridge and HMI both talk to this.</td></tr>
+    <tr><td class="k">TcHmi WebSocket</td><td class="v">3003</td><td class="n">HMI runtime, engineering server.</td></tr>
+    <tr><td class="k">TcHmi Auth</td><td class="v">13001</td><td class="n">Auth extension.</td></tr>
+    <tr><td class="k">TcHmi HTTPS (public)</td><td class="v">3443</td><td class="n">Public-facing HTTPS.</td></tr>
+    <tr><td class="k">Robot TCP</td><td class="v">2000</td><td class="n">Placeholder in <code>config.example.yaml</code>. Edit before commissioning.</td></tr>
+    <tr><td class="k">Docs (this server)</td><td class="v">8765</td><td class="n">Local <code>python -m http.server</code>, launched by <code>scripts/serve-docs.ps1</code>.</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- PLC                                                          -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-plc">
+  <h2>PLC — TwinCAT project</h2>
+  <p>Project root: <code>Flower_PLC_HMI/Flower_PLC_HMI/</code>. PLC1 uses only free Beckhoff libraries: <code>Tc2_Standard</code>, <code>Tc2_System</code>, <code>Tc3_Module</code>. No paid supplement is referenced.</p>
+
+  <div class="card" data-c="plc">
+    <h3>DUTs (data types)</h3>
+    <table class="kv-table">
+      <tr><th>Type</th><th>Purpose</th></tr>
+      <tr><td class="k">E_ControlMode</td><td class="n">Enum: <code>Manual := 0</code>, <code>Automatic := 1</code>. Attributes: <code>qualified_only</code>, <code>strict</code>, <code>to_string</code>.</td></tr>
+      <tr><td class="k">E_RobotConnState</td><td class="n">Enum: <code>Disconnected := 0</code>, <code>Connecting := 1</code>, <code>Connected := 2</code>, <code>Error := 3</code>.</td></tr>
+      <tr><td class="k">ST_HmiPiston</td><td class="n">HMI contract for one piston. Contains <code>Name</code>, <code>eMode</code>, manual/jog/simulate command bits, and FB-written status/selected/effective bits.</td></tr>
+      <tr><td class="k">ST_HmiRobot</td><td class="n">HMI contract for the robot bridge state. Contains <code>Name</code>, <code>eConnState</code>, <code>sConnStateText</code>, <code>bAtPos1/2/3</code>, <code>nPacketsRx</code>, <code>sLastMessage</code>. Written entirely by the Python bridge.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>Function block — <code>FB_SolSolPiston_2Pos</code></h3>
+    <p>One FB drives every piston instance (six today). SOL-SOL topology with two limit switches. Sections in scan order:</p>
+    <ul class="compact">
+      <li><b>0a — Effective sensor merge:</b> <code>bSwitchExtended_eff := bSwitchExtended OR stHmi.bSimulateExtended</code> (same for retracted).</li>
+      <li><b>0 — HMI button latching:</b> R_TRIG on <code>bManCmdExtend</code> / <code>bManCmdRetract</code> selects the latched target. Independent IFs — retract wins on same-cycle collision.</li>
+      <li><b>1 — Mode → target mapping:</b> Auto uses <code>bAutoCmd*</code> pins, Manual uses <code>bSelected*</code> latches, otherwise safe-default zeros.</li>
+      <li><b>1a — Jog override:</b> while either <code>bManJog*</code> button is held, latched selections are cleared.</li>
+      <li><b>1b — Target-reached reset:</b> once the piston arrives at a sensor, the corresponding latched selection is dropped.</li>
+      <li><b>2 — Solenoid drive ladder:</b> Jog branches ahead of latched targets (Manual-mode gated). Effective sensor stops the coil. Same-cycle collision: retract wins.</li>
+      <li><b>3 — HMI status feedback:</b> mirrors effective sensor + coil state into <code>stHmi</code>.</li>
+    </ul>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>GVLs (global variable lists)</h3>
+    <table class="kv-table">
+      <tr><th>GVL</th><th>Role</th></tr>
+      <tr><td class="k">GVL_IO</td><td class="n">The only hardware-mapped symbols: <code>dIn AT %I* : ARRAY[1..16] OF BOOL</code>, <code>dOut AT %Q* : ARRAY[1..16] OF BOOL</code>. All EtherCAT links terminate here.</td></tr>
+      <tr><td class="k">GVL_App</td><td class="n">Plain-BOOL aliases with descriptive names (<code>bSensorSepRetracted1</code>, <code>bValveSepExtend1</code>, ...). MAIN copies raw <code>GVL_IO.dIn[N]</code> into these at the top of the scan, and the reverse at the bottom.</td></tr>
+      <tr><td class="k">GVL_HMI</td><td class="n">Six <code>ST_HmiPiston</code> instances (stSepSol1/2/3, stPushSol1/2/3). <code>{attribute 'TcHmiSymbol.AddSymbol'}</code> pragma auto-registers them with the HMI symbol table.</td></tr>
+      <tr><td class="k">GVL_Robot</td><td class="n">One <code>ST_HmiRobot</code> instance <code>stRobot</code>. Also auto-registered via the same pragma. Written by the Python bridge over ADS, read by the HMI Robot page.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>MAIN scan structure</h3>
+    <p>Scan order in <code>PLC1/POUs/MAIN.TcPOU</code>:</p>
+    <ol class="compact">
+      <li><b>READ INPUTS.</b> Copy <code>GVL_IO.dIn[N]</code> to <code>GVL_App.bSensor*</code>. Currently wired for SepSol1 (dIn[1..2]) and PushSol1 (dIn[7..8]); SepSol2/3 + PushSol2/3 lines are commented with <code>TODO</code> markers pending channel assignment.</li>
+      <li><b>Call six piston FBs.</b> <code>fbSepSol1..3</code>, <code>fbPushSol1..3</code>, each with <code>bAutoCmd*</code> pins wired to <code>FALSE</code> (future <code>FB_Auto</code> hook).</li>
+      <li><b>WRITE OUTPUTS.</b> Copy <code>GVL_App.bValve*</code> to <code>GVL_IO.dOut[N]</code>. Same partial wiring — SepSol1 (dOut[1..2]) and PushSol1 (dOut[7..8]) only.</li>
+    </ol>
+    <div class="callout warn">
+      <b>Soft-only pistons.</b> SepSol2/3 and PushSol2/3 currently run software-only: the HMI operator can drive them and see feedback, but the coil bits never reach hardware. See <a href="open-issues.html">Open issues</a> for the channel-assignment table.
+    </div>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>Naming convention</h3>
+    <p>Follows the project's <code>TwinCAT_NamingConventions</code> skill (Structured Hungarian):</p>
+    <ul class="compact">
+      <li><code>b*</code> BOOL, <code>n*</code> integer (UDINT/DINT/INT), <code>r*</code> REAL/LREAL, <code>s*</code> STRING, <code>e*</code> ENUM, <code>st*</code> STRUCT instance, <code>fb*</code> FB instance.</li>
+      <li><code>FB_*</code> function block declaration, <code>ST_*</code> struct type, <code>E_*</code> enum type, <code>GVL_*</code> global variable list.</li>
+      <li>Signals prefixed by role: <code>bSensor*</code> (inputs), <code>bValve*</code> (outputs), <code>bMan*</code> (HMI-writes), <code>bSelected*</code>/<code>bIs*</code>/<code>bOut*</code> (FB-writes).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- HMI                                                          -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-hmi">
+  <h2>HMI — TcHmi runtime</h2>
+  <p>Project root: <code>Flower_PLC_HMI/Flower_HMI/</code>. Dark theme (Base-Dark). Two functional pages plus the stock StartPage / Events / Settings.</p>
+
+  <div class="card" data-c="hmi">
+    <h3>Pages</h3>
+    <table class="kv-table">
+      <tr><th>Page</th><th>Purpose</th></tr>
+      <tr><td class="k">StartPage.content</td><td class="n">Stock landing page.</td></tr>
+      <tr><td class="k">Piston.content</td><td class="n">1100×730 grid: 3 columns × 2 rows of <code>UC_Piston</code> instances. Left column SepSol1/PushSol1, middle SepSol2/PushSol2, right SepSol3/PushSol3. Each UC bound to its respective <code>%s%ADS.PLC1.GVL_HMI.st*%/s%</code> symbol.</td></tr>
+      <tr><td class="k">Robot.content</td><td class="n">Single <code>UC_Robot</code> instance bound to <code>%s%ADS.PLC1.GVL_Robot.stRobot%/s%</code>. Room reserved for future comms (Modbus, second robot, etc.).</td></tr>
+      <tr><td class="k">Events.content</td><td class="n">Stock event/alarm log.</td></tr>
+      <tr><td class="k">Settings.content</td><td class="n">Stock locale / theme picker.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" data-c="hmi">
+    <h3>UserControl — <code>UC_Piston</code></h3>
+    <p>337×340 card. Two parameters: <code>piston : PLC1.ST_HmiPiston</code>, <code>bModeAuto : BOOL</code>.</p>
+    <ul class="compact">
+      <li><b>Title Textblock</b> bound to <code>%pp%piston::Name%/pp%</code>.</li>
+      <li><b>MOVING</b> indicator, colored green while either coil is energized.</li>
+      <li><b>Extend row</b>: sensor indicator (left) + EXTEND button (state-symbol <code>bManCmdExtend</code>) + JOG button (state-symbol <code>bManJogExtend</code>) + solenoid indicator (right).</li>
+      <li><b>Retract row</b>: mirror layout.</li>
+      <li><b>Man/Auto ToggleSwitch</b>: bidirectional trigger syncs local <code>bModeAuto</code> BOOL ↔ <code>piston::eMode</code> enum.</li>
+    </ul>
+  </div>
+
+  <div class="card" data-c="hmi">
+    <h3>UserControl — <code>UC_Robot</code></h3>
+    <p>337×340 card. One parameter: <code>robot : PLC1.ST_HmiRobot</code>. Receive-only display (v1 — a future "send test frame" button becomes an additive change).</p>
+    <ul class="compact">
+      <li><b>Title Textblock</b> bound to <code>%pp%robot::Name%/pp%</code>.</li>
+      <li><b>Connection state rectangle</b> — colored by trigger on <code>%pp%robot::eConnState%/pp%</code>: green (Connected), yellow (Connecting), red (Error), grey (Disconnected). Text overlay bound to <code>%pp%robot::sConnStateText%/pp%</code>.</li>
+      <li><b>AT POS 1 / 2 / 3</b> indicator rectangles — green when the corresponding <code>bAtPosN</code> is TRUE.</li>
+      <li><b>Packets Rx</b> — Textblock bound to <code>%pp%robot::nPacketsRx%/pp%</code>.</li>
+      <li><b>Last msg</b> — monospace Textblock bound to <code>%pp%robot::sLastMessage%/pp%</code>.</li>
+    </ul>
+  </div>
+
+  <div class="card" data-c="hmi">
+    <h3>Two-schema model — where each symbol is defined</h3>
+    <p>TwinCAT HMI uses two schema files that must agree for a symbol to be visible AND writable:</p>
+    <table class="kv-table">
+      <tr><th>File</th><th>Role</th></tr>
+      <tr><td class="k">Properties/tchmi.project.Schema.json</td><td class="n"><b>Project schema.</b> Type definitions used by the designer / IntelliSense. Contains <code>PLC1.E_ControlMode</code>, <code>PLC1.E_RobotConnState</code>, <code>PLC1.ST_HmiPiston</code>, <code>PLC1.ST_HmiRobot</code>.</td></tr>
+      <tr><td class="k">Server/TcHmiSrv/TcHmiSrv.Config.default.json</td><td class="n"><b>Server schema.</b> ADS-side type definitions (<code>ADS-PLC1.*</code>), SYMBOLS map (<code>ADS.PLC1.GVL_HMI.stSepSol1</code>, ..., <code>ADS.PLC1.GVL_Robot.stRobot</code>), and USERGROUPS ACL grants (each symbol must be listed in <code>USERGROUPS.__SystemUsers.SYMBOLS</code> with access value <code>3</code> = R/W).</td></tr>
+    </table>
+    <div class="callout warn" style="margin-top:6px">
+      <b>Gotcha.</b> Forgetting the USERGROUPS.__SystemUsers.SYMBOLS grant is the #1 cause of <code>SYMBOL_NOT_AUTHORIZED</code> errors that survive "Activate Configuration". Adding the SYMBOLS map entry alone isn't enough.
+    </div>
+  </div>
+
+  <div class="card" data-c="hmi">
+    <h3>Localization</h3>
+    <p><code>Localization/en.localization</code> + <code>de.localization</code>. Current keys: <code>L_StartPage</code>, <code>L_Piston</code>, <code>L_Robot</code>, <code>L_Events</code>, <code>L_Localization</code>, <code>L_Theme</code>, <code>L_Settings</code>. Both files must be kept in sync when adding a new key.</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- BRIDGE                                                       -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-bridge">
+  <h2>Robot Bridge — Python + pyads</h2>
+  <p>Location: <code>RobotBridge/</code> at the repo root. Single-file Python service, no framework. Runs as a long-lived process (foreground console, Scheduled Task, or NSSM service).</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+sequenceDiagram
+  participant Robot
+  participant Bridge as robot_bridge.py
+  participant PLC as PLC (GVL_Robot.stRobot)
+  participant HMI as HMI Robot page
+
+  Note over Bridge: startup — open ADS, set eConnState=Disconnected
+  Bridge->>PLC: eConnState = Connecting
+  alt server mode
+    Robot->>Bridge: TCP connect
+  else client mode
+    Bridge->>Robot: TCP connect
+  end
+  Bridge->>PLC: eConnState = Connected
+  loop while socket open
+    Robot->>Bridge: "POS2\n"
+    Bridge->>PLC: nPacketsRx++, sLastMessage="POS2"
+    Bridge->>PLC: bAtPos1=F, bAtPos2=T, bAtPos3=F
+    PLC-->>HMI: (subscription) POS2 indicator lights
+  end
+  Robot--xBridge: connection closed
+  Bridge->>PLC: eConnState = Disconnected
+  Note over Bridge: sleep reconnect.delay_seconds, retry
+    </pre>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Files</h3>
+    <table class="kv-table">
+      <tr><th>File</th><th>Role</th></tr>
+      <tr><td class="k">robot_bridge.py</td><td class="n">The bridge. ~230 lines, single file. Sections: <code>ConnState</code> mirror, <code>Config</code> loader, <code>PlcRobotSymbol</code> ADS writer, <code>LineAccumulator</code> byte-to-line parser, <code>parse_position</code>, socket helpers, <code>run_once</code>, <code>main</code>.</td></tr>
+      <tr><td class="k">config.example.yaml</td><td class="n">Template. Commit; copy to <code>config.yaml</code> and edit real endpoints.</td></tr>
+      <tr><td class="k">config.yaml</td><td class="n"><b>Gitignored.</b> Real endpoints. Not in version control.</td></tr>
+      <tr><td class="k">requirements.txt</td><td class="n"><code>pyads&gt;=3.4.0</code>, <code>pyyaml&gt;=6.0</code>. Both permissively licensed.</td></tr>
+      <tr><td class="k">start_bridge.bat</td><td class="n">Windows convenience launcher.</td></tr>
+      <tr><td class="k">README.md</td><td class="n">Install + configure + smoke test.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3><code>config.yaml</code> keys</h3>
+    <table class="kv-table">
+      <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+      <tr><td class="k">plc.ams_net_id</td><td class="v">"127.0.0.1.1.1"</td><td class="n">AMS Net ID of the TwinCAT runtime. Local runtime uses this default. Remote hosts need a route.</td></tr>
+      <tr><td class="k">plc.ams_port</td><td class="v">851</td><td class="n">PLC1's ADS port.</td></tr>
+      <tr><td class="k">plc.symbol_prefix</td><td class="v">"GVL_Robot.stRobot"</td><td class="n">Root path of the <code>ST_HmiRobot</code> instance the bridge writes into.</td></tr>
+      <tr><td class="k">robot.role</td><td class="v">"server"</td><td class="n"><code>"server"</code> = bridge listens, robot dials in. <code>"client"</code> = bridge dials the robot. See <a href="open-issues.html">Open issues</a>.</td></tr>
+      <tr><td class="k">robot.host</td><td class="v">"192.168.1.50"</td><td class="n">Robot's IP. <b>Ignored when role = "server"</b>.</td></tr>
+      <tr><td class="k">robot.port</td><td class="v">2000</td><td class="n">TCP port. Applies to both roles.</td></tr>
+      <tr><td class="k">robot.encoding</td><td class="v">"ascii"</td><td class="n">Character encoding of the robot's frames.</td></tr>
+      <tr><td class="k">reconnect.delay_seconds</td><td class="v">2</td><td class="n">Backoff between reconnect attempts. Sleep after every disconnect / error.</td></tr>
+    </table>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Wire format</h3>
+    <p>ASCII, line-terminated by <code>\n</code>. Case-insensitive. Trailing <code>\r</code> is stripped.</p>
+    <table class="kv-table">
+      <tr><th>Frame</th><th>Effect on <code>GVL_Robot.stRobot</code></th></tr>
+      <tr><td class="k">POS1\n</td><td class="n"><code>bAtPos1 = TRUE</code>, <code>bAtPos2 = FALSE</code>, <code>bAtPos3 = FALSE</code>. Counter and last-message updated.</td></tr>
+      <tr><td class="k">POS2\n</td><td class="n">Same, but Pos2 latched.</td></tr>
+      <tr><td class="k">POS3\n</td><td class="n">Same, but Pos3 latched.</td></tr>
+      <tr><td class="k">anything else</td><td class="n">Counter increments, <code>sLastMessage</code> updates, but no <code>bAtPos*</code> change. Useful for surfacing malformed frames on the HMI.</td></tr>
+    </table>
+    <div class="callout">
+      <b>"In position" semantics.</b> Position bits are <b>latched</b>: <code>bAtPos2</code> stays TRUE until the robot sends a different <code>POSn</code> frame. The bridge does not clear on timeout in v1.
+    </div>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Failure handling</h3>
+    <ul class="compact">
+      <li><b>Robot never connects (server mode):</b> bridge blocks on <code>accept()</code>. <code>eConnState = Connecting</code> stays until a connection arrives.</li>
+      <li><b>Robot refuses connection (client mode):</b> bridge catches <code>ConnectionRefusedError</code>, sets <code>eConnState = Error</code>, sleeps <code>reconnect.delay_seconds</code>, retries.</li>
+      <li><b>Connection drops mid-session:</b> <code>recv()</code> returns <code>b""</code>, bridge closes the socket, sets <code>eConnState = Disconnected</code>, sleeps, reconnects.</li>
+      <li><b>ADS write fails:</b> logged as exception, top-level supervisor catches it, sets <code>eConnState = Error</code>, sleeps, retries.</li>
+      <li><b>Bridge process itself dies:</b> HMI keeps showing the last-written <code>eConnState</code> — no PLC-side watchdog in v1. Future <code>FB_RobotWatchdog</code> would reset the state based on <code>nPacketsRx</code> stagnation.</li>
+    </ul>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Licensing rationale</h3>
+    <p>Beckhoff's native <code>Tc2_TcpIp</code> library requires the paid <b>TF6310</b> supplement + install on the runtime target. Same for <code>Tc3_IoT_Communicator</code> (TF6701 MQTT) and OPC UA server (TF6100). Deliberately avoided in this project.</p>
+    <p>ADS is built into TwinCAT (both runtime and client DLL are free), and <code>pyads</code> is MIT-licensed. The bridge is therefore royalty-free on both sides. See the memory note <code>feedback_avoid_licensed_beckhoff_libs</code> for the durable version of this decision.</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+  const tabs = document.getElementById('tabs');
+  const panels = document.querySelectorAll('.panel');
+  tabs.addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    const t = e.target.dataset.tab;
+    panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + t));
+    location.hash = '#' + t;
+  });
+  if (location.hash) {
+    const t = location.hash.slice(1);
+    const btn = tabs.querySelector('button[data-tab="'+t+'"]');
+    if (btn) btn.click();
+  }
+  if (window.mermaid) mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { fontSize: '12px' } });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flower — Documentation Index</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d30; --border: #3e3e42;
+    --text: #e0e0e0; --muted: #a0a0a0;
+    --accent: #4fc3f7; --accent2: #81c784; --warn: #ffb74d; --danger: #e57373;
+    --plc: #ce93d8; --hmi: #4fc3f7; --bridge: #81c784; --robot: #f48fb1;
+    --ops: #ffd54f; --issues: #e57373;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 28px 40px; }
+  header h1 { margin: 0 0 6px 0; font-size: 26px; color: var(--accent); }
+  header .sub { color: var(--muted); font-size: 14px; }
+  header .sub a { color: var(--accent); text-decoration: none; }
+  header .sub a:hover { text-decoration: underline; }
+  header .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; max-width: 900px; }
+  header .stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+  header .stat .n { font-size: 22px; font-weight: 700; color: var(--accent); }
+  header .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  main { padding: 32px 40px; max-width: 1400px; }
+  section.cat { margin-bottom: 40px; }
+  section.cat h2 { margin: 0 0 6px 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 12px; }
+  section.cat p.desc { margin: 0 0 16px 0; color: var(--muted); font-size: 13px; max-width: 900px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+  a.card {
+    display: block; background: var(--bg2); border: 1px solid var(--border);
+    border-left: 4px solid var(--accent); border-radius: 8px;
+    padding: 16px 20px; text-decoration: none; color: var(--text);
+    transition: transform 0.08s ease, background 0.08s ease;
+  }
+  a.card:hover { transform: translateY(-1px); background: var(--bg3); }
+  a.card[data-c=config]  { border-left-color: var(--hmi); }
+  a.card[data-c=ops]     { border-left-color: var(--ops); }
+  a.card[data-c=issues]  { border-left-color: var(--issues); }
+  a.card .title { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+  a.card .kind {
+    display: inline-block; padding: 1px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--bg); background: var(--accent);
+  }
+  a.card .desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 6px 0 0 0; }
+  a.card .path { font-family: 'Consolas', monospace; font-size: 10px; color: var(--muted); margin-top: 8px; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
+  .dot.config { background: var(--hmi); }
+  .dot.ops    { background: var(--ops); }
+  .dot.issues { background: var(--issues); }
+  footer { padding: 24px 40px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); background: var(--bg2); margin-top: 30px; }
+  footer a { color: var(--accent); text-decoration: none; }
+  .tldr { background: rgba(129, 199, 132, 0.08); border-left: 4px solid var(--accent2); padding: 14px 18px; margin: 18px 0 24px 0; border-radius: 4px; font-size: 13px; max-width: 1000px; }
+  .tldr b { color: var(--accent2); }
+  .tldr code { background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Flower — Documentation Index</h1>
+  <div class="sub">
+    Pneumatic pin-separator / pin-pusher test rig: <b>TwinCAT PLC</b> (6 SOL-SOL pistons) + <b>TwinCAT HMI</b> + <b>Python-ADS robot bridge</b> for TCP/IP communication with the industrial robot.<br>
+    Repo: <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
+    &middot; Docs generated <b>2026-07-07</b>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n">6</div><div class="l">Pistons</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">HMI pages</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">Robot positions</div></div>
+    <div class="stat"><div class="n">2</div><div class="l">Open issues</div></div>
+  </div>
+</header>
+
+<main>
+
+<div class="tldr">
+  <b>What this project is.</b> A 6-piston pneumatic test rig driven by a TwinCAT PLC and controlled from a TcHmi web HMI. Each piston is a <b>SOL-SOL two-position actuator with two limit switches</b>, driven by one instance of <code>FB_SolSolPiston_2Pos</code>. The rig also receives <b>"in position 1/2/3"</b> signals from an industrial robot over TCP/IP — but the socket layer lives in a <b>Python bridge</b> (<code>RobotBridge/robot_bridge.py</code>) that translates to ADS, deliberately avoiding Beckhoff's paid TF6310 TCP/IP supplement.
+</div>
+
+<section class="cat">
+  <h2><span class="dot config"></span>Configuration</h2>
+  <p class="desc">What the system is and how each part is wired: architecture diagram, PLC structure, HMI pages and bindings, and the Python bridge that talks to the robot.</p>
+  <div class="grid">
+    <a class="card" data-c="config" href="configuration.html">
+      <div class="title">Configuration reference <span class="kind">HTML</span></div>
+      <div class="desc">4 tabs: Architecture, PLC (TwinCAT), HMI (TcHmi), Robot Bridge (Python). Includes the data-flow diagram, DUT/FB/GVL breakdown, symbol-mapping table, and <code>config.yaml</code> keys.</div>
+      <div class="path">docs/configuration.html</div>
+    </a>
+    <a class="card" data-c="config" href="viewer.html?doc=../RobotBridge/README.md">
+      <div class="title">Robot Bridge README <span class="kind" style="background:var(--accent2)">MD</span></div>
+      <div class="desc">Python-side README: install (<code>pip install -r requirements.txt</code>), YAML config, ADS route setup for remote hosts, smoke test with <code>nc</code>.</div>
+      <div class="path">RobotBridge/README.md</div>
+    </a>
+    <a class="card" data-c="config" href="viewer.html?doc=../CLAUDE.md">
+      <div class="title">CLAUDE.md (project TODOs) <span class="kind" style="background:var(--accent2)">MD</span></div>
+      <div class="desc">Source of truth for open issues and outstanding work. Read this before starting any task.</div>
+      <div class="path">CLAUDE.md</div>
+    </a>
+  </div>
+</section>
+
+<section class="cat">
+  <h2><span class="dot ops"></span>Operation &amp; Installation</h2>
+  <p class="desc">How to install, start, verify, and recover the whole stack. Includes the end-to-end smoke test that goes robot → bridge → PLC → HMI.</p>
+  <div class="grid">
+    <a class="card" data-c="ops" href="operation.html">
+      <div class="title">Operation &amp; install guide <span class="kind">HTML</span></div>
+      <div class="desc">4 tabs: Install (Python deps, ADS routes, PLC + HMI build/publish), Startup order, Smoke test (<code>nc POS1</code>), Recovery (bridge died, PLC restart, HMI cache).</div>
+      <div class="path">docs/operation.html</div>
+    </a>
+  </div>
+</section>
+
+<section class="cat">
+  <h2><span class="dot issues"></span>Open issues &amp; deferred decisions</h2>
+  <p class="desc">Deliberately deferred design choices and unassigned hardware bindings. Read this before making changes so you don't step on a live decision.</p>
+  <div class="grid">
+    <a class="card" data-c="issues" href="open-issues.html">
+      <div class="title">Open issues <span class="kind" style="background:var(--danger)">HTML</span></div>
+      <div class="desc">2 open items: (1) Robot TCP/IP role — server vs client, decided by <code>RobotBridge/config.yaml</code> at commissioning; (2) EtherCAT channel assignment for SepSol2/3 + PushSol2/3 (soft-only until wired).</div>
+      <div class="path">docs/open-issues.html</div>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <b>How to open these docs:</b><br>
+  <b>Fastest (daily):</b> double-click <code>scripts\serve-docs.bat</code> (or run <code>scripts\serve-docs.ps1</code>). It launches <code>python -m http.server 8765</code> from the repo root and opens your default browser at <code>http://127.0.0.1:8765/docs/index.html</code>. Leave the terminal window open while browsing; Ctrl+C to stop.<br>
+  <b>Manual:</b> <code>cd C:\Users\Natan.Moshkin\source\repos\Flower &amp;&amp; python -m http.server 8765</code>, then browse to <code>http://127.0.0.1:8765/docs/index.html</code>.<br>
+  <b>Direct file:// open:</b> works for the tabbed HTML pages, but the <b>.md viewer</b> needs HTTP (browsers block <code>fetch()</code> under <code>file://</code>) — the viewer will show a helpful error with the fix.<br>
+  <br>
+  <b>Style:</b> mirrors <a href="https://github.com/NatanMoshkin/BS_HMI_PLC_DB">BS_HMI_PLC_DB/docs</a> — self-contained dark-theme HTML with Mermaid diagrams and a client-side markdown renderer (<code>viewer.html</code>).
+  &middot; <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
+</footer>
+
+</body>
+</html>

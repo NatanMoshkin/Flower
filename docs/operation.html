@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flower — Operation &amp; Install Guide</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d30; --border: #3e3e42;
+    --text: #e0e0e0; --muted: #a0a0a0;
+    --accent: #4fc3f7; --accent2: #81c784; --warn: #ffb74d; --danger: #e57373;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 20px 30px; }
+  header h1 { margin: 0 0 6px 0; font-size: 22px; color: var(--accent); }
+  header .meta { color: var(--muted); font-size: 12px; }
+  header .meta a { color: var(--accent); text-decoration: none; }
+  nav.tabs { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 30px; display: flex; gap: 4px; flex-wrap: wrap; position: sticky; top: 0; z-index: 10; }
+  nav.tabs button { background: transparent; border: none; color: var(--muted); padding: 12px 18px; cursor: pointer; border-bottom: 2px solid transparent; font: inherit; }
+  nav.tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+  nav.tabs button:hover { color: var(--text); }
+  main { padding: 24px 30px; max-width: 1400px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  h2 { color: var(--accent); font-size: 18px; margin: 24px 0 12px 0; }
+  h2:first-of-type { margin-top: 0; }
+  h3 { color: var(--accent2); font-size: 13px; margin: 18px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  p { line-height: 1.6; }
+  code { background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--accent); font-family: 'Consolas', 'Cascadia Code', monospace; font-size: 12.5px; }
+  pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-family: 'Consolas', monospace; font-size: 12px; color: var(--accent2); overflow-x: auto; line-height: 1.5; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; border-left: 4px solid var(--accent); }
+  .card h3 { margin: 0 0 10px 0; text-transform: none; letter-spacing: 0; color: var(--accent); font-size: 14px; }
+  .kv-table { width: 100%; border-collapse: collapse; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+  .kv-table th { background: var(--bg3); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .kv-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+  .kv-table tr:last-child td { border-bottom: 0; }
+  .kv-table .k { color: var(--muted); font-family: 'Consolas', monospace; white-space: nowrap; }
+  .kv-table .v { color: var(--accent2); font-family: 'Consolas', monospace; }
+  .kv-table .n { color: var(--text); }
+  .callout { background: rgba(129, 199, 132, 0.08); border-left: 4px solid var(--accent2); padding: 12px 16px; border-radius: 4px; margin: 12px 0; font-size: 13px; }
+  .callout.warn { background: rgba(255, 183, 77, 0.08); border-left-color: var(--warn); }
+  .callout.warn b { color: var(--warn); }
+  .callout b { color: var(--accent2); }
+  ul.compact { margin: 6px 0 12px 20px; padding: 0; }
+  ul.compact li { margin: 4px 0; font-size: 13px; }
+  ol.compact { margin: 6px 0 12px 22px; padding: 0; }
+  ol.compact li { margin: 6px 0; font-size: 13px; }
+  .checklist { margin: 12px 0 18px 0; padding: 0; list-style: none; }
+  .checklist li { padding: 4px 0 4px 24px; position: relative; font-size: 13px; }
+  .checklist li::before { content: "☐"; position: absolute; left: 0; color: var(--muted); font-size: 15px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Flower — Operation &amp; Install Guide</h1>
+  <div class="meta">
+    Branch <b>master</b> &middot; docs generated <b>2026-07-07</b>
+    &middot; <a href="index.html">← Doc index</a>
+    &middot; <a href="configuration.html">← Configuration</a>
+    &middot; <a href="open-issues.html">Open issues</a>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="active" data-tab="install">Install</button>
+  <button data-tab="startup">Startup</button>
+  <button data-tab="smoke">Smoke test</button>
+  <button data-tab="recovery">Recovery</button>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<!-- INSTALL                                                      -->
+<!-- ============================================================ -->
+<section class="panel active" id="panel-install">
+  <h2>Install</h2>
+  <p>First-time setup on a fresh panel PC. Everything is local by default — the docs, HMI, PLC runtime, and Python bridge all target <code>127.0.0.1</code>. Only the robot lives at a real IP.</p>
+
+  <div class="card">
+    <h3>Prerequisites</h3>
+    <ul class="compact">
+      <li><b>TwinCAT 3.1</b> (build 4026 or newer) with the TcXaeShell IDE.</li>
+      <li><b>TE2000 TwinCAT HMI Engineering</b> — free for engineering use.</li>
+      <li><b>Python 3.9+</b> on PATH. Verify with <code>python --version</code>.</li>
+      <li><b>Git.</b> Clone with <code>git clone https://github.com/NatanMoshkin/Flower.git</code>.</li>
+    </ul>
+    <div class="callout warn">
+      <b>No paid Beckhoff supplements are required.</b> Notably, TF6310 TCP/IP is <b>not</b> installed and <b>must not</b> be referenced from PLC1 — the robot channel is handled by the Python bridge instead.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>1. PLC — build &amp; activate</h3>
+    <ol class="compact">
+      <li>Open <code>Flower_PLC_HMI/Flower_PLC_HMI.sln</code> in TcXaeShell.</li>
+      <li><b>Build → Build Solution</b>. Zero errors expected.</li>
+      <li><b>TwinCAT → Activate Configuration</b>. Restart the runtime in Run mode when prompted.</li>
+      <li>Verify: <b>PLC → Login</b>, then in the online view confirm <code>GVL_Robot.stRobot</code> is present and <code>stRobot.Name = "Robot"</code>.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>2. HMI — build &amp; publish</h3>
+    <ol class="compact">
+      <li>Right-click the HMI project → <b>Build</b>.</li>
+      <li>Right-click → <b>Publish</b> → Local Engineering Server. Note the URL (usually <code>http://127.0.0.1:1010/</code> for engineering, <code>http://127.0.0.1:3003/</code> for the runtime WebSocket).</li>
+      <li>Open the browser at the engineering URL. Log in as <code>__SystemUser</code> (passwordless in the default config).</li>
+      <li>Confirm the navigation menu shows: StartPage, Piston, <b>Robot</b>, Events, Settings.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>3. Python bridge — install dependencies</h3>
+    <pre>cd RobotBridge
+pip install -r requirements.txt</pre>
+    <p>Installs <code>pyads</code> and <code>pyyaml</code>. On Windows the ADS client DLL ships with TwinCAT — no extra install. On Linux, install <code>libads</code> per the <a href="https://pyads.readthedocs.io/en/latest/documentation/setup.html">pyads setup docs</a>.</p>
+  </div>
+
+  <div class="card">
+    <h3>4. Python bridge — create <code>config.yaml</code></h3>
+    <pre>cd RobotBridge
+cp config.example.yaml config.yaml
+# edit config.yaml — set robot.host + robot.port + robot.role</pre>
+    <p>Defaults (server mode, port 2000, placeholder IP) are enough to run the smoke test with <code>nc</code>. Real robot integration requires editing <code>host</code> / <code>port</code> to match the robot controller and picking a <code>role</code>.</p>
+  </div>
+
+  <div class="card">
+    <h3>5. ADS route (remote hosts only)</h3>
+    <p>Skip this step if the bridge runs on the same PC as TwinCAT — the local route <code>127.0.0.1.1.1</code> is present out of the box.</p>
+    <p>If the bridge runs on a different machine:</p>
+    <ol class="compact">
+      <li>On the TwinCAT engineering PC: <b>System Manager → Routes → Add Route</b>.</li>
+      <li>Point at the bridge host's AMS Net ID (usually <code>&lt;host-ip&gt;.1.1</code>).</li>
+      <li>Update <code>plc.ams_net_id</code> in <code>RobotBridge/config.yaml</code> accordingly.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>6. Docs (this site)</h3>
+    <p>Double-click <code>scripts\serve-docs.bat</code>. Serves the repo root on <code>http://127.0.0.1:8765</code> and opens the browser at <code>/docs/index.html</code>. Leave the console window open while browsing; Ctrl+C to stop.</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- STARTUP                                                      -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-startup">
+  <h2>Startup order</h2>
+  <p>After a cold boot, bring the stack up in this order:</p>
+
+  <div class="card">
+    <h3>Daily startup checklist</h3>
+    <ol class="compact">
+      <li><b>TwinCAT runtime → Run mode.</b> Usually automatic on boot. Verify with the TwinCAT icon in the tray (green = Run).</li>
+      <li><b>HMI server.</b> The published TcHmiSrv runs as a Windows service; confirm <code>http://127.0.0.1:3003</code> is reachable.</li>
+      <li><b>Python bridge.</b> Double-click <code>RobotBridge\start_bridge.bat</code>, or start it as a Scheduled Task / NSSM service. Logs should show:
+        <pre>YYYY-MM-DD HH:MM:SS  INFO     loaded config: role=server port=2000 ams=127.0.0.1.1.1
+YYYY-MM-DD HH:MM:SS  INFO     ADS opened to 127.0.0.1.1.1:851
+YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
+      </li>
+      <li><b>Browser.</b> Open the HMI. Go to the Robot page — connection indicator should be yellow (<code>Connecting</code>).</li>
+      <li><b>Robot.</b> Power up / start the robot controller. On its first frame the connection indicator flips green (<code>Connected</code>) and the corresponding AT POS N lights.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>What each state means on the HMI Robot page</h3>
+    <table class="kv-table">
+      <tr><th>State</th><th>Color</th><th>Meaning</th></tr>
+      <tr><td class="k">Disconnected</td><td class="v">Grey</td><td class="n">Bridge running but no socket up. In server mode: no robot has dialed in yet. In client mode: reconnect delay in progress.</td></tr>
+      <tr><td class="k">Connecting</td><td class="v">Yellow</td><td class="n">Bridge is actively trying to establish the socket (calling <code>accept()</code> or <code>connect()</code>).</td></tr>
+      <tr><td class="k">Connected</td><td class="v">Green</td><td class="n">Socket up, receiving. Position bits reflect the last frame received.</td></tr>
+      <tr><td class="k">Error</td><td class="v">Red</td><td class="n">Bridge caught an exception (ADS write failed, socket error, bad config). Check the bridge console for the traceback.</td></tr>
+    </table>
+    <div class="callout warn">
+      <b>State can go stale.</b> If the bridge process dies, the HMI keeps showing the last-written state indefinitely — v1 has no PLC-side watchdog. If <code>Connected</code> is shown but <code>nPacketsRx</code> hasn't moved in minutes, check the bridge is alive.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Unattended startup (auto-run the bridge)</h3>
+    <p>Two options:</p>
+    <ul class="compact">
+      <li><b>Windows Scheduled Task.</b> Task Scheduler → Create Basic Task → Trigger "At log on" → Action "Start a program" → <code>RobotBridge\start_bridge.bat</code>. Set "Run whether user is logged on or not" so it survives RDP disconnects.</li>
+      <li><b>NSSM service.</b> <code>nssm install FlowerRobotBridge</code>, point at <code>python.exe</code> with args <code>robot_bridge.py --config config.yaml</code>, set the working directory to <code>RobotBridge\</code>. Survives reboots and runs headlessly.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SMOKE TEST                                                   -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-smoke">
+  <h2>Smoke test — robot → bridge → PLC → HMI</h2>
+  <p>End-to-end verification without a real robot. A companion script <code>RobotBridge/sim_robot.py</code> ships in the repo — it opens a TCP client to the bridge and sends the ASCII POS frames with a configurable gap. Same Python + stdlib as the bridge itself, so no extra dependencies.</p>
+
+  <div class="card">
+    <h3>Prep</h3>
+    <ol class="compact">
+      <li>PLC in Run mode with the latest build activated.</li>
+      <li>HMI running; browser open on the Robot page.</li>
+      <li>Bridge running in server mode (<code>robot.role: "server"</code>, port 2000). Start via <code>RobotBridge\start_bridge.bat</code> or <code>python robot_bridge.py --config config.yaml</code>.</li>
+      <li>Bridge console shows <code>listening on :2000</code>.</li>
+      <li>HMI Robot page shows: <b>eConnState = Connecting</b> (yellow), all AT POS N grey.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Run the simulation (recommended)</h3>
+    <p>From another shell on the same machine — cross-platform, no <code>nc.exe</code> needed:</p>
+    <pre>cd RobotBridge
+
+# Default script: POS1, POS2, POS3, FOO with a 1s gap
+python sim_robot.py
+
+# Custom sequence
+python sim_robot.py POS1 POS3
+
+# Remote bridge, faster gap
+python sim_robot.py --host 192.168.1.10 --port 2000 --gap 0.3 POS2</pre>
+    <p>Expected console output:</p>
+    <pre>connecting to 127.0.0.1:2000
+connected
+  sent [1/4]: POS1
+  sent [2/4]: POS2
+  sent [3/4]: POS3
+  sent [4/4]: FOO
+closing</pre>
+    <p>Matching bridge log (in the bridge's own console):</p>
+    <pre>YYYY-MM-DD HH:MM:SS  INFO     robot connected from ('127.0.0.1', 61592)
+YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS1'
+YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS2'
+YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS3'
+YYYY-MM-DD HH:MM:SS  INFO     rx: 'FOO'
+YYYY-MM-DD HH:MM:SS  INFO     robot closed the connection
+YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
+  </div>
+
+  <div class="card">
+    <h3>Expected HMI behavior</h3>
+    <ul class="checklist">
+      <li>Robot page's connection indicator flips <b>green</b> (Connected) as soon as <code>sim_robot.py</code> establishes the socket.</li>
+      <li>After <code>POS1</code>: <b>AT POS 1 lights green</b>. <code>nPacketsRx = 1</code>. <code>sLastMessage = "POS1"</code>.</li>
+      <li>After <code>POS2</code>: POS 1 clears, <b>POS 2 lights</b>. <code>nPacketsRx = 2</code>. <code>sLastMessage = "POS2"</code>.</li>
+      <li>After <code>POS3</code>: POS 2 clears, <b>POS 3 lights</b>. <code>nPacketsRx = 3</code>. <code>sLastMessage = "POS3"</code>.</li>
+      <li>After <code>FOO</code>: <b>no AT POS N change</b> (POS 3 stays lit). <code>nPacketsRx = 4</code>. <code>sLastMessage = "FOO"</code> — the unknown-frame path still updates the counter and last-message for debugging.</li>
+      <li>After <code>sim_robot.py</code> exits: bridge logs <code>robot closed the connection</code>, HMI eConnState → <b>Disconnected</b> (grey). AT POS N indicators retain their last state. After <code>reconnect.delay_seconds</code> (default 2s), bridge logs <code>listening on :2000</code> again and eConnState → <b>Connecting</b> (yellow).</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Verify from Python (no HMI needed)</h3>
+    <p>If the HMI isn't up yet, you can still confirm the whole chain by reading <code>GVL_Robot.stRobot</code> directly via <code>pyads</code>. Handy for CI / smoke-test scripts:</p>
+    <pre>python -c "
+import pyads
+plc = pyads.Connection('127.0.0.1.1.1', 851); plc.open()
+for f, t in [('bAtPos1', pyads.PLCTYPE_BOOL), ('bAtPos2', pyads.PLCTYPE_BOOL),
+             ('bAtPos3', pyads.PLCTYPE_BOOL), ('nPacketsRx', pyads.PLCTYPE_UDINT),
+             ('sLastMessage', pyads.PLCTYPE_STRING)]:
+    print(f, '=', plc.read_by_name(f'GVL_Robot.stRobot.{f}', t))
+plc.close()
+"</pre>
+    <p>After the default 4-frame sim script, expect <code>bAtPos3 = True</code>, <code>nPacketsRx = 4</code>, <code>sLastMessage = 'FOO'</code>.</p>
+    <div class="callout">
+      <b>Verified end-to-end</b> on 2026-07-07 with a fresh install (pyads 3.6.0, TwinCAT 3.1.4026). Bridge logs, PLC symbol reads, and (post-rebuild) HMI indicators all agreed.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Alternatives (if <code>sim_robot.py</code> isn't available)</h3>
+    <pre># Linux / WSL / Git Bash — netcat
+nc 127.0.0.1 2000
+POS1
+POS2
+POS3
+FOO
+
+# Windows PowerShell — no netcat needed
+$c = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 2000)
+$w = New-Object System.IO.StreamWriter($c.GetStream())
+$w.NewLine = "`n"; $w.AutoFlush = $true
+$w.WriteLine("POS1"); Start-Sleep 1
+$w.WriteLine("POS2"); Start-Sleep 1
+$w.WriteLine("POS3"); Start-Sleep 1
+$w.WriteLine("FOO");  Start-Sleep 1
+$c.Close()</pre>
+  </div>
+
+  <div class="card">
+    <h3>Piston smoke test (independent of the robot)</h3>
+    <p>Even without the bridge running, the pneumatic pistons are fully operable from the HMI:</p>
+    <ol class="compact">
+      <li>Go to the Piston page. Six UCs in a 3×2 grid.</li>
+      <li>For SepSol1 or PushSol1 (wired to real IO), press EXTEND. Solenoid indicator turns green, coil energizes. When the extended limit switch trips, the button un-highlights (target reached).</li>
+      <li>Press-and-hold JOG next to EXTEND — coil energizes only while the button is held.</li>
+      <li>For SepSol2/3 + PushSol2/3 (soft-only), the same UI works but no hardware output flows. See <a href="open-issues.html">Open issues</a>.</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- RECOVERY                                                     -->
+<!-- ============================================================ -->
+<section class="panel" id="panel-recovery">
+  <h2>Recovery</h2>
+  <p>What to do when something has stopped working.</p>
+
+  <div class="card">
+    <h3>Symptom: HMI Robot page frozen on stale state</h3>
+    <p>Typically means the bridge process died. Position indicators + connection state reflect the last successful write.</p>
+    <ol class="compact">
+      <li>Check the bridge console window — is it closed / exited?</li>
+      <li>Restart via <code>start_bridge.bat</code>. Watch for exceptions on startup.</li>
+      <li>If the exception is <code>ADSError: 1861 (target port not found)</code> — the TwinCAT runtime is not in Run mode. Restart it.</li>
+      <li>If <code>ConnectionRefusedError</code> in client mode — the robot's TCP server is down or unreachable.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: HMI shows <code>HMI_ADS_E_INVALID_SYMBOL</code> for stRobot fields</h3>
+    <p>The PLC symbol table doesn't yet know about the new struct fields. Fix:</p>
+    <ol class="compact">
+      <li>In TcXaeShell: <b>PLC → Login</b>, then <b>TwinCAT → Activate Configuration</b>. An Online Change is <b>not sufficient</b> for new struct members — the symbol table cache needs a full activate.</li>
+      <li>If still failing after Activate, restart TcXaeShell — the IDE has a symbol-table cache of its own.</li>
+      <li>Force-refresh the browser (Ctrl+F5) to bypass the HMI's client cache.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: <code>SYMBOL_NOT_AUTHORIZED</code> on stRobot</h3>
+    <p>The symbol is in the SYMBOLS map but not in the USERGROUPS ACL. Fix:</p>
+    <ol class="compact">
+      <li>Open <code>Server/TcHmiSrv/TcHmiSrv.Config.default.json</code>.</li>
+      <li>Under <code>USERGROUPS.__SystemUsers.SYMBOLS</code>, verify <code>"ADS.PLC1.GVL_Robot.stRobot": 3</code> is present.</li>
+      <li>Rebuild + republish the HMI project.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: HMI page shows old content after edit</h3>
+    <p>TcHmi caches <code>.content</code> and <code>.usercontrol</code> in the browser aggressively.</p>
+    <ol class="compact">
+      <li>Hard reload: Ctrl+F5, or open DevTools and check "Disable cache" while devtools is open.</li>
+      <li>If a UserControl was renamed, also check <code>tchmiconfig.json</code>'s <code>userControls</code> list.</li>
+      <li>If a localization key was added, both <code>en.localization</code> and <code>de.localization</code> must have it — otherwise the runtime falls back to the literal key text.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: PLC won't build after external file edit</h3>
+    <p>Common when edits happen outside TcXaeShell (e.g. via Claude Code or git).</p>
+    <ol class="compact">
+      <li>Confirm every new file has a matching <code>&lt;Compile Include="..."/&gt;</code> in <code>PLC1/PLC1.plcproj</code>.</li>
+      <li>Confirm every TcPOU / TcDUT / TcGVL has a unique GUID in its <code>Id="{...}"</code> attribute.</li>
+      <li>If the project appears empty in the Solution Explorer after opening, look for a stripped <code>.tsproj</code> — never commit hand-edited <code>.tsproj</code> files. Restore from git if needed.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: HMI console shows <code>E_TRIGGER_CONDITION_INVALID</code> (code 5200/0x1450)</h3>
+    <p>Full text: <i>"Condition definition is invalid because it contains no expressions and no following actions."</i> The event target usually points at a specific property binding, e.g. <code>%pp%RobotHost::robot::eConnState%/pp%</code>.</p>
+    <p><b>Cause.</b> A trigger's <code>Condition</code> action was authored with an <code>elseIf</code> part. TcHmi only supports <code>if</code> and <code>else</code>. The <code>elseIf</code> key is silently ignored — the part is seen as having no expression and no action, and the whole condition is refused at parse time.</p>
+    <p><b>Fix.</b> Nest a fresh <code>Condition</code> inside the outer <code>else</code>'s <code>then</code> array, one level per additional branch:</p>
+    <pre>parts: [
+  { if: [state == A], then: [action A] },
+  { else: [
+      { objectType: "Condition", parts: [
+          { if: [state == B], then: [action B] },
+          { else: [
+              { objectType: "Condition", parts: [
+                  { if: [state == C], then: [action C] },
+                  { else: [action D] } ] } ] } ] } ] }
+]</pre>
+    <p>Verbose but the only supported shape for n-way state → color mapping without introducing a user function. The Flower <code>UC_Robot.usercontrol</code> uses this nesting for its 4-state <code>eConnState</code> color trigger — copy that pattern.</p>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: docs viewer shows a fetch error</h3>
+    <p><code>viewer.html</code> uses <code>fetch()</code> to load the .md source, which browsers block under <code>file://</code>.</p>
+    <ol class="compact">
+      <li>Serve via <code>scripts\serve-docs.bat</code> (or <code>python -m http.server 8765</code> from the repo root) and browse via <code>http://127.0.0.1:8765/docs/index.html</code>.</li>
+      <li>The HTML pages (configuration, operation, open-issues) work fine under <code>file://</code>; only the markdown viewer needs HTTP.</li>
+    </ol>
+  </div>
+</section>
+
+</main>
+
+<script>
+  const tabs = document.getElementById('tabs');
+  const panels = document.querySelectorAll('.panel');
+  tabs.addEventListener('click', e => {
+    if (e.target.tagName !== 'BUTTON') return;
+    tabs.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    const t = e.target.dataset.tab;
+    panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + t));
+    location.hash = '#' + t;
+  });
+  if (location.hash) {
+    const t = location.hash.slice(1);
+    const btn = tabs.querySelector('button[data-tab="'+t+'"]');
+    if (btn) btn.click();
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flower — Open Issues</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d30; --border: #3e3e42;
+    --text: #e0e0e0; --muted: #a0a0a0;
+    --accent: #4fc3f7; --accent2: #81c784; --warn: #ffb74d; --danger: #e57373;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.55 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 20px 30px; }
+  header h1 { margin: 0 0 6px 0; font-size: 22px; color: var(--accent); }
+  header .meta { color: var(--muted); font-size: 12px; }
+  header .meta a { color: var(--accent); text-decoration: none; }
+  main { padding: 24px 30px; max-width: 1200px; }
+  h2 { color: var(--accent); font-size: 18px; margin: 24px 0 12px 0; }
+  h3 { color: var(--accent2); font-size: 13px; margin: 18px 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  p { line-height: 1.6; }
+  code { background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--accent); font-family: 'Consolas', 'Cascadia Code', monospace; font-size: 12.5px; }
+  pre { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 12px 14px; font-family: 'Consolas', monospace; font-size: 12px; color: var(--accent2); overflow-x: auto; line-height: 1.5; }
+  .issue {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-left: 4px solid var(--warn);
+    border-radius: 8px; padding: 18px 22px; margin-bottom: 20px;
+  }
+  .issue.blocking { border-left-color: var(--danger); }
+  .issue.deferred { border-left-color: var(--warn); }
+  .issue h3 {
+    margin: 0 0 4px 0; text-transform: none; letter-spacing: 0;
+    color: var(--accent); font-size: 16px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .issue .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    background: var(--warn); color: var(--bg);
+  }
+  .issue.blocking .tag { background: var(--danger); }
+  .issue .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .issue .body { margin-top: 12px; font-size: 13px; line-height: 1.6; }
+  .issue .body p { margin: 8px 0; }
+  .kv-table { width: 100%; border-collapse: collapse; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+  .kv-table th { background: var(--bg3); color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .kv-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-size: 12px; vertical-align: top; }
+  .kv-table tr:last-child td { border-bottom: 0; }
+  .kv-table .k { color: var(--muted); font-family: 'Consolas', monospace; white-space: nowrap; }
+  .kv-table .v { color: var(--accent2); font-family: 'Consolas', monospace; }
+  .kv-table .tbd { color: var(--warn); font-family: 'Consolas', monospace; font-weight: 700; }
+  .kv-table .n { color: var(--text); }
+  ul.compact { margin: 6px 0 8px 20px; padding: 0; }
+  ul.compact li { margin: 3px 0; font-size: 13px; }
+  .callout { background: rgba(129, 199, 132, 0.08); border-left: 4px solid var(--accent2); padding: 10px 14px; border-radius: 4px; margin: 10px 0; font-size: 12.5px; }
+  .callout b { color: var(--accent2); }
+  .stats { display: flex; gap: 10px; margin: 12px 0 24px 0; flex-wrap: wrap; }
+  .stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px; }
+  .stat b { color: var(--accent); font-size: 16px; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Flower — Open Issues &amp; Deferred Decisions</h1>
+  <div class="meta">
+    Branch <b>master</b> &middot; docs generated <b>2026-07-07</b>
+    &middot; <a href="index.html">← Doc index</a>
+    &middot; <a href="configuration.html">Configuration</a>
+    &middot; <a href="operation.html">Operation</a>
+  </div>
+</header>
+
+<main>
+
+<p>These items are documented decisions that need external input to close (channel numbers, integration protocol) — not bugs. The system runs fine without them being decided, but hardware / robot commissioning will hit them.</p>
+
+<div class="stats">
+  <div class="stat"><b>2</b> open items</div>
+  <div class="stat"><b>4</b> soft-only pistons</div>
+  <div class="stat"><b>1</b> deferred protocol decision</div>
+</div>
+
+<!-- ISSUE 1 -->
+<div class="issue deferred">
+  <h3>#1 — Robot TCP/IP role: server or client? <span class="tag">Deferred</span></h3>
+  <div class="sub">Owner: commissioning · Blocks: real-robot integration only · Introduced: initial robot bridge commit</div>
+
+  <div class="body">
+    <p><b>Question.</b> Does the robot dial the bridge (bridge = TCP server), or does the bridge dial the robot (bridge = TCP client)?</p>
+
+    <p><b>Why deferred.</b> Different robot vendors default to different roles: some expose their own TCP server (bridge should be client), others expect a listening endpoint (bridge should be server). Choosing before we know the specific controller model risks committing code that has to be flipped anyway.</p>
+
+    <p><b>How to resolve.</b> One line in <code>RobotBridge/config.yaml</code>:</p>
+    <pre>robot:
+  role: "server"   # or "client"
+  host: "192.168.1.50"   # ignored when role=server
+  port: 2000</pre>
+    <p>Restart the bridge process. No code change, no rebuild.</p>
+
+    <p><b>Default in git.</b> <code>role: "server"</code>, <code>port: 2000</code>, placeholder <code>host</code>. This works out of the box for the <code>nc</code>-based smoke test.</p>
+
+    <p><b>Related code.</b> <code>RobotBridge/robot_bridge.py</code>: <code>accept_from_robot()</code> vs <code>connect_to_robot()</code> — both feed the same parser and PLC writer, so the choice is truly cosmetic in the source.</p>
+
+    <div class="callout">
+      <b>Broader constraint.</b> This choice sits inside a bigger decision — the whole bridge exists to avoid Beckhoff's paid <b>TF6310 TCP/IP</b> supplement. Do not "solve" this by adding <code>Tc2_TcpIp</code> to the PLC project; see <code>configuration.html#bridge</code> and the memory note <code>feedback_avoid_licensed_beckhoff_libs</code> for the rationale.
+    </div>
+  </div>
+</div>
+
+<!-- ISSUE 2 -->
+<div class="issue blocking">
+  <h3>#2 — Physical IO channel assignment for SepSol2/3 + PushSol2/3 <span class="tag">Blocking hw</span></h3>
+  <div class="sub">Owner: electrical integrator · Blocks: full-rig operation · Software already wired</div>
+
+  <div class="body">
+    <p><b>Question.</b> Which <code>GVL_IO.dIn[]</code> / <code>dOut[]</code> array slots are wired to the physical proximity switches and solenoid valves of the four unassigned pistons?</p>
+
+    <p><b>Current state.</b> <code>GVL_IO.dIn</code> and <code>GVL_IO.dOut</code> are sized <code>ARRAY[1..16]</code>. Slots 1..8 were re-verified after the array grew; slots 9..16 are unassigned. Two pistons are wired:</p>
+
+    <table class="kv-table">
+      <tr><th>Actuator</th><th>DI (Retract)</th><th>DI (Extend)</th><th>DO (Retract)</th><th>DO (Extend)</th></tr>
+      <tr><td class="k">SepSol1</td><td class="v">dIn[1]</td><td class="v">dIn[2]</td><td class="v">dOut[1]</td><td class="v">dOut[2]</td></tr>
+      <tr><td class="k">SepSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+      <tr><td class="k">SepSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+      <tr><td class="k">PushSol1</td><td class="v">dIn[7]</td><td class="v">dIn[8]</td><td class="v">dOut[7]</td><td class="v">dOut[8]</td></tr>
+      <tr><td class="k">PushSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+      <tr><td class="k">PushSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+    </table>
+
+    <p><b>What "soft-only" means.</b> The four unassigned pistons already run — HMI operator can drive them and see UI feedback — but the FB outputs never reach hardware. The <code>GVL_App</code> alias variables stay in software; the copies to/from <code>GVL_IO</code> in MAIN's READ INPUTS / WRITE OUTPUTS bookends are commented out with <code>TODO</code> markers.</p>
+
+    <p><b>How to resolve.</b> Once channels are assigned:</p>
+    <ol class="compact" style="margin-left:22px">
+      <li>Fill in the four TBD rows above.</li>
+      <li>Open <code>Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU</code>. Ten lines are currently commented placeholders like <code>// GVL_App.bSensorSepRetracted2 := GVL_IO.dIn[??];</code>.</li>
+      <li>Replace each <code>[??]</code> with the actual slot number, uncomment the line, and remove its <code>TODO</code> marker.</li>
+      <li>Rebuild + Activate. In the Watch window, force <code>GVL_IO.dIn[N]</code> for each new switch and confirm the corresponding <code>bAtPos</code> / sensor indicator on the HMI updates.</li>
+    </ol>
+
+    <p><b>Tag convention.</b> <code>&lt;Device&gt;Sol&lt;N&gt;&lt;slot&gt;</code> where slot 1 = RETRACT, slot 2 = EXTEND. E.g. the SepSol1 retract sensor is <code>DiSepSol11</code> and the extend sensor is <code>DiSepSol12</code>.</p>
+
+    <p><b>Related caveat.</b> After the array grew from <code>[1..8]</code> to <code>[1..16]</code>, the EtherCAT links for slots 1..8 must be re-verified in the System Manager — TwinCAT does not always re-attach linked variables when their parent array is resized. Symptom: SepSol1 / PushSol1 sensor indicators stop updating even though nothing else changed.</p>
+  </div>
+</div>
+
+<!-- Closed / recently resolved ------------------------------------ -->
+<h2>Recently closed</h2>
+<p style="color: var(--muted); font-size: 12.5px;">Items resolved recently, kept here for context.</p>
+
+<div class="issue" style="border-left-color: var(--accent2); opacity: 0.85;">
+  <h3>✓ Robot TCP/IP receive path <span class="tag" style="background: var(--accent2)">Closed</span></h3>
+  <div class="sub">Closed 2026-07-07 · Shipped as Python bridge (RobotBridge/)</div>
+  <div class="body">
+    <p>Original TODO: <i>create protocol to talk to industrial robot via TCP/IP — TC PLC to receive from the robot: in position 1, 2, 3</i>. Delivered via the Python bridge instead of a PLC-native socket implementation, avoiding the paid TF6310 supplement. The role decision (server vs client) is the only surviving open item — see #1 above.</p>
+  </div>
+</div>
+
+<div class="issue" style="border-left-color: var(--accent2); opacity: 0.85;">
+  <h3>✓ Momentary JOG buttons on piston UC <span class="tag" style="background: var(--accent2)">Closed</span></h3>
+  <div class="sub">Closed in commit a8672fa</div>
+  <div class="body">
+    <p>Two JOG buttons per piston added to <code>UC_Piston.usercontrol</code>, bound to <code>bManJog*</code> in <code>ST_HmiPiston</code>. FB's Section 2 ladder now checks jog branches ahead of latched targets. Manual-mode gated, respects the effective end sensor.</p>
+  </div>
+</div>
+
+</main>
+
+</body>
+</html>
