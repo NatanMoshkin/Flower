@@ -164,6 +164,21 @@
 ]</script>
 </div>
 
+<!-- ============ Simulate-sensor checkboxes (JetGame-style) ============ -->
+<!-- When ticked, the effective sensor in FB_SolSolPiston_2Pos.Section 0a
+     evaluates real-OR-simulate as TRUE. Use these to smoke-test the piston
+     FB and the auto sequencer without any physical hardware:
+       1) Tick Sim RET to declare "piston is at retracted end" as the start state.
+       2) Press EXTEND (or start the auto cycle). Coil energizes.
+       3) Tick Sim EXT + untick Sim RET — the FB now sees the piston at extended;
+          it releases the coil and (auto mode) advances to DWELL_EXT.
+     Bidirectional binding — no scripts needed. -->
+<!-- Placed left of the sensor indicators, aligned to their respective rows. -->
+<div id="SimExtCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="8" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Sim EXT" data-tchmi-state-symbol="%pp%piston::bSimulateExtended|BindingMode=TwoWay%/pp%" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="1">
+</div>
+<div id="SimRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="8" data-tchmi-left-unit="px" data-tchmi-top="200" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Sim RET" data-tchmi-state-symbol="%pp%piston::bSimulateRetracted|BindingMode=TwoWay%/pp%" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="1">
+</div>
+
 <!-- ============ Manual / Auto toggle ============ -->
 <!-- Bound to local BOOL bModeAuto (see .usercontrol.json). Two triggers sync bModeAuto <-> piston::eMode (Manual=0 / Automatic=1). -->
 <div id="ModeToggle" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiToggleSwitch" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="141" data-tchmi-left-unit="px" data-tchmi-text="&lt;-Man / Auto-&gt;" data-tchmi-top="270" data-tchmi-top-unit="px" data-tchmi-width="153" data-tchmi-width-unit="px" data-tchmi-state-symbol="%pp%bModeAuto|BindingMode=TwoWay%/pp%" data-tchmi-text-position="Right" data-tchmi-zindex="1">

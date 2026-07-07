@@ -1,4 +1,4 @@
-<div id="PistonPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730">
+<div id="PistonPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="1080">
 
   <!-- Column 1 -->
   <div id="SepSol1Host"
@@ -58,6 +58,19 @@
        data-tchmi-width="337" data-tchmi-width-unit="px"
        data-tchmi-height="340" data-tchmi-height-unit="px"
        data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stPushSol3%/s%">
+  </div>
+
+  <!-- Row 3: auto-cycle sequencer for SepSol1 (v1 demo — placed under column 1) -->
+  <div id="SepSol1AutoHost"
+       data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost"
+       data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol"
+       data-tchmi-top="720" data-tchmi-top-unit="px"
+       data-tchmi-left="20" data-tchmi-left-unit="px"
+       data-tchmi-width="337" data-tchmi-width-unit="px"
+       data-tchmi-height="340" data-tchmi-height-unit="px"
+       data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol1Auto%/s%"
+       data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg%/s%"
+       data-tchmi-pistonname="SepSol1 — Auto Cycle">
   </div>
 
 </div>

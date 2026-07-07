@@ -1,0 +1,58 @@
+{
+  "parameters": [
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setAuto",
+      "propertyGetterName": "getAuto",
+      "refTo": "",
+      "name": "data-tchmi-auto",
+      "displayName": "auto",
+      "visible": true,
+      "type": "tchmi:project#/definitions/PLC1.ST_HmiPistonAuto",
+      "category": "",
+      "description": "Runtime state — commands + step + error. Bound to GVL_HMI.stSepSol1Auto.",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "auto"
+    },
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setCfg",
+      "propertyGetterName": "getCfg",
+      "refTo": "",
+      "name": "data-tchmi-cfg",
+      "displayName": "cfg",
+      "visible": true,
+      "type": "tchmi:project#/definitions/PLC1.ST_HmiPistonAutoCfg",
+      "category": "",
+      "description": "PERSISTENT config — dwell + timeout + continuous. Bound to GVL_HmiPersistent.stSepSol1AutoCfg.",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "cfg"
+    },
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setPistonName",
+      "propertyGetterName": "getPistonName",
+      "refTo": "",
+      "name": "data-tchmi-pistonname",
+      "displayName": "pistonName",
+      "visible": true,
+      "type": "tchmi:general#/definitions/String",
+      "category": "",
+      "description": "Static label for the header (e.g. 'SepSol1').",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "pistonName"
+    }
+  ],
+  "virtualRights": [],
+  "$schema": "./../../Packages/Beckhoff.TwinCAT.HMI.Framework.14.4.5/runtimes/native1.12-tchmi/Schema/UserControlConfig.Schema.json",
+  "description": ""
+}

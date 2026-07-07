@@ -62,6 +62,9 @@
       "url": "UserControls/UC_Piston.usercontrol"
     },
     {
+      "url": "UserControls/UC_PistonAuto.usercontrol"
+    },
+    {
       "url": "UserControls/UC_Robot.usercontrol"
     }
   ],

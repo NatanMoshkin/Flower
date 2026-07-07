@@ -9,7 +9,7 @@
     "CACHEMAXAGE": "P30D",
     "CACHEMAXENTRYSIZE": 1048576,
     "CACHEMAXSIZE": 2097152,
-    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQrRENDQXVDZ0F3SUJBZ0lKQUk1ZDlpekFOUGJHTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TnpFek1URXpObG9YRFRJNU1EY3dOekEzTVRFek5sb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBdFZOcAp1NTgxSkNLUTFONVhWSE5uRTExd2Fxa1NZb3FHZTFzN1dTaHpIRUJzbSthVmtiYWR2SjY4RGswV0xaTGp2SEpHCktOc1hVKzFNbUMxdWJLNWFJOTBFYlVqN1ZDNXBVdlFaRGhLUnBZdlIrUFg4Mk9HbU1xYzZrL1YwcTYydDhoQWkKOUdOSzQ2ZnJVQjZHSFgxTGhQYjM2VGtqNkZ5dXJTUjRkZUdWWnc1bW5GeTkydktkNUJNQWhVWVJBRTA5eFEwNQpSeHgyMGhGWk05R3BEZjk5a2JFQVMxQTc4K1U4eE05Q0VLeTdJazhLM243WUVyRFlzdnVMVVlVUlkxU1ZkVzh6CnVacUFvV0I2TUhwZlIwVGM1M2NNS2pweWR1Q1Y0QlVnNTZiWitveGpqRE9pQ3RWZHVRM1hyUys2alhEQmlQeXcKQW5qbTZmdm9PVUFGVWptbjd3SURBUUFCbzRIek1JSHdNSUdQQmdOVkhSRUVnWWN3Z1lTQ0NXeHZZMkZzYUc5egpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmhiazB1CmEyRjFabTFoYmkxeVpDNWpiMjJIQk1Db0FjT0hFQ29OYjhBSEpKMEFFSjZQQXBMUzFrZUhFQ29OYjhBSEpKMEEKTGhyaXNhYVozMWlIRVA2QUFBQUFBQUFBMWJKNGRmM0VBdWd3SFFZRFZSME9CQllFRkNVMHZ6UVVhQzgrZktPUwp6Sjl2bU9IREJjYW9NQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1Bd0dBMVVkCkV3RUIvd1FDTUFBd0RnWURWUjBQQVFIL0JBUURBZ1dnTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBNWJWTXkKeFdyNlQ3a1NZT2k5MEJ6Mm5jQTQ1d1ZkSStIejJ6WlJKTG1aUWxNbTRhdzR3c2pWY0dQMUYyT29RanNaZE44ZwpuaklYSjdhdEZvRjhwTjhPU3dQck8yMk9ZZHpXK3IzWCtzVjNGUmdtT3JrZW9kRHBBd1FsS2toUWtxZW85K08rClpUSDUvZ1N1SzdlUHhpMlFWVkV4Y1czWWx0WjVHNEw5V3NReC96eDQvK1hiL0gySDZ6T0lrWks4OTJEV0l4ZmsKT3djSEFKdEtRQVJtcVhkTUpYdDRRbHhlVk1xdGRqQTg5cXQzZVpBL0dqeW01Q1N0WWsvWk9nWXN0eXdNVjFtTgo4OFdOUHFVTHM3ZXZFVjBpQ1VEZjc3WWpYVXNCT1dmN3BNOUZMQnNEc2NGQS80TThCMmRKejg1OXpLaWpJNGU2CkdYdDhsOTRVMnhPWVZrMi8KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
+    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQrRENDQXVDZ0F3SUJBZ0lKQUpjaURpeUI0MVY1TUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TnpFMk16Y3lObG9YRFRJNU1EY3dOekV3TXpjeU5sb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBcklKWAp3SGhHczE2MkFSbDFtWjdLYzVJSUJQYlpYWnVMT0NhNk9LLzN3V1Q3QnBOVnVRcUx2NUFCb0JOZlhKcjA4K1pnClVIaStzN1ZzQ1dveHlOekRzSlJyS0JXeEgyaTZZMVNxVnE0MWREcDdya0J1OFIrZzRSNXUxZVFNNnZqM0pyaU8Ka2EybStvSzdKcFF0Q3ByRnFFa2JmaTBkRFc4Y05yMU85QnFLS3Btd2FwME9oaXYzZ25oUDZ3UHVCZ1ppTW1ULwpSaWFCclJrZHVFbG55YWpPSUNoVk5idlU0VnVJQVZwVUV6Q01oVjlhK2pvNlpHalRyRENKVytqNjl5YTZhcmVtCnp5ZFRDMlBWUXNldzJRYkdsQW50SXBYaWVnZkp3QlFEdklzSkQrWTN1L0VXeTFWUlFzVlk4M3JrYWl5L1p5QkkKYzVSSlZ2Vm9zV2NIbHVmaTdRSURBUUFCbzRIek1JSHdNSUdQQmdOVkhSRUVnWWN3Z1lTQ0NXeHZZMkZzYUc5egpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmhiazB1CmEyRjFabTFoYmkxeVpDNWpiMjJIQk1Db0FjT0hFQ29OYjhBSEpKMEFMaHJpc2FhWjMxaUhFQ29OYjhBSEpKMEEKTWNkYVdXRzM4L3VIRVA2QUFBQUFBQUFBMWJKNGRmM0VBdWd3SFFZRFZSME9CQllFRlA0WDd1R1o4YnJQN1BETwowN29MTmZIcWRHTE9NQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1Bd0dBMVVkCkV3RUIvd1FDTUFBd0RnWURWUjBQQVFIL0JBUURBZ1dnTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFBOFY5eDAKT3IxMmp6WG13NE9KeXdIUFB4YVRhZ2J5U2pHdzB6cDhGVmxCdHVXRm9iQWp6RU9WSzhIMzNWa09ZVjlrdlJsdApNR3VQMDRhb3pydkFWMCtraHltbUlFWmFUbFVGc3krY3JKWjA4NmxQSE9tNm1WcWdkV2RSTnRYenJTM3dUUCt6CjZMZEw5T3A0M1ovN2ZFczF2MmQ0V3dHYjA1Q05FMGlZMUQzSTg5dmpkZlNXaGNTaENrNTJXLy9lS3lza1kxN1gKOHZUcGJ0ZXgrbFVqZjdrM01zZ0hnalNqWWdtWE9XT202anMvdXBoY3BwVHpXVmdVOTBYODdFaDdIRFlmeTE5bQpUNE9LcnBERUhQcjBXS3RsbWpjQ2VWWUF3dlFPL3lYSHFkMHpsTlRLaitPRExZV3lYNVNsR3g2YjVYWmtrOVliCnJrWmdIY0ExakgvRUN2SVIKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
     "CERTIFICATEEXPIRATION": "P1095DT18H",
     "CHECKSUMENABLED": true,
     "CHUNKSIZE": 1048576,
@@ -31,6 +31,49 @@
     "DEFAULTTIMEZONE": "client",
     "DEFINITIONS": {
         "ADS": {
+            "ADS-PLC1.E_AutoStep": {
+                "attributes": {
+                    "generate_implicit_init_function": "",
+                    "qualified_only": "",
+                    "strict": "",
+                    "to_string": ""
+                },
+                "enum": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    99
+                ],
+                "options": [
+                    {
+                        "label": "IDLE",
+                        "value": 0
+                    },
+                    {
+                        "label": "EXTENDING",
+                        "value": 1
+                    },
+                    {
+                        "label": "DWELL_EXT",
+                        "value": 2
+                    },
+                    {
+                        "label": "RETRACTING",
+                        "value": 3
+                    },
+                    {
+                        "label": "DWELL_RET",
+                        "value": 4
+                    },
+                    {
+                        "label": "ERR",
+                        "value": 99
+                    }
+                ],
+                "type": "integer"
+            },
             "ADS-PLC1.E_ControlMode": {
                 "attributes": {
                     "generate_implicit_init_function": "",
@@ -295,6 +338,195 @@
                     "bIsMoving",
                     "bOutSolenoidExtend",
                     "bOutSolenoidRetract"
+                ],
+                "type": "object"
+            },
+            "ADS-PLC1.ST_HmiPistonAuto": {
+                "additionalProperties": false,
+                "properties": {
+                    "bAck": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 4
+                            }
+                        ]
+                    },
+                    "bError": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 8
+                            }
+                        ]
+                    },
+                    "bReset": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "bStart": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "HMI writes — momentary commands (R_TRIG inside FB latches the rising edge)",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    },
+                    "bStop": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 2
+                            }
+                        ]
+                    },
+                    "eStep": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.E_AutoStep"
+                            },
+                            {
+                                "comment": "FB writes — status (never touched by HMI)",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "nCyclesCompleted": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "incremented at end of each DWELL_RET",
+                                "propertyOrder": 10
+                            }
+                        ]
+                    },
+                    "sErrorText": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/STRING%2880%29"
+                            },
+                            {
+                                "propertyOrder": 9
+                            }
+                        ]
+                    },
+                    "sStepText": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-20"
+                            },
+                            {
+                                "comment": "human-readable mirror of eStep",
+                                "propertyOrder": 6
+                            }
+                        ]
+                    },
+                    "tElapsedS": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/LREAL"
+                            },
+                            {
+                                "comment": "seconds spent in the current step (0.0 on transition)",
+                                "propertyOrder": 7
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "bStart",
+                    "bStop",
+                    "bReset",
+                    "bAck",
+                    "eStep",
+                    "sStepText",
+                    "tElapsedS",
+                    "bError",
+                    "sErrorText",
+                    "nCyclesCompleted"
+                ],
+                "type": "object"
+            },
+            "ADS-PLC1.ST_HmiPistonAutoCfg": {
+                "additionalProperties": false,
+                "properties": {
+                    "bContinuous": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "If TRUE, DWELL_RET loops back to EXTENDING instead of returning to IDLE.",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "tDwellExtendedMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "All times in milliseconds. UDINT so HMI NumericInput binds directly (no TIME<->UDINT juggling).\r\n Dwell = how long to sit at the sensor before starting the reverse move.",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    },
+                    "tDwellRetractedMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "propertyOrder": 2
+                            }
+                        ]
+                    },
+                    "tTimeoutExtendMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "Timeout = if we do not see the target sensor within this window, raise an error.",
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "tTimeoutRetractMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "propertyOrder": 4
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "tDwellExtendedMs",
+                    "tDwellRetractedMs",
+                    "tTimeoutExtendMs",
+                    "tTimeoutRetractMs",
+                    "bContinuous"
                 ],
                 "type": "object"
             },
@@ -621,7 +853,7 @@
     "HTTP_FLOODPROTECTION": 100,
     "INITTIMEOUT": "PT10S",
     "KEEP_ALIVE": "PT40S",
-    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQzFVMm03bnpVa0lwRFUKM2xkVWMyY1RYWEJxcVJKaWlvWjdXenRaS0hNY1FHeWI1cFdSdHAyOG5yd09UUll0a3VPOGNrWW8yeGRUN1V5WQpMVzVzcmxvajNRUnRTUHRVTG1sUzlCa09FcEdsaTlINDlmelk0YVl5cHpxVDlYU3JyYTN5RUNMMFkwcmpwK3RRCkhvWWRmVXVFOXZmcE9TUG9YSzZ0SkhoMTRaVm5EbWFjWEwzYThwM2tFd0NGUmhFQVRUM0ZEVGxISEhiU0VWa3oKMGFrTi8zMlJzUUJMVUR2ejVUekV6MElRckxzaVR3cmVmdGdTc05peSs0dFJoUkZqVkpWMWJ6TzVtb0NoWUhvdwplbDlIUk56bmR3d3FPbkoyNEpYZ0ZTRG5wdG42akdPTU02SUsxVjI1RGRldEw3cU5jTUdJL0xBQ2VPYnArK2c1ClFBVlNPYWZ2QWdNQkFBRUNnZ0VBREZPLzkwaldiSnA0YUhjM2N2WERPVStFNTliWDFTRGtvRFA4S3pMM3BQeWUKaWk5VW56UHlld1ZvdmMzZXE0dWp4K0k2cUl0QkYrTUFXOE9SeC9tMHZNN2Jmc0tCSVZka0hqM2tVK0VwbElnbwo1c2JnSEluczh5Z01jSllSQzFQK1ArNE1WdC9aTnZSWGc1N2g1MExDaExsUThubUFrU1pTd0pxZlJkL0RDMHkzCjlCS2J4c0JQQkFkaVFOZXp5NjBiU3RmeGhlQlJieDlPM1U4eFVQSktCTTJMd0hYcU1qODN4U2x2dkgrNFFlZ1EKWlJYU2YxVVhhNitwZzBxa2NRT1F0czN3T2MxKzlab3JlU25ieS93cDJZVGVaTjFRNXcxdi9CdFdQNzZIMlQzbgpFQnpGU1dJOHpYL3c0bllaTDd1WHhiQ1BNTTgxdUtLbGt0OGxHbVhCQVFLQmdRRDhoMUhmK0NucnMvTkZsWXg3CktvUU5zSVJMb2ZFaUR6Qk9WOWhHSTVZRFJpWmFUb1dpK29zeVFCMDFIUkZqYUJzSmF4dlFFWjcvbEVQZzRNNSsKbmdOa0RaMG5nWXZ4ODRSeGJCSUEzRWIwSTluc3dLT2tXVlBTdW1JQjJHQTV5WlZaSjJxUEV4YzQzT3F1b0laRwpTU1YweHhYN0s4UHpDMWxLbWNVRTZRZXJvUUtCZ1FDMzBZV0tQMVh3OGhBUnF5Zk5aRU5CU2FNYnE5TzlNK25zCnJ0ZDdxZk5PRnBMc1hXd01zNWs2UEdTdFM4TWdOaW1oSnBnVXJWWUVCV1BmVkRTQTlrM0hEZDZVZmN0RmNvZmoKQTd0aHFUYUJzK1VJUTVYQVhyaHo3a0FySVNBSmtONVZJekhEcG9JUXBsakZiVkRDWHI3bW8ybTV5SlQ5N08zbwpFU1B0OS9RcGp3S0JnUUNEUW85RFBJb0ZzeDZqTDYyNm80bktWOU1jUVF2R3FXQnhpR1dwWjN2bExjUm5zbUx5CktRckxUdG9mcm9GSVMyZXFTSnRIVnJGdnBaQjJ4a052T3hFR0k3RnBSSVFLZW9xQUxpMVpkeVlHWnRBeXFKc20KcFN2VjMvMXJlaDNpUzY2dWpiZHNzUDZrRnVpQlpuMEU4YVpmZ2RBaUkwaVIvM2NsT0xKWThBdUZvUUtCZ0Z0MQpoRndrNXozYk11T1hwVllzYk1vdk9WaXJSYzc5NVlZOStEa3ZkaitFTzlZZkpZT3NXTEVCRzVhZCs1Z3JXc3N6CnlMZUJCeXM1QTFnN0xXUjlLSFhDRU4wUk9mSno2ZWlxRXJHazM5bnBDQ3YwZEs0aWN1UTd4dkd1cWFJWTBvYkoKM0JqYzRCb29xa0tSQVgyMFpvZWJCeC9KRFZqS2FoVHRjbE1VN0FkQkFvR0JBTk9yRDE4RGprYUUyait5NUlVOApEMEpFYlpTaGNkOU9sb3I4eElvL1lPV0QyblVGWk1GcXhqTVBzZFFUeUJYQWpaV1p5U3JpbzFSYzUzYlZjd3o2CjJGVTIwWFJRaUhoQk1qYmkyVGUzQm0xd0J3cVV0N0QyUEdyUVRKYTVtRkFwaGM3T3dZNHB3amFSb1lWbWVMNy8KRHFLbStQMWRnSHNuWUVvSGJnZkRpenVxCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3NnbGZBZUVhelhyWUIKR1hXWm5zcHprZ2dFOXRsZG00czRKcm80ci9mQlpQc0drMVc1Q291L2tBR2dFMTljbXZUejVtQlFlTDZ6dFd3SgphakhJM01Pd2xHc29GYkVmYUxwalZLcFdyalYwT251dVFHN3hINkRoSG03VjVBenErUGNtdUk2UnJhYjZncnNtCmxDMEttc1dvU1J0K0xSME5ieHcydlU3MEdvb3FtYkJxblE2R0svZUNlRS9yQSs0R0JtSXlaUDlHSm9HdEdSMjQKU1dmSnFNNGdLRlUxdTlUaFc0Z0JXbFFUTUl5RlgxcjZPanBrYU5Pc01JbGI2UHIzSnJwcXQ2YlBKMU1MWTlWQwp4N0RaQnNhVUNlMGlsZUo2QjhuQUZBTzhpd2tQNWplNzhSYkxWVkZDeFZqemV1UnFMTDluSUVoemxFbFc5V2l4Clp3ZVc1K0x0QWdNQkFBRUNnZ0VBQVhCK1orcjZLMlNhZ3V5TDFUY3pGSEVlZ2NaYUVaV2JLQ3hoSzhycmNMU1MKa3MrU2xncUwvRzBZYWszQWlHRDdtODlSSUtoeEh5TS9hT0xHTDE4YmVyb0lrU2YrdFJpS1kxbmllZ080SWpweApralVCVFlHL0o3Z2Y2cFFEOUdvNloyTmFuRDZYOFRFZmR2WXIza3YrUzhWZlRjMFdMMFhVaEZIVXhpUVBQZTh1CkN0ak9qQndmVmVjMWNocEFjcEZ6azlpeXlLWnpmZ2QxVGtIYzJvQlhnWlBYNlpHenpoUGxROUkyM2M2a3kxbGIKVlk4L2xSZzdPNjZSeGtXb2V1enhqYThuVTBZSyt5UmRDbDhNc0J0bWtiajEveXVvYjlZL0YrNm83bVNyeStIRApPTWJQb0NsZTJjOEVsazArcGxLUnA2STJFZStBUEQ0QmVsbm1jK3lkb3dLQmdRRHdsaHluMExlcklyYWNONTg4CjgzajJxd0JmZlAxcGJxSUJoZWhWbmh6RUFXWVNlT2xqMjJSbHM1OU1OdURNL1dKNTZxaUYxam1zSXRJRVU3RDEKTjBpT1BLdjAvd21CZ1lDeGhyTmdSYXdBWlMxY2hjaEsxdnNqb1BBZXJqK1IvRFpBUWp6SkRKRUpFSnJzMUh5Uwp3dithUWZrS0tSazVZSlI0Smxmbk9qUEx4d0tCZ1FDM2o3QURncjlucS9ERkNKenB3Q2JkQWNKT1ZpZ0U5UmFoCnJXcXplbUV4VjFpeUdRMG9ocnpQTTNjRURlaUV0d2gvTU5MZ1Q0R3lHcHhHWUNaa1JTN1NVb2NJTzBhWDZ1M0cKUnh2Uzl0dExPTU4xbHlOMmNyN0dTZDFvOXlpNjBscXlDM05adEQxWmtLOVp0YkNPNUhzclJiUjBLaWliV0g2SApoWGJqeWxrVHF3S0JnRndiN0o2blB4cHJNT1RBT3R2NER6REpLVnhsbXhPNWdwYjRzSW5PL2c1Z3hyWjl5a1VyCjR0VTVIdHpzQ2NjUm41a3pxUStNaEFvT1RyL1BWdW1iSDlFdEUxeTZJK2FNTVR4R2FQaUwxQjFXbnpaVUZlbnAKUXI5U1IzeEhsQmtOS2F3U2IvazlNVzM2Q0laeGw3d01vaFZwK3JIVUtFOGFWZDFtT0xOVFNpOVRBb0dCQUlLVgpKMlAzK1c0bzlTbFdEVHFFeGFEbmhYRHcvWnM1TjVaZ3BjMTBPL3c3NVE4ZG55eTdYVW9SbEpNL3lhL1AvYTF0CjhEWSttVWM0Z3YvVm1yb3VOVGJPR3QyU1BaQUpRb21SUUl2OXJOZUFWQnd0SHI4K3RkU2Q2M0tta1VVR0xCc0kKNWxCa1ZsaUhBeGRRbDMrdnJxZUQrUEhDcEF5UEVjUWJBQTdnZmludEFvR0JBTWhCZ1V0WnNKcjNqdXJYL0N2YQpLZmwxRTNFTWdkb0NKVGVmR09YL2dnblFvbE5qMkprRmJZWEx0VTA3ZHdsWUwrRG1jMU5oYm5lM1ViS0Z4eEJ6CkpwS1hMU1NnRUwzVlVsaWJxcmhHa3BIK0tFOEQ2MHBZMmRFWjZxelZXaXBwM0l0MHQ4MjZXRENBWmVydEZmaWkKSjhSYUpwZXFLKytNRmVKMnRLdTBZS28rCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
     "KEYPASSWORD": "",
     "MAXCONNECTIONSPERCLIENT": 32,
     "MAXHTTPHEADERSIZE": 32768,
@@ -1211,6 +1443,23 @@
             },
             "USEMAPPING": true
         },
+        "ADS.PLC1.GVL_HMI.stSepSol1Auto": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HMI::stSepSol1Auto",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "comment": "Runtime state for the SepSol1 auto sequencer. Config for it lives in\r\n GVL_HmiPersistent.stSepSol1AutoCfg (PERSISTENT)."
+                    },
+                    {
+                        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
+                    }
+                ]
+            },
+            "USEMAPPING": true
+        },
         "ADS.PLC1.GVL_HMI.stSepSol2": {
             "ACCESS": 3,
             "DOMAIN": "ADS",
@@ -1228,6 +1477,23 @@
             "MAPPING": "PLC1::GVL_HMI::stSepSol3",
             "SCHEMA": {
                 "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPiston"
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HmiPersistent::stSepSol1AutoCfg",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "comment": "Auto-cycle configuration. PERSISTENT so operator-tuned dwell / timeout\r\n values survive an Activate Configuration + PLC restart. Values reset\r\n to the struct defaults only on a full cold-boot reset."
+                    },
+                    {
+                        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
+                    }
+                ]
             },
             "USEMAPPING": true
         },
@@ -4249,8 +4515,10 @@
                 "ADS.PLC1.GVL_HMI.stPushSol2": 3,
                 "ADS.PLC1.GVL_HMI.stPushSol3": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol1": 3,
+                "ADS.PLC1.GVL_HMI.stSepSol1Auto": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol2": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol3": 3,
+                "ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg": 3,
                 "ADS.PLC1.GVL_Robot.stRobot": 3,
                 "ChangeUserSettings": 3,
                 "ConfirmAlarm": 3,

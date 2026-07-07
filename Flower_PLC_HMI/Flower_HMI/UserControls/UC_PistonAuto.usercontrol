@@ -1,0 +1,150 @@
+<div id="PistonAuto" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControl" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="337" data-tchmi-height="340" data-tchmi-width-unit="px" data-tchmi-height-unit="px" data-tchmi-creator-viewport-width="500" data-tchmi-creator-viewport-height="500">
+
+<!-- Title bound to pistonName parameter. TcHmi doesn't interpolate literal text
+     with %pp% expressions inside a Textblock's text attribute, so the caller
+     passes the whole title (e.g. "SepSol1 — Auto Cycle"). -->
+<div id="Title" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="0" data-tchmi-left-unit="px" data-tchmi-top="4" data-tchmi-top-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-text="%pp%pistonName%/pp%" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="14" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold" data-tchmi-zindex="0">
+</div>
+
+<!-- ============ Step banner (colored rect + text) ============ -->
+<!-- Color rule (nested if/else because TcHmi conditions don't support OR combinators):
+       state==99 (ERR)                     -> red
+       else state==0 (IDLE)                -> grey
+       else state==2 (DWELL_EXT)           -> green
+       else state==4 (DWELL_RET)           -> green
+       else (states 1 EXTENDING / 3 RETRACTING) -> yellow -->
+<div id="StepRect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="32" data-tchmi-top-unit="px" data-tchmi-width="313" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%auto::eStep%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          {
+            "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "symbolExpression": "%pp%auto::eStep%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "value": 99 }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(221, 90, 90, 1)" } }, "asyncWait": true } ]
+          },
+          {
+            "else": [
+              {
+                "objectType": "Condition", "active": true, "parts": [
+                  {
+                    "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "symbolExpression": "%pp%auto::eStep%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "value": 0 }, "compareOperator": "==", "logic": null } ],
+                    "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 90, 90, 1)" } }, "asyncWait": true } ]
+                  },
+                  {
+                    "else": [
+                      {
+                        "objectType": "Condition", "active": true, "parts": [
+                          {
+                            "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "symbolExpression": "%pp%auto::eStep%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "value": 2 }, "compareOperator": "==", "logic": null } ],
+                            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ]
+                          },
+                          {
+                            "else": [
+                              {
+                                "objectType": "Condition", "active": true, "parts": [
+                                  {
+                                    "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "symbolExpression": "%pp%auto::eStep%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_AutoStep", "value": 4 }, "compareOperator": "==", "logic": null } ],
+                                    "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ]
+                                  },
+                                  {
+                                    "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(255, 220, 80, 1)" } }, "asyncWait": true } ]
+                                  }
+                                ], "asyncWait": true
+                              }
+                            ]
+                          }
+                        ], "asyncWait": true
+                      }
+                    ]
+                  }
+                ], "asyncWait": true
+              }
+            ]
+          }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<div id="StepText" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="32" data-tchmi-top-unit="px" data-tchmi-width="313" data-tchmi-width-unit="px" data-tchmi-text="%pp%auto::sStepText%/pp%" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="13" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold" data-tchmi-zindex="1">
+</div>
+
+<!-- ============ Elapsed + Cycles counter row ============ -->
+<div id="ElapsedLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="66" data-tchmi-top-unit="px" data-tchmi-width="80" data-tchmi-width-unit="px" data-tchmi-text="Elapsed:" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="ElapsedVal" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="90" data-tchmi-left-unit="px" data-tchmi-top="66" data-tchmi-top-unit="px" data-tchmi-width="75" data-tchmi-width-unit="px" data-tchmi-text="%pp%auto::tElapsedS%/pp%" data-tchmi-text-format="{{value|toFixed:1}} s" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="0">
+</div>
+<div id="CyclesLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="180" data-tchmi-left-unit="px" data-tchmi-top="66" data-tchmi-top-unit="px" data-tchmi-width="60" data-tchmi-width-unit="px" data-tchmi-text="Cycles:" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="CyclesVal" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="240" data-tchmi-left-unit="px" data-tchmi-top="66" data-tchmi-top-unit="px" data-tchmi-width="80" data-tchmi-width-unit="px" data-tchmi-text="%pp%auto::nCyclesCompleted%/pp%" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="0">
+</div>
+
+<!-- ============ Start / Stop / Reset button row ============ -->
+<!-- Momentary — state-symbol writes TRUE while pressed, FALSE on release; FB R_TRIG catches the rising edge. -->
+<div id="StartBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="32" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="98" data-tchmi-width-unit="px" data-tchmi-text="START" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bStart|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+<div id="StopBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="32" data-tchmi-height-unit="px" data-tchmi-left="120" data-tchmi-left-unit="px" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="98" data-tchmi-width-unit="px" data-tchmi-text="STOP" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bStop|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+<div id="ResetBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="32" data-tchmi-height-unit="px" data-tchmi-left="228" data-tchmi-left-unit="px" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="98" data-tchmi-width-unit="px" data-tchmi-text="RESET" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bReset|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+
+<!-- ============ Continuous checkbox ============ -->
+<div id="ContCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="134" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Continuous cycling" data-tchmi-state-symbol="%pp%cfg::bContinuous|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+
+<!-- ============ Config inputs (PERSISTENT so operator tuning survives restart) ============ -->
+<div id="DwellExtLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="164" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Dwell EXT (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="DwellExtIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="164" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tDwellExtendedMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
+</div>
+
+<div id="DwellRetLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Dwell RET (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="DwellRetIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tDwellRetractedMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
+</div>
+
+<div id="ToExtLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="216" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Timeout EXT (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="ToExtIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="216" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tTimeoutExtendMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
+</div>
+
+<div id="ToRetLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="242" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Timeout RET (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+</div>
+<div id="ToRetIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="242" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tTimeoutRetractMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
+</div>
+
+<!-- ============ Error banner + Ack button ============ -->
+<!-- Rectangle is red when bError=TRUE, grey otherwise. Text overlay bound to sErrorText. -->
+<div id="ErrRect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="278" data-tchmi-top-unit="px" data-tchmi-width="215" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%auto::bError%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%auto::bError%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": true }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(221, 90, 90, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(60, 60, 60, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+<div id="ErrText" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-top="278" data-tchmi-top-unit="px" data-tchmi-width="207" data-tchmi-width-unit="px" data-tchmi-text="%pp%auto::sErrorText%/pp%" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="10" data-tchmi-text-font-size-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1">
+</div>
+
+<div id="AckBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="235" data-tchmi-left-unit="px" data-tchmi-top="278" data-tchmi-top-unit="px" data-tchmi-width="90" data-tchmi-width-unit="px" data-tchmi-text="ACK" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bAck|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+
+</div>

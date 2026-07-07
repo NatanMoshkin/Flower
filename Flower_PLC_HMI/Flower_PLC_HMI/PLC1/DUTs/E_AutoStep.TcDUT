@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_AutoStep" Id="{b2089cf5-9c4f-47c2-ad31-12d809ee6848}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_AutoStep :
+(
+    IDLE       := 0,
+    EXTENDING  := 1,
+    DWELL_EXT  := 2,
+    RETRACTING := 3,
+    DWELL_RET  := 4,
+    ERR        := 99
+) ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

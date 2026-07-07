@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_PistonAutoCycle" Id="{3c33d53e-5cde-4f33-bae3-ab323c98dcf0}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_PistonAutoCycle
+VAR_IN_OUT
+    (* Reads bIs* effective sensors, writes eMode := Automatic while running. *)
+    stHmi  : ST_HmiPiston;
+    (* Reads commands, writes step + status. *)
+    stAuto : ST_HmiPistonAuto;
+    (* Reads persistent dwell / timeout / continuous config. *)
+    stCfg  : ST_HmiPistonAutoCfg;
+END_VAR
+
+VAR_OUTPUT
+    (* Wire these to the piston FB's bAutoCmdExtend / bAutoCmdRetract in MAIN. *)
+    bCmdExtend  : BOOL;
+    bCmdRetract : BOOL;
+END_VAR
+
+VAR
+    (* HMI button edge detection *)
+    fbTrigStart : R_TRIG;
+    fbTrigStop  : R_TRIG;
+    fbTrigReset : R_TRIG;
+    fbTrigAck   : R_TRIG;
+
+    (* Per-state timers. TON.IN bound to (eStep = target); .Q fires when PT elapsed.
+       When we transition out, IN goes FALSE and TON auto-resets ET. *)
+    fbTimerExtend  : TON;   // extend-timeout (fault on Q while EXTENDING)
+    fbTimerRetract : TON;   // retract-timeout (fault on Q while RETRACTING)
+    fbTimerDwellE  : TON;   // dwell at extended
+    fbTimerDwellR  : TON;   // dwell at retracted
+
+    (* Step-elapsed display timer. Resets on step change; long PT so .Q never fires. *)
+    fbStepTimer : TON;
+
+    (* Prev-state snapshot for step-changed detection *)
+    ePrevStep    : E_AutoStep;
+    bStepChanged : BOOL;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* ==========================================
+   0. HMI COMMAND EDGE DETECTION
+   ========================================== *)
+fbTrigStart(CLK := stAuto.bStart);
+fbTrigStop (CLK := stAuto.bStop);
+fbTrigReset(CLK := stAuto.bReset);
+fbTrigAck  (CLK := stAuto.bAck);
+
+(* ==========================================
+   1. PER-STATE TIMERS
+   Called BEFORE the state machine so their .Q outputs reflect the current
+   state's dwell / timeout for this cycle's decisions.
+   ========================================== *)
+fbTimerExtend (IN := stAuto.eStep = E_AutoStep.EXTENDING,  PT := UDINT_TO_TIME(stCfg.tTimeoutExtendMs));
+fbTimerRetract(IN := stAuto.eStep = E_AutoStep.RETRACTING, PT := UDINT_TO_TIME(stCfg.tTimeoutRetractMs));
+fbTimerDwellE (IN := stAuto.eStep = E_AutoStep.DWELL_EXT,  PT := UDINT_TO_TIME(stCfg.tDwellExtendedMs));
+fbTimerDwellR (IN := stAuto.eStep = E_AutoStep.DWELL_RET,  PT := UDINT_TO_TIME(stCfg.tDwellRetractedMs));
+
+(* ==========================================
+   2. GLOBAL COMMANDS
+   Stop = soft interrupt back to IDLE (does NOT clear error latch).
+   Reset = hard reset: force IDLE, clear cycles + error.
+   Ack = clear error latch (only meaningful from ERR).
+   ========================================== *)
+IF fbTrigStop.Q AND stAuto.eStep <> E_AutoStep.ERR THEN
+    stAuto.eStep := E_AutoStep.IDLE;
+END_IF
+
+IF fbTrigReset.Q THEN
+    stAuto.eStep            := E_AutoStep.IDLE;
+    stAuto.bError           := FALSE;
+    stAuto.sErrorText       := '';
+    stAuto.nCyclesCompleted := 0;
+END_IF
+
+IF fbTrigAck.Q AND stAuto.eStep = E_AutoStep.ERR THEN
+    stAuto.bError     := FALSE;
+    stAuto.sErrorText := '';
+    stAuto.eStep      := E_AutoStep.IDLE;
+END_IF
+
+(* ==========================================
+   3. STATE MACHINE
+   Reads effective sensors from stHmi.bIsExtended / bIsRetracted — these
+   are already the real-OR-simulate value written by FB_SolSolPiston_2Pos.
+   So simulation "just works" via the piston FB's existing bSimulate* pins.
+   ========================================== *)
+CASE stAuto.eStep OF
+
+    E_AutoStep.IDLE:
+        bCmdExtend  := FALSE;
+        bCmdRetract := FALSE;
+        (* Start only from IDLE (and only if no latched error). *)
+        IF fbTrigStart.Q AND NOT stAuto.bError THEN
+            stAuto.eStep := E_AutoStep.EXTENDING;
+        END_IF
+
+    E_AutoStep.EXTENDING:
+        bCmdExtend  := TRUE;
+        bCmdRetract := FALSE;
+        stHmi.eMode := E_ControlMode.Automatic;
+        (* Feedback mismatch = physical impossibility, sensor fault. *)
+        IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
+            stAuto.bError     := TRUE;
+            stAuto.sErrorText := 'Both sensors active during EXTENDING (feedback mismatch)';
+            stAuto.eStep      := E_AutoStep.ERR;
+        ELSIF stHmi.bIsExtended THEN
+            stAuto.eStep := E_AutoStep.DWELL_EXT;
+        ELSIF fbTimerExtend.Q THEN
+            stAuto.bError     := TRUE;
+            stAuto.sErrorText := 'Timeout waiting for extended sensor';
+            stAuto.eStep      := E_AutoStep.ERR;
+        END_IF
+
+    E_AutoStep.DWELL_EXT:
+        (* Coil released — piston sits at the extended end sensor. *)
+        bCmdExtend  := FALSE;
+        bCmdRetract := FALSE;
+        stHmi.eMode := E_ControlMode.Automatic;
+        IF fbTimerDwellE.Q THEN
+            stAuto.eStep := E_AutoStep.RETRACTING;
+        END_IF
+
+    E_AutoStep.RETRACTING:
+        bCmdExtend  := FALSE;
+        bCmdRetract := TRUE;
+        stHmi.eMode := E_ControlMode.Automatic;
+        IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
+            stAuto.bError     := TRUE;
+            stAuto.sErrorText := 'Both sensors active during RETRACTING (feedback mismatch)';
+            stAuto.eStep      := E_AutoStep.ERR;
+        ELSIF stHmi.bIsRetracted THEN
+            stAuto.eStep := E_AutoStep.DWELL_RET;
+        ELSIF fbTimerRetract.Q THEN
+            stAuto.bError     := TRUE;
+            stAuto.sErrorText := 'Timeout waiting for retracted sensor';
+            stAuto.eStep      := E_AutoStep.ERR;
+        END_IF
+
+    E_AutoStep.DWELL_RET:
+        bCmdExtend  := FALSE;
+        bCmdRetract := FALSE;
+        stHmi.eMode := E_ControlMode.Automatic;
+        IF fbTimerDwellR.Q THEN
+            (* One complete cycle just ended. Count it. *)
+            stAuto.nCyclesCompleted := stAuto.nCyclesCompleted + 1;
+            IF stCfg.bContinuous THEN
+                stAuto.eStep := E_AutoStep.EXTENDING;
+            ELSE
+                stAuto.eStep := E_AutoStep.IDLE;
+            END_IF
+        END_IF
+
+    E_AutoStep.ERR:
+        (* Latched error — outputs safe, wait for Ack or Reset. *)
+        bCmdExtend  := FALSE;
+        bCmdRetract := FALSE;
+        (* Do NOT touch stHmi.eMode — let the operator flip to Manual for recovery. *)
+
+END_CASE
+
+(* ==========================================
+   4. STEP-CHANGE DETECTION & ELAPSED TIMER
+   Placed AFTER the state machine so we detect this cycle's transitions.
+   fbStepTimer.IN := NOT bStepChanged pulses its ET back to 0 for one cycle
+   on transition, then counts up until the next transition.
+   ========================================== *)
+bStepChanged := (stAuto.eStep <> ePrevStep);
+ePrevStep    := stAuto.eStep;
+
+fbStepTimer(IN := NOT bStepChanged, PT := T#1D);
+stAuto.tElapsedS := DINT_TO_LREAL(TIME_TO_DINT(fbStepTimer.ET)) * 0.001;
+
+(* ==========================================
+   5. STATUS TEXT MIRROR — refresh sStepText every cycle
+   ========================================== *)
+CASE stAuto.eStep OF
+    E_AutoStep.IDLE:       stAuto.sStepText := 'Idle';
+    E_AutoStep.EXTENDING:  stAuto.sStepText := 'Extending';
+    E_AutoStep.DWELL_EXT:  stAuto.sStepText := 'Dwell (extended)';
+    E_AutoStep.RETRACTING: stAuto.sStepText := 'Retracting';
+    E_AutoStep.DWELL_RET:  stAuto.sStepText := 'Dwell (retracted)';
+    E_AutoStep.ERR:        stAuto.sStepText := 'ERROR';
+ELSE
+    stAuto.sStepText := 'Unknown';
+END_CASE
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

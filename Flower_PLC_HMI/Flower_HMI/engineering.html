@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Flower_HMI</title>
-  <meta name="tchmi-buildtime" content="2026-07-07T16:13:34">
+  <meta name="tchmi-buildtime" content="2026-07-07T20:55:41">
 
   <!-- target-densitydpi=device-dpi -->
   <meta name="viewport" content="width=device-width"><script>
@@ -242,10 +242,28 @@
 <script src="/Beckhoff.TwinCAT.HMI.Functions/UploadRecipeFiles.js" type="module"></script>
 </head>
 <body class="tchmi-body-designer">
-	<div id="RobotPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730" data-tchmi-creator-partial-key="/Pages/Robot.content">
+	<div id="PistonPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="1080" data-tchmi-creator-partial-key="/Pages/Piston.content">
 
-  <!-- Single Robot user-control card; page reserved for future comms (Modbus, second robot, MQTT, etc.) -->
-  <div id="RobotHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Robot.usercontrol" data-tchmi-top="20" data-tchmi-top-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-robot="%s%ADS.PLC1.GVL_Robot.stRobot%/s%">
+  <!-- Column 1 -->
+  <div id="SepSol1Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="20" data-tchmi-top-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stSepSol1%/s%">
+  </div>
+  <div id="PushSol1Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stPushSol1%/s%">
+  </div>
+
+  <!-- Column 2 -->
+  <div id="SepSol2Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="20" data-tchmi-top-unit="px" data-tchmi-left="377" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stSepSol2%/s%">
+  </div>
+  <div id="PushSol2Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-left="377" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stPushSol2%/s%">
+  </div>
+
+  <!-- Column 3 -->
+  <div id="SepSol3Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="20" data-tchmi-top-unit="px" data-tchmi-left="734" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stSepSol3%/s%">
+  </div>
+  <div id="PushSol3Host" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Piston.usercontrol" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-left="734" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-piston="%s%ADS.PLC1.GVL_HMI.stPushSol3%/s%">
+  </div>
+
+  <!-- Row 3: auto-cycle sequencer for SepSol1 (v1 demo — placed under column 1) -->
+  <div id="SepSol1AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="720" data-tchmi-top-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol1Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg%/s%" data-tchmi-pistonname="SepSol1 — Auto Cycle">
   </div>
 
 </div>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiPistonAutoCfg" Id="{9e2392ff-c3b5-4d8d-9a3c-4c05d3fca870}">
+    <Declaration><![CDATA[TYPE ST_HmiPistonAutoCfg :
+STRUCT
+    // All times in milliseconds. UDINT so HMI NumericInput binds directly (no TIME<->UDINT juggling).
+
+    // Dwell = how long to sit at the sensor before starting the reverse move.
+    tDwellExtendedMs   : UDINT := 500;
+    tDwellRetractedMs  : UDINT := 500;
+
+    // Timeout = if we do not see the target sensor within this window, raise an error.
+    tTimeoutExtendMs   : UDINT := 3000;
+    tTimeoutRetractMs  : UDINT := 3000;
+
+    // If TRUE, DWELL_RET loops back to EXTENDING instead of returning to IDLE.
+    bContinuous        : BOOL  := FALSE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

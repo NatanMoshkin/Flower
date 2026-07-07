@@ -1,6 +1,232 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
   "definitions": {
+    "PLC1.E_AutoStep": {
+      "attributes": {
+        "generate_implicit_init_function": "",
+        "qualified_only": "",
+        "strict": "",
+        "to_string": ""
+      },
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        99
+      ],
+      "options": [
+        {
+          "value": 0,
+          "label": "IDLE"
+        },
+        {
+          "value": 1,
+          "label": "EXTENDING"
+        },
+        {
+          "value": 2,
+          "label": "DWELL_EXT"
+        },
+        {
+          "value": 3,
+          "label": "RETRACTING"
+        },
+        {
+          "value": 4,
+          "label": "DWELL_RET"
+        },
+        {
+          "value": 99,
+          "label": "ERR"
+        }
+      ]
+    },
+    "PLC1.ST_HmiPistonAutoCfg": {
+      "additionalProperties": {},
+      "properties": {
+        "tDwellExtendedMs": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 1
+            }
+          ]
+        },
+        "tDwellRetractedMs": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 2
+            }
+          ]
+        },
+        "tTimeoutExtendMs": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 3
+            }
+          ]
+        },
+        "tTimeoutRetractMs": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 4
+            }
+          ]
+        },
+        "bContinuous": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 5
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "tDwellExtendedMs",
+        "tDwellRetractedMs",
+        "tTimeoutExtendMs",
+        "tTimeoutRetractMs",
+        "bContinuous"
+      ]
+    },
+    "PLC1.ST_HmiPistonAuto": {
+      "additionalProperties": {},
+      "properties": {
+        "bStart": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 1
+            }
+          ]
+        },
+        "bStop": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 2
+            }
+          ]
+        },
+        "bReset": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 3
+            }
+          ]
+        },
+        "bAck": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 4
+            }
+          ]
+        },
+        "eStep": {
+          "allOf": [
+            {
+              "$ref": "tchmi:project#/definitions/PLC1.E_AutoStep"
+            },
+            {
+              "propertyOrder": 5
+            }
+          ]
+        },
+        "sStepText": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 20,
+              "propertyOrder": 6
+            }
+          ]
+        },
+        "tElapsedS": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/LREAL"
+            },
+            {
+              "propertyOrder": 7
+            }
+          ]
+        },
+        "bError": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 8
+            }
+          ]
+        },
+        "sErrorText": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 80,
+              "propertyOrder": 9
+            }
+          ]
+        },
+        "nCyclesCompleted": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 10
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "bStart",
+        "bStop",
+        "bReset",
+        "bAck",
+        "eStep",
+        "sStepText",
+        "tElapsedS",
+        "bError",
+        "sErrorText",
+        "nCyclesCompleted"
+      ]
+    },
     "PLC1.E_RobotConnState": {
       "attributes": {
         "generate_implicit_init_function": "",

@@ -175,6 +175,13 @@
       <SubType>Content</SubType>
       <DependentUpon>UserControls\UC_Piston.usercontrol</DependentUpon>
     </Content>
+    <Content Include="UserControls\UC_PistonAuto.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_PistonAuto.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_PistonAuto.usercontrol</DependentUpon>
+    </Content>
     <Content Include="UserControls\UC_Robot.usercontrol">
       <SubType>Content</SubType>
     </Content>

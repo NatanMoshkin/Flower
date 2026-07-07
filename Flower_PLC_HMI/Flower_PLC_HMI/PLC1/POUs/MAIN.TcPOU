@@ -9,6 +9,11 @@ VAR
     fbPushSol1 : FB_SolSolPiston_2Pos;
     fbPushSol2 : FB_SolSolPiston_2Pos;
     fbPushSol3 : FB_SolSolPiston_2Pos;
+
+    // v1 demo — auto cycle only wired for SepSol1. Its bAutoCmd* pins get
+    // driven by fbSepSol1Auto below. Extending to the other five pistons
+    // is a copy-paste of the FB instance + one MAIN call block.
+    fbSepSol1Auto : FB_PistonAutoCycle;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -34,11 +39,22 @@ GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
 // GVL_App.bSensorPushExtended3  := GVL_IO.dIn[??];
 
 (* ==========================================
-   Pin separators (SOL-SOL, 2 limit switches). bAutoCmd* FALSE until FB_Auto exists.
+   Pin separators (SOL-SOL, 2 limit switches).
+   SepSol1 is driven by fbSepSol1Auto (called first so its outputs
+   feed the piston FB this cycle). Other pistons still manual-only —
+   their bAutoCmd* pins stay wired to FALSE until each gets its own
+   sequencer instance.
    ========================================== *)
+fbSepSol1Auto(
+    stHmi        := GVL_HMI.stSepSol1,
+    stAuto       := GVL_HMI.stSepSol1Auto,
+    stCfg        := GVL_HmiPersistent.stSepSol1AutoCfg
+    // bCmdExtend / bCmdRetract wired inline in the fbSepSol1 call below
+);
+
 fbSepSol1(
-    bAutoCmdExtend      := FALSE,
-    bAutoCmdRetract     := FALSE,
+    bAutoCmdExtend      := fbSepSol1Auto.bCmdExtend,
+    bAutoCmdRetract     := fbSepSol1Auto.bCmdRetract,
     bSwitchExtended     := GVL_App.bSensorSepExtended1,
     bSwitchRetracted    := GVL_App.bSensorSepRetracted1,
     stHmi               := GVL_HMI.stSepSol1,

@@ -10,6 +10,10 @@ VAR_GLOBAL
     stPushSol1 : ST_HmiPiston := (Name := 'PushSol1');
     stPushSol2 : ST_HmiPiston := (Name := 'PushSol2');
     stPushSol3 : ST_HmiPiston := (Name := 'PushSol3');
+
+    // Runtime state for the SepSol1 auto sequencer. Config for it lives in
+    // GVL_HmiPersistent.stSepSol1AutoCfg (PERSISTENT).
+    stSepSol1Auto : ST_HmiPistonAuto;
 END_VAR
 ]]></Declaration>
   </GVL>
