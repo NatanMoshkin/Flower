@@ -195,7 +195,36 @@ YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
 <!-- ============================================================ -->
 <section class="panel" id="panel-smoke">
   <h2>Smoke test — robot → bridge → PLC → HMI</h2>
-  <p>End-to-end verification without a real robot. A companion script <code>RobotBridge/sim_robot.py</code> ships in the repo — it opens a TCP client to the bridge and sends the ASCII POS frames with a configurable gap. Same Python + stdlib as the bridge itself, so no extra dependencies.</p>
+  <p>End-to-end verification without a real robot. Two options, depending on how much you want to see:</p>
+  <ul class="compact" style="margin-bottom:14px">
+    <li><b>GUI (recommended if TCP/IP is new to you)</b> — <code>python RobotBridge/bridge_gui.py</code>. Everything in one window with a contextual explanation panel that narrates what's happening as you click. See the card below.</li>
+    <li><b>Scripted</b> — <code>python RobotBridge/sim_robot.py</code>. Cross-platform TCP client that sends a fixed sequence. Good for CI / automation.</li>
+  </ul>
+
+  <div class="card">
+    <h3>Option A — the GUI (bridge_gui.py)</h3>
+    <p>A single-window tkinter desktop app that ties three things together — no extra dependencies beyond what the bridge already needs (<code>pyads</code>, <code>pyyaml</code>).</p>
+    <ul class="compact">
+      <li><b>Bridge process panel</b> — Start / Stop <code>robot_bridge.py</code> as a subprocess. Live stdout tail. Bridge PID + colored LED.</li>
+      <li><b>PLC live state panel</b> — reads <code>GVL_Robot.stRobot</code> via <code>pyads</code> five times per second and shows: connection state (colored banner), three AT POS N LEDs, packet counter, last message.</li>
+      <li><b>Robot simulator panel</b> — opens a TCP client to the bridge and plays the robot. <code>POS1</code> / <code>POS2</code> / <code>POS3</code> / custom-frame buttons. Every send shows the exact bytes that left the process, hex + ASCII, so you can see the framing (each frame ends in <code>0x0A</code> = <code>\n</code>).</li>
+      <li><b>Event log</b> — merged feed of GUI events + bridge stdout + PLC state changes. Colored per source.</li>
+      <li><b>"What is happening right now"</b> — a live-updating explanation panel at the bottom. Describes the current step in plain English: what "listening" means, what a client does, why the position bits latch, what an ADS write does. If you're learning TCP/IP, keep an eye on this.</li>
+    </ul>
+    <p>Launch (assumes <code>config.yaml</code> is already created — copy from <code>config.example.yaml</code> if not):</p>
+    <pre>python RobotBridge/bridge_gui.py --config RobotBridge/config.yaml
+
+# or double-click on Windows:
+RobotBridge\start_gui.bat</pre>
+    <div class="callout">
+      <b>How to use it as a tutorial.</b> Open the GUI, then follow: press <b>Start bridge</b> → watch the explanation update from "bridge not running" to "listening" → press <b>Connect</b> in the simulator panel → watch the flow diagram at the top light up green → press <b>POS1</b> and observe the byte view (<code>50 4F 53 31 0A</code>) + PLC state change + event log entry, all in the same beat.
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Option B — the scripted client (sim_robot.py)</h3>
+    <p>Same underlying protocol, no GUI. Same Python + stdlib as the bridge itself, so no extra dependencies.</p>
+  </div>
 
   <div class="card">
     <h3>Prep</h3>

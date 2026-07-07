@@ -74,6 +74,27 @@ For unattended operation, wrap `start_bridge.bat` in a Windows Scheduled
 Task set to "run whether user is logged on or not", or install it as a
 service with [NSSM](https://nssm.cc/).
 
+## GUI (recommended for exploration & smoke testing)
+
+`bridge_gui.py` is a tkinter desktop app that ties everything together:
+
+- Live snapshot of `GVL_Robot.stRobot` via `pyads` (polled 5×/sec)
+- Start / stop the bridge process with a button
+- Play the robot: opens a TCP client to the bridge and sends `POS1` /
+  `POS2` / `POS3` / custom frames, with a hex + ASCII byte view of what
+  actually went on the wire
+- A "What is happening right now" panel that narrates the current state
+  — useful if TCP/IP is new to you (it explains what "listening" /
+  "connected" / "frame delimiter" mean as you interact)
+
+Launch:
+
+```
+python bridge_gui.py --config config.yaml
+```
+
+or double-click `start_gui.bat` on Windows.
+
 ## Smoke test
 
 1. Build + Activate the PLC so `GVL_Robot.stRobot` is visible in the
@@ -110,7 +131,9 @@ Alternatives (if you don't want to use `sim_robot.py`):
 |------------------------|------------------------------------------------------------------|
 | `robot_bridge.py`      | The bridge. Single file, no framework.                           |
 | `sim_robot.py`         | TCP client that sends POS frames for smoke testing.              |
+| `bridge_gui.py`        | Desktop GUI: monitor + tester with contextual TCP/IP tutorial.   |
 | `config.example.yaml`  | Template; committed to git.                                      |
 | `config.yaml`          | Your real endpoints; **gitignored**.                             |
 | `requirements.txt`     | `pyads` + `pyyaml`.                                              |
-| `start_bridge.bat`     | Convenience Windows launcher.                                    |
+| `start_bridge.bat`     | Convenience Windows launcher for the bridge.                     |
+| `start_gui.bat`        | Convenience Windows launcher for the GUI.                        |
