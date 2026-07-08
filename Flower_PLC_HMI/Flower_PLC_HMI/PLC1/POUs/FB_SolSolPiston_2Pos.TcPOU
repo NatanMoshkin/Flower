@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_SolSolPiston_2Pos" Id="{1cc505ad-12b3-4ad6-b3e6-2111bf6da3c3}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_SolSolPiston_2Pos
@@ -35,9 +35,42 @@ VAR
     (* Effective sensor states = real OR HMI simulate. Recomputed every cycle in Section 0a. *)
     bSwitchExtended_eff  : BOOL;
     bSwitchRetracted_eff : BOOL;
+
+    (* Previous-cycle snapshots for the mode-field bridge in Section 0b.
+       Classic PLC HMI writes stHmi.bMode (Rotary Switch is boolean-only);
+       web HMI writes stHmi.eMode (enum via ToggleSwitch). This FB is the
+       authoritative reader of eMode, so we sync in whichever direction
+       changed since last cycle. *)
+    bPrevMode : BOOL;
+    ePrevMode : E_ControlMode;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
+   0b. MODE-FIELD BRIDGE — sync bMode <-> eMode
+   The classic PLC HMI (VISUs) writes stHmi.bMode because its Rotary Switch
+   element is boolean-only. The web HMI (Flower_HMI) writes stHmi.eMode via
+   a ToggleSwitch. Rest of this FB reads eMode as the authoritative field,
+   so we mirror bMode into eMode when the classic HMI toggled the switch,
+   and mirror eMode back into bMode when the web HMI (or anyone else) wrote
+   eMode. Edge-triggered — whichever side changed since last cycle wins.
+   Runs BEFORE Section 0 so downstream logic sees a coherent eMode.
+   ========================================== *)
+IF stHmi.bMode <> bPrevMode THEN
+    // Classic VISU changed bMode → propagate to eMode
+    IF stHmi.bMode THEN
+        stHmi.eMode := E_ControlMode.Automatic;
+    ELSE
+        stHmi.eMode := E_ControlMode.Manual;
+    END_IF;
+ELSIF stHmi.eMode <> ePrevMode THEN
+    // Web HMI (or any other writer) changed eMode → propagate to bMode
+    stHmi.bMode := (stHmi.eMode = E_ControlMode.Automatic);
+END_IF;
+
+bPrevMode := stHmi.bMode;
+ePrevMode := stHmi.eMode;
+
+(* ==========================================
    0a. EFFECTIVE SENSOR INPUTS (real OR HMI simulate)
    ========================================== *)
 bSwitchExtended_eff  := bSwitchExtended  OR stHmi.bSimulateExtended;

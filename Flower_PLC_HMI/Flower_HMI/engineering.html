@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Flower_HMI</title>
-  <meta name="tchmi-buildtime" content="2026-07-07T21:10:12">
+  <meta name="tchmi-buildtime" content="2026-07-08T13:01:05">
 
   <!-- target-densitydpi=device-dpi -->
   <meta name="viewport" content="width=device-width"><script>
@@ -242,19 +242,223 @@
 <script src="/Beckhoff.TwinCAT.HMI.Functions/UploadRecipeFiles.js" type="module"></script>
 </head>
 <body class="tchmi-body-designer">
-	<div id="RobotPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730" data-tchmi-creator-partial-key="/Pages/Robot.content">
+	<div id="Piston" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControl" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="337" data-tchmi-height="340" data-tchmi-width-unit="px" data-tchmi-height-unit="px" data-tchmi-creator-viewport-width="500" data-tchmi-creator-viewport-height="500" data-tchmi-creator-partial-key="/UserControls/UC_Piston.usercontrol">
 
-  <!-- Single Robot user-control card; page reserved for future comms (Modbus, second robot, MQTT, etc.) -->
-  <div id="RobotHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_Robot.usercontrol" data-tchmi-top="20" data-tchmi-top-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-robot="%s%ADS.PLC1.GVL_Robot.stRobot%/s%">
-  </div>
+<!-- Title label bound to piston::Name (set once from GVL_HMI, never written by FB) -->
+<div id="TitleName" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="28" data-tchmi-height-unit="px" data-tchmi-left="0" data-tchmi-left-unit="px" data-tchmi-top="4" data-tchmi-top-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-text="%pp%piston::Name%/pp%" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="16" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold" data-tchmi-zindex="0">
+</div>
 
-  <!-- Diagnostics strip: runtime toggle for DEBUG-level PLC logging.
-       When ON, F_LogEvent stops dropping DBG entries — they flow through
-       the Python bridge's log_pump into today's CSV in RobotBridge/logs/. -->
-  <div id="DebugLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="24" data-tchmi-height-unit="px" data-tchmi-left="20" data-tchmi-left-unit="px" data-tchmi-top="380" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Debug logging (verbose CSV):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
-  </div>
-  <div id="DebugToggle" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiToggleSwitch" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="230" data-tchmi-left-unit="px" data-tchmi-top="378" data-tchmi-top-unit="px" data-tchmi-width="120" data-tchmi-width-unit="px" data-tchmi-text="off / on" data-tchmi-state-symbol="%s%ADS.PLC1.GVL_Log.bDebugMode|BindingMode=TwoWay%/s%" data-tchmi-text-position="Right" data-tchmi-zindex="1">
-  </div>
+<!-- MOVING indicator: green while either coil is energized -->
+<div id="MovingIndicator" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="18" data-tchmi-height-unit="px" data-tchmi-left="188" data-tchmi-left-unit="px" data-tchmi-top="46" data-tchmi-top-unit="px" data-tchmi-width="51" data-tchmi-width-unit="px" data-tchmi-text="MOVING" data-tchmi-zindex="2" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="10" data-tchmi-text-font-size-unit="px">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bIsMoving%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bIsMoving%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(67, 67, 67, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- Background panel behind the two rows -->
+<div id="RowPanel" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="180" data-tchmi-height-unit="px" data-tchmi-left="170" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="96" data-tchmi-width-unit="px">
+</div>
+
+<!-- ============ EXTEND row ============ -->
+
+<!-- Sensor indicator (left): green when bIsExtended -->
+<div id="Input_Extended" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="143" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bIsExtended%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bIsExtended%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(149, 118, 118, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- EXTEND command button: momentary press writes bManCmdExtend, background highlights while bSelectedExtend -->
+<div id="ExtendButton" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="185" data-tchmi-left-unit="px" data-tchmi-text="EXTEND" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="66" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManCmdExtend|BindingMode=TwoWay%/pp%">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bSelectedExtend%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bSelectedExtend%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(67, 67, 67, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(255, 220, 80, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- JOG EXTEND: momentary — drives bManJogExtend TRUE while pressed. FB moves the piston while held, stops on release or at end sensor. -->
+<div id="JogExtend" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="295" data-tchmi-left-unit="px" data-tchmi-text="JOG" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="40" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManJogExtend|BindingMode=TwoWay%/pp%">
+</div>
+
+<!-- Extend solenoid coil indicator (right): green when bOutSolenoidExtend -->
+<div id="SolenoidExtend" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="266" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bOutSolenoidExtend%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bOutSolenoidExtend%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(149, 118, 118, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- ============ RETRACT row ============ -->
+
+<div id="Input_Retracted" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="143" data-tchmi-left-unit="px" data-tchmi-top="200" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bIsRetracted%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bIsRetracted%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(149, 118, 118, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<div id="RetractButton" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="185" data-tchmi-left-unit="px" data-tchmi-text="RETRACT" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="66" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManCmdRetract|BindingMode=TwoWay%/pp%">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bSelectedRetract%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bSelectedRetract%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(67, 67, 67, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::BackgroundColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(255, 220, 80, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- JOG RETRACT: momentary — drives bManJogRetract TRUE while pressed. -->
+<div id="JogRetract" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="42" data-tchmi-height-unit="px" data-tchmi-left="295" data-tchmi-left-unit="px" data-tchmi-text="JOG" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="40" data-tchmi-width-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1" data-tchmi-state-symbol="%pp%piston::bManJogRetract|BindingMode=TwoWay%/pp%">
+</div>
+
+<div id="SolenoidRetract" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="266" data-tchmi-left-unit="px" data-tchmi-top="200" data-tchmi-top-unit="px" data-tchmi-width="27" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::bOutSolenoidRetract%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%piston::bOutSolenoidRetract%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(149, 118, 118, 1)" } }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(90, 221, 147, 1)" } }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
+
+<!-- ============ Simulate-sensor checkboxes (JetGame-style) ============ -->
+<!-- When ticked, the effective sensor in FB_SolSolPiston_2Pos.Section 0a
+     evaluates real-OR-simulate as TRUE. Use these to smoke-test the piston
+     FB and the auto sequencer without any physical hardware:
+       1) Tick Sim RET to declare "piston is at retracted end" as the start state.
+       2) Press EXTEND (or start the auto cycle). Coil energizes.
+       3) Tick Sim EXT + untick Sim RET — the FB now sees the piston at extended;
+          it releases the coil and (auto mode) advances to DWELL_EXT.
+     Bidirectional binding — no scripts needed. -->
+<!-- Placed left of the sensor indicators, aligned to their respective rows. -->
+<div id="SimExtCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="8" data-tchmi-left-unit="px" data-tchmi-top="70" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Sim EXT" data-tchmi-state-symbol="%pp%piston::bSimulateExtended|BindingMode=TwoWay%/pp%" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="1">
+</div>
+<div id="SimRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="8" data-tchmi-left-unit="px" data-tchmi-top="200" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Sim RET" data-tchmi-state-symbol="%pp%piston::bSimulateRetracted|BindingMode=TwoWay%/pp%" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="1">
+</div>
+
+<!-- ============ Manual / Auto toggle ============ -->
+<!-- Bound to local BOOL bModeAuto (see .usercontrol.json). Two triggers sync bModeAuto <-> piston::eMode (Manual=0 / Automatic=1). -->
+<div id="ModeToggle" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiToggleSwitch" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="141" data-tchmi-left-unit="px" data-tchmi-text="&lt;-Man / Auto-&gt;" data-tchmi-top="270" data-tchmi-top-unit="px" data-tchmi-width="153" data-tchmi-width-unit="px" data-tchmi-state-symbol="%pp%bModeAuto|BindingMode=TwoWay%/pp%" data-tchmi-text-position="Right" data-tchmi-zindex="1">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+  {
+    "event": "%pp%piston::eMode%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_ControlMode", "symbolExpression": "%pp%piston::eMode%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_ControlMode", "value": 1 }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%pp%bModeAuto%/pp%", "value": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": true }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%pp%bModeAuto%/pp%", "value": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": false }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  },
+  {
+    "event": "%pp%bModeAuto%/pp%",
+    "actions": [
+      {
+        "objectType": "Condition",
+        "active": true,
+        "parts": [
+          { "if": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:general#/definitions/BOOL", "symbolExpression": "%pp%bModeAuto%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:general#/definitions/BOOL", "value": true }, "compareOperator": "==", "logic": null } ],
+            "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%pp%piston::eMode%/pp%", "value": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_ControlMode", "value": 1 }, "asyncWait": true } ] },
+          { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%pp%piston::eMode%/pp%", "value": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_ControlMode", "value": 0 }, "asyncWait": true } ] }
+        ],
+        "asyncWait": true
+      }
+    ]
+  }
+]</script>
+</div>
 
 </div>
 
