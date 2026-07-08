@@ -85,6 +85,9 @@
     <Compile Include="POUs\FB_SolSolPiston_2Pos.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\FB_SolSpringPiston_2Pos.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\MAIN.TcPOU">
       <SubType>Code</SubType>
     </Compile>
