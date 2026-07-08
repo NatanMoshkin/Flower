@@ -5,8 +5,16 @@
 (* Single-solenoid, spring-return 2-position actuator.
    Coil energised  -> drives to EXTENDED.
    Coil de-energised -> mechanical spring returns to RETRACTED.
+
+   The coil is a continuous force against the spring, so Section 2 uses a
+   LATCH-and-RETAIN pattern: the coil is set TRUE on Extend command and
+   FALSE on Retract command, and RETAINS its state (via VAR_OUTPUT retain)
+   any cycle no explicit command is active. Without the latch the coil
+   would drop the moment the extended sensor fires and the spring would
+   immediately pull the piston back.
+
    Fail-safe by construction: broken wire, dead coil, PLC power loss
-   or e-stop all result in a retract (safe state).
+   or e-stop all leave bOutSolenoid FALSE and the spring retracts.
 
    Interface is kept symmetric with FB_SolSolPiston_2Pos so a sequencer FB
    (e.g. FB_PistonAutoCycle) can drive either actuator type without a
@@ -140,49 +148,61 @@ IF stHmi.bSelectedExtend  AND bSwitchExtended_eff  THEN stHmi.bSelectedExtend  :
 IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract := FALSE; END_IF;
 
 (* ==========================================
-   2. SOLENOID CONTROL — single coil, spring-return
-   One coil (bOutSolenoid). Retract is achieved by de-energising the coil;
-   the mechanical spring returns the actuator. Consequences:
-     - No "retract coil" branch — retract IS the ELSE.
-     - ELSE unconditionally clears the coil (safe default). Unlike SolSol,
-       there is no coil-retain risk that could keep driving after the target
-       is reached.
-     - No coil-oscillation guards needed — the spring is passive and always
-       correct.
-   Jog branches sit first and are gated by Manual mode so they cannot
-   interfere with the automatic sequence.
+   2. SOLENOID CONTROL — single coil, LATCH-and-RETAIN
+   The coil is a continuous force against the spring. If it drops, the spring
+   wins and the actuator retracts. So the coil must be LATCHED TRUE from the
+   moment Extend is commanded until Retract is commanded — not pulsed until
+   the sensor fires (which is the double-solenoid pattern).
+   Structure:
+     - Jog branches first, gated by Manual mode.
+     - Explicit Extend / Retract command branches drive the coil to a
+       definite state.
+     - The IF ladder has NO ELSE. When no branch matches, VAR_OUTPUT retain
+       semantics carry the coil forward:
+         * At the Extended sensor after a successful extend (Section 1b just
+           cleared bTargetExtend) → coil retains TRUE → piston HOLDS.
+         * At the Retracted sensor after a successful retract → coil retains
+           FALSE → piston HOLDS retracted (spring already there).
+         * Sequencer DWELL_EXT (both auto bits FALSE) → coil retains TRUE
+           for the full dwell instead of releasing the piston.
+     - No sensor guards on the drive branches: holding the coil TRUE while
+       at the Extended sensor is normal operation, not a wasted drive.
+   Fail-safe still holds: cold boot, PLC reset, or e-stop leave bOutSolenoid
+   at its default FALSE and the spring retracts.
    ========================================== *)
-// JOG EXTEND: while held in Manual, drive coil until end sensor
-IF stHmi.bManJogExtend AND NOT bSwitchExtended_eff AND stHmi.eMode = E_ControlMode.Manual THEN
+// JOG EXTEND: while held in Manual, energise coil
+IF stHmi.bManJogExtend AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := TRUE;
 
 // JOG RETRACT: while held in Manual, de-energise coil (spring retracts)
 ELSIF stHmi.bManJogRetract AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := FALSE;
 
-// CASE 1: Move to EXTENDED — energise coil until Extended sensor
-ELSIF bTargetExtend AND NOT bSwitchExtended_eff THEN
+// EXTEND commanded — energise coil (latched via retain when bTargetExtend clears)
+ELSIF bTargetExtend THEN
     bOutSolenoid := TRUE;
 
-// CASE 2: Target reached, retract requested, or no active target → de-energise, spring returns
-ELSE
+// RETRACT commanded — de-energise coil, spring retracts
+ELSIF bTargetRetract THEN
     bOutSolenoid := FALSE;
+
+// No branch → bOutSolenoid RETAINS its previous value (see block header).
 END_IF;
 
 (* ==========================================
    3. HMI STATUS FEEDBACK
-   bIsMoving: OR the coil state with "between sensors" so the HMI shows
-   motion during the passive spring-return stroke (no coil to sense on that
-   half of the cycle). This differs from FB_SolSolPiston_2Pos, where both
-   strokes are coil-driven.
+   bIsMoving is derived from sensor state alone: with Section 2's latch
+   semantics, bOutSolenoid stays TRUE at the extended limit — so ORing
+   it in would report "moving" while the piston is actually parked.
+   "Between the two limits" is accurate for both strokes: coil-driven
+   extend and spring-driven retract both traverse that gap.
 
    bOutSolenoidRetract is written FALSE unconditionally — no retract coil
    exists on a spring-return actuator, so the mirror stays cleared.
    ========================================== *)
 stHmi.bIsExtended         := bSwitchExtended_eff;
 stHmi.bIsRetracted        := bSwitchRetracted_eff;
-stHmi.bIsMoving           := bOutSolenoid
-                             OR (NOT bSwitchExtended_eff AND NOT bSwitchRetracted_eff);
+stHmi.bIsMoving           := NOT bSwitchExtended_eff AND NOT bSwitchRetracted_eff;
 stHmi.bOutSolenoidExtend  := bOutSolenoid;
 stHmi.bOutSolenoidRetract := FALSE;
 ]]></ST>
