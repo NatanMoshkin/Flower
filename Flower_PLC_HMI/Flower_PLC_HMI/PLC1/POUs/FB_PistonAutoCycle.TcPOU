@@ -90,8 +90,9 @@ END_IF
 (* ==========================================
    3. STATE MACHINE
    Reads effective sensors from stHmi.bIsExtended / bIsRetracted — these
-   are already the real-OR-simulate value written by FB_SolSolPiston_2Pos.
-   So simulation "just works" via the piston FB's existing bSimulate* pins.
+   are already the real-OR-simulate value written by the piston FB
+   (FB_SolSolPiston_2Pos or FB_SolSpringPiston_2Pos). So simulation
+   "just works" via the piston FB's existing bSimulate* pins.
    ========================================== *)
 CASE stAuto.eStep OF
 

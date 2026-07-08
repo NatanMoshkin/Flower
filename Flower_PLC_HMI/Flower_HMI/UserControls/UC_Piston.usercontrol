@@ -165,9 +165,10 @@
 </div>
 
 <!-- ============ Simulate-sensor checkboxes (JetGame-style) ============ -->
-<!-- When ticked, the effective sensor in FB_SolSolPiston_2Pos.Section 0a
-     evaluates real-OR-simulate as TRUE. Use these to smoke-test the piston
-     FB and the auto sequencer without any physical hardware:
+<!-- When ticked, the effective sensor in the piston FB (Section 0a of
+     FB_SolSolPiston_2Pos / FB_SolSpringPiston_2Pos) evaluates real-OR-simulate
+     as TRUE. Use these to smoke-test the piston FB and the auto sequencer
+     without any physical hardware:
        1) Tick Sim RET to declare "piston is at retracted end" as the start state.
        2) Press EXTEND (or start the auto cycle). Coil energizes.
        3) Tick Sim EXT + untick Sim RET — the FB now sees the piston at extended;
