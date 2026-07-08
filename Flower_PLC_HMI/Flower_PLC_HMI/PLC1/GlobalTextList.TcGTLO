@@ -11,6 +11,16 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"899"</v>
+              <v n="TextDefault">"Auto"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"658"</v>
+              <v n="TextDefault">"Auto/Manual"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"841"</v>
               <v n="TextDefault">"bManCmdExtend"</v>
               <l n="LanguageTexts" t="ArrayList" />
@@ -28,6 +38,16 @@
             <o>
               <v n="TextID">"926"</v>
               <v n="TextDefault">"bManJogRetract"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"57"</v>
+              <v n="TextDefault">"Man"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"58"</v>
+              <v n="TextDefault">"MOVING"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
