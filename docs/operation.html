@@ -142,6 +142,60 @@ cp config.example.yaml config.yaml
     <h3>6. Docs (this site)</h3>
     <p>Double-click <code>scripts\serve-docs.bat</code>. Serves the repo root on <code>http://127.0.0.1:8765</code> and opens the browser at <code>/docs/index.html</code>. Leave the console window open while browsing; Ctrl+C to stop.</p>
   </div>
+
+  <div class="card">
+    <h3>7. CP6606 panel bring-up (TC3 PLC HMI)</h3>
+    <p>The <b>CP6606-0001-0020</b> is the whole control system in production: one ARM Cortex A8 device under Windows Embedded Compact 7, running both the TwinCAT PLC runtime and a native operator HMI on its 7-inch 800×480 touchscreen. There is no browser and no <code>TcHmiSrv</code> on the panel — the operator UI is Beckhoff's <b>TC3 PLC HMI</b> (visualizations authored inside the PLC project). The web HMI (<code>Flower_HMI</code>) stays on the developer's Windows x64 laptop for engineering use.</p>
+
+    <div class="callout">
+      <b>Design first, then deploy.</b> Build the six <code>*.TcVISU</code> files in TcXaeShell (right-click <code>PLC1 → Add → Visualization</code>) — see the next card for the per-page design guide. The <code>.TcVISU</code> file format is TcXaeShell-generated XML; hand-authoring is not recommended.
+    </div>
+
+    <h4 style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 6px 0;">Deployment steps</h4>
+    <ol class="compact">
+      <li><b>Add an ADS route to the panel</b> — TcXaeShell → SYSTEM → Routes → Add Route → search the LAN, pick the CP6606, log in with the panel's user (default: no password on Beckhoff CE). Routes must be present on BOTH sides.</li>
+      <li><b>Set the target system</b> — the TwinCAT toolbar's target dropdown → pick the CP6606's AMS Net ID. Solution now deploys to the panel instead of localhost.</li>
+      <li><b>Enable the SVG→BMP setting</b> — In the Solution Explorer under PLC1, double-click <code>Visualization Manager</code> → tab <i>Settings</i> → check "<i>Automatically convert SVG to BMP</i>". The CE renderer does not support SVG; this is a required setting even if you don't ship any SVG icons today.</li>
+      <li><b>Build + Activate Configuration</b> — writes boot files to <code>\Hard Disk\TwinCAT\3.1\Boot\</code> on the panel. Confirm the PLC comes up in Run mode.</li>
+      <li><b>Configure Startup Manager on the panel</b> — on the CE desktop: Start → <code>StartMan</code> → <i>Startup Options</i> tab → <i>Autostart</i> → add an entry with:
+        <ul class="compact" style="margin-top:4px">
+          <li>Type: <code>Application</code></li>
+          <li>Delay: <code>30 s</code> (waits for TwinCAT runtime to be Run first)</li>
+          <li>Command: <code>\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe</code></li>
+        </ul>
+      </li>
+      <li><b>Reboot the panel.</b> After the delay, <code>Tc3PlcHmi.exe</code> should come up fullscreen with your <code>VISU_Home</code> visible. Touch-driven navigation to the subpages should work.</li>
+    </ol>
+
+    <div class="callout warn" style="margin-top:12px">
+      <b><code>Tc3PlcHmi.ini</code> location has moved.</b> The config-file path changed between TwinCAT builds: <code>C:\TwinCAT\3.1\Components\Plc\Tc3PlcHmi</code> (builds &lt; 4022) → <code>C:\TwinCAT\3.1\Boot\Plc</code> (4022 to 4025) → <code>C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\Plc\Tc3PlcHmi</code> (4026+). If you ever need to hand-edit the INI, check your panel's TC build first (see the TwinCAT tray → About).
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>8. PLC HMI design (six VISUs to build in TcXaeShell)</h3>
+    <p>All six visualization pages target <b>800×480</b> to match the CP6606 screen. Build them in this order — the shared <code>VISU_Piston</code> tile is referenced by <code>VISU_Pistons</code>, so create it first. Every subpage carries a "← Home" button in the top-left that navigates back to <code>VISU_Home</code> (Element property → <i>Inputconfiguration</i> → mouse down action → <i>Change shown visualization</i>).</p>
+
+    <ul class="compact">
+      <li><b><code>VISU_Piston</code></b> — reusable tile, size <b>~260×220</b>. Interface parameter: <code>piston : ST_HmiPiston</code>. Elements:
+        <ul class="compact">
+          <li>Label bound to <code>piston.Name</code> (top)</li>
+          <li>Two coloured rectangles for the sensor indicators; color expression → green if <code>piston.bIsExtended</code>/<code>piston.bIsRetracted</code>, grey otherwise</li>
+          <li>Two buttons "EXTEND" and "RETRACT" with <i>Toggle</i> disabled and <i>Tap</i> configured to write <code>piston.bManCmdExtend</code>/<code>bManCmdRetract</code> (TRUE on mouse-down, FALSE on mouse-up — matches the web UC's momentary semantics)</li>
+          <li>Small mode label bound to <code>piston.eMode</code> using a textlist ("Manual" / "Automatic")</li>
+        </ul>
+      </li>
+      <li><b><code>VISU_Pistons</code></b> — <b>800×480</b>. Six <code>Frame</code> elements referencing <code>VISU_Piston</code> in a 3×2 grid; pass <code>GVL_HMI.stSepSol1</code>..<code>stSepSol3</code>, <code>stPushSol1</code>..<code>stPushSol3</code> to each. Plus one "← Home" button.</li>
+      <li><b><code>VISU_Robot</code></b> — <b>800×480</b>. Wide banner rectangle at top; color expression on <code>GVL_Robot.stRobot.eConnState</code> (0=grey, 1=yellow, 2=green, 3=red). Text overlay bound to <code>stRobot.sConnStateText</code>. Three "AT POS N" indicator rectangles bound to <code>bAtPos1/2/3</code>. Packet counter (<code>nPacketsRx</code>) and last message (<code>sLastMessage</code>) as text fields. "← Home" button.</li>
+      <li><b><code>VISU_AutoCycle</code></b> — <b>800×480</b>. Step banner (color expression on <code>GVL_HMI.stSepSol1Auto.eStep</code>, same rules as the web UC). Four buttons Start/Stop/Reset/Ack wired to <code>stSepSol1Auto.bStart/bStop/bReset/bAck</code>. "Continuous" checkbox bound to <code>GVL_HmiPersistent.stSepSol1AutoCfg.bContinuous</code>. Four numeric inputs for <code>tDwellExtendedMs</code> / <code>tDwellRetractedMs</code> / <code>tTimeoutExtendMs</code> / <code>tTimeoutRetractMs</code>. Error text field bound to <code>stSepSol1Auto.sErrorText</code>. "← Home" button.</li>
+      <li><b><code>VISU_Diagnostics</code></b> — <b>800×480</b>. One ToggleSwitch bound to <code>GVL_Log.bDebugMode</code>. Optional: one text field showing the last log entry (<code>GVL_Log.aLog[(GVL_Log.nWriteIdx - 1) MOD 256].sMsg</code>). "← Home" button.</li>
+      <li><b><code>VISU_Home</code></b> — <b>800×480</b>. Four large touch buttons in a 2×2 grid: "Pistons" / "Robot" / "Auto" / "Diagnostics", each configured with <i>Inputconfiguration</i> → mouse down → <i>Change shown visualization</i> → target the corresponding VISU. Aim for 400×240 per button so they're easily hit on the 7-inch touchscreen.</li>
+    </ul>
+
+    <div class="callout" style="margin-top:6px">
+      <b>What this design deliberately drops vs the web HMI</b> (all acceptable on the panel): no JOG buttons on the piston tile, no localization (English only for v1), no simulation checkboxes (operators shouldn't fake sensors on the panel — that's an engineering task, done via the web HMI or a Watch window). Add them back if the operators ask.
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================ -->
@@ -404,6 +458,27 @@ $c.Close()</pre>
                   { else: [action D] } ] } ] } ] } ] }
 ]</pre>
     <p>Verbose but the only supported shape for n-way state → color mapping without introducing a user function. The Flower <code>UC_Robot.usercontrol</code> uses this nesting for its 4-state <code>eConnState</code> color trigger — copy that pattern.</p>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: CP6606 boots to CE desktop, no HMI shown</h3>
+    <p>The Beckhoff Startup Manager didn't fire the PLC HMI Client, or the PLC isn't in Run mode when the client starts.</p>
+    <ol class="compact">
+      <li>On the panel, tap Start → <code>StartMan</code> → verify the Autostart entry exists with the correct path <code>\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe</code>.</li>
+      <li>Increase the delay to 45–60 s if the PLC needs longer to reach Run mode.</li>
+      <li>Manually double-click <code>Tc3PlcHmi.exe</code> from the CE file explorer. If it opens a "no visualization found" or "cannot connect to PLC" message, the PLC isn't running or the config INI is wrong.</li>
+      <li>From TcXaeShell (on the developer laptop, connected via ADS route), check the CP6606's PLC state — it must be Run for the client to have anything to render.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h3>Symptom: CP6606 HMI shows blank / missing images</h3>
+    <p>The CE renderer requires BMP; SVG isn't rendered.</p>
+    <ol class="compact">
+      <li>In TcXaeShell → PLC1 → Visualization Manager → Settings tab → check "<i>Automatically convert SVG to BMP</i>".</li>
+      <li>Rebuild + Activate. The panel needs a fresh boot-file deployment.</li>
+      <li>If images still don't appear, verify the source files are actually in the project (right-click Image Pool → Properties) — missing image references silently render as blanks.</li>
+    </ol>
   </div>
 
   <div class="card">

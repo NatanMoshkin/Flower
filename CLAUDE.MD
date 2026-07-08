@@ -2,7 +2,6 @@
 
 ## TODO:
 
- - create Docs web style, similar to C:\Users\Natan.Moshkin\source\repos\BS\BS_HMI_PLC_DB and the script that will run the http://127.0.0.1:8765/docs/index.html (or different port as needed)
 
 ## OPEN ISSUE: robot TCP/IP role (server vs client)
 
