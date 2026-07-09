@@ -56,6 +56,12 @@ VAR_OUTPUT
     bSepCmdRetract        : ARRAY[1..3] OF BOOL;
     bPushCmdExtend        : ARRAY[1..3] OF BOOL;
     bPushCmdRetract       : ARRAY[1..3] OF BOOL;
+
+    (* TRUE while the master cycle is in any state other than IDLE or ERR.
+       MAIN reads this to force enabled pistons' stHmi.eMode := Automatic
+       while running, so bAutoCmd* actually reaches the piston coil (in
+       Manual mode the piston FB ignores bAutoCmd*). *)
+    bAnyRunning           : BOOL;
 END_VAR
 
 VAR
@@ -390,10 +396,14 @@ ELSE
 END_CASE;
 
 (* ==========================================
-   5. STATUS MIRROR — human-readable step name
+   5. STATUS MIRROR — human-readable step name + running flag
    TO_STRING relies on the enum's {to_string} attribute.
+   bAnyRunning is TRUE any time the cycle is actively driving pistons —
+   MAIN uses it to force enabled pistons into Automatic mode.
    ========================================== *)
 stHmi.sStepText := TO_STRING(stHmi.eStep);
+bAnyRunning     := (stHmi.eStep <> E_MasterAutoStep.IDLE)
+               AND (stHmi.eStep <> E_MasterAutoStep.ERR);
 ]]></ST>
     </Implementation>
   </POU>

@@ -77,6 +77,27 @@ fbMasterAutoCycle(
     stRobot := GVL_Robot.stRobot
 );
 
+(* Force enabled pistons into Automatic while the master cycle is running,
+   so bAutoCmd* actually reaches the coil. Mirrors what FB_PistonAutoCycle
+   already does for its own piston. Only touches pistons up to the
+   configured pair count; leaves the others in whatever mode the operator
+   set. When the master is IDLE or ERR, this block does nothing — the
+   operator's manual choice is preserved. *)
+IF fbMasterAutoCycle.bAnyRunning THEN
+    IF GVL_HmiPersistent.stMasterAutoCfg.uiPairCount >= 1 THEN
+        GVL_HMI.stSepSol1.eMode  := E_ControlMode.Automatic;
+        GVL_HMI.stPushSol1.eMode := E_ControlMode.Automatic;
+    END_IF;
+    IF GVL_HmiPersistent.stMasterAutoCfg.uiPairCount >= 2 THEN
+        GVL_HMI.stSepSol2.eMode  := E_ControlMode.Automatic;
+        GVL_HMI.stPushSol2.eMode := E_ControlMode.Automatic;
+    END_IF;
+    IF GVL_HmiPersistent.stMasterAutoCfg.uiPairCount >= 3 THEN
+        GVL_HMI.stSepSol3.eMode  := E_ControlMode.Automatic;
+        GVL_HMI.stPushSol3.eMode := E_ControlMode.Automatic;
+    END_IF;
+END_IF;
+
 (* ==========================================
    Pin separators (SOL-Spring, 2 limit switches, single Extend coil).
    SepSol1 and PushSol1 are driven by their own FB_PistonAutoCycle
