@@ -106,15 +106,31 @@ class Config:
 # ---------------------------------------------------------------------------
 
 class PlcRobotSymbol:
-    """Wraps writes into GVL_Robot.stRobot on the PLC."""
+    """Wraps reads/writes on GVL_Robot.stRobot on the PLC."""
+
+    # Outbound frame catalog. The PLC's FB_MasterAutoCycle pulses one of the
+    # bTx* flags on state transitions; the bridge polls, sends the frame,
+    # increments the counter, and clears the flag. Robot-side firmware must
+    # accept these tokens; tune the RHS strings here if commissioning finds
+    # the robot expects different words.
+    TX_FRAMES = (
+        # (field name on ST_HmiRobot, TCP frame token — CRLF-terminated at send time)
+        ("bTxAutoStarted",  "AUTO_STARTED"),
+        ("bTxPushDone",     "PUSH_DONE"),
+        ("bTxPistonsError", "PISTONS_ERROR"),
+    )
 
     def __init__(self, plc: pyads.Connection, prefix: str):
         self._plc = plc
         self._prefix = prefix
         self._packets_rx = 0
+        self._packets_tx = 0
 
     def _write(self, field: str, value, plc_type):
         self._plc.write_by_name(f"{self._prefix}.{field}", value, plc_type)
+
+    def _read(self, field: str, plc_type):
+        return self._plc.read_by_name(f"{self._prefix}.{field}", plc_type)
 
     def set_conn_state(self, state: int) -> None:
         self._write("eConnState", state, pyads.PLCTYPE_UINT)
@@ -126,10 +142,40 @@ class PlcRobotSymbol:
         self._write("bAtPos2", pos == 2, pyads.PLCTYPE_BOOL)
         self._write("bAtPos3", pos == 3, pyads.PLCTYPE_BOOL)
 
+    def set_reset_error(self) -> None:
+        """Latch bRxResetError := TRUE on an inbound RESET_ERROR frame.
+        FB_MasterAutoCycle consumes on rising edge and clears the flag."""
+        self._write("bRxResetError", True, pyads.PLCTYPE_BOOL)
+
     def record_packet(self, message: str) -> None:
         self._packets_rx += 1
         self._write("nPacketsRx", self._packets_rx, pyads.PLCTYPE_UDINT)
         self._write("sLastMessage", message[:80], pyads.PLCTYPE_STRING)
+
+    def poll_tx_flags(self, conn: socket.socket, encoding: str) -> None:
+        """Drain any pending PLC-to-Robot pulses.
+
+        For each bTx* flag that is TRUE, send the corresponding TCP frame,
+        bump nPacketsTx / sLastTxMessage, and clear the flag. If the send
+        raises, propagate — the caller's exception handler drops the
+        connection and reconnects; the flag stays TRUE on the PLC and gets
+        re-sent on the next connect. No queue, no lost pulses.
+        """
+        for field, token in self.TX_FRAMES:
+            try:
+                if not self._read(field, pyads.PLCTYPE_BOOL):
+                    continue
+            except pyads.ADSError:
+                # Field missing on target (e.g. running against a pre-master
+                # PLC). Ignore this pulse; other TX flags may still work.
+                continue
+            frame = (token + "\n").encode(encoding)
+            conn.sendall(frame)
+            self._packets_tx += 1
+            self._write("nPacketsTx", self._packets_tx, pyads.PLCTYPE_UDINT)
+            self._write("sLastTxMessage", token[:80], pyads.PLCTYPE_STRING)
+            self._write(field, False, pyads.PLCTYPE_BOOL)
+            logging.info("tx: %s", token)
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +207,14 @@ def parse_position(line: str) -> Optional[int]:
     if upper == "POS3":
         return 3
     return None
+
+
+def is_reset_error(line: str) -> bool:
+    """True iff the line is a RESET_ERROR frame from the robot.
+
+    Case-insensitive. Consumed by FB_MasterAutoCycle to leave the ERR state.
+    """
+    return line.upper() == "RESET_ERROR"
 
 
 # ---------------------------------------------------------------------------
@@ -254,6 +308,13 @@ def run_once(cfg: Config, plc_symbol: PlcRobotSymbol) -> None:
                         logging.info("heartbeat send failed (%s); dropping connection", exc)
                         break
                     idle_seconds = 0.0
+                # Drain PLC-to-Robot pulses even on idle windows so latency
+                # from PLC pulse -> TCP frame stays under one recv_timeout.
+                try:
+                    plc_symbol.poll_tx_flags(conn, cfg.encoding)
+                except OSError as exc:
+                    logging.info("tx send failed (%s); dropping connection", exc)
+                    break
                 continue
 
             if not data:
@@ -268,7 +329,16 @@ def run_once(cfg: Config, plc_symbol: PlcRobotSymbol) -> None:
                 pos = parse_position(line)
                 if pos is not None:
                     plc_symbol.set_position(pos)
+                elif is_reset_error(line):
+                    plc_symbol.set_reset_error()
                 # unknown frames still update sLastMessage/nPacketsRx above
+
+            # Drain PLC-to-Robot pulses after processing inbound frames too.
+            try:
+                plc_symbol.poll_tx_flags(conn, cfg.encoding)
+            except OSError as exc:
+                logging.info("tx send failed (%s); dropping connection", exc)
+                break
     finally:
         conn.close()
         plc_symbol.set_conn_state(ConnState.DISCONNECTED)
