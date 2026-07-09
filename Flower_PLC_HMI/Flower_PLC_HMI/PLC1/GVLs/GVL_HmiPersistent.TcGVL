@@ -7,7 +7,8 @@ VAR_GLOBAL PERSISTENT
     // Auto-cycle configuration. PERSISTENT so operator-tuned dwell / timeout
     // values survive an Activate Configuration + PLC restart. Values reset
     // to the struct defaults only on a full cold-boot reset.
-    stSepSol1AutoCfg : ST_HmiPistonAutoCfg;
+    stSepSol1AutoCfg  : ST_HmiPistonAutoCfg;
+    stPushSol1AutoCfg : ST_HmiPistonAutoCfg;
 END_VAR
 ]]></Declaration>
   </GVL>

@@ -3,6 +3,10 @@
   data-tchmi-type="TcHmi.Controls.System.TcHmiContent"
   data-tchmi-top="0"
   data-tchmi-left="0"
-  data-tchmi-width="800"
-  data-tchmi-height="640"
-></div>
+  data-tchmi-width="1100"
+  data-tchmi-height="730"
+><div id="SepSol1AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="12" data-tchmi-top-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol1Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg%/s%" data-tchmi-pistonname="SepSol1 — Auto Cycle">
+</div>
+<div id="PudhSol1AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="351" data-tchmi-top-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stPushSol1Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stPushSol1AutoCfg%/s%" data-tchmi-pistonname="PushSol1 — Auto Cycle">
+</div>
+</div>

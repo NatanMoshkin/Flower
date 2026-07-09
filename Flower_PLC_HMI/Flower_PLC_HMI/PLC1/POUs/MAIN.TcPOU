@@ -10,10 +10,12 @@ VAR
     fbPushSol2 : FB_SolSpringPiston_2Pos;
     fbPushSol3 : FB_SolSpringPiston_2Pos;
 
-    // v1 demo — auto cycle only wired for SepSol1. Its bAutoCmd* pins get
-    // driven by fbSepSol1Auto below. Extending to the other five pistons
-    // is a copy-paste of the FB instance + one MAIN call block.
-    fbSepSol1Auto : FB_PistonAutoCycle;
+    // Auto-cycle sequencers. Each drives one piston's bAutoCmdExtend /
+    // bAutoCmdRetract pins via its bCmdExtend / bCmdRetract outputs.
+    // Extending to more pistons is a copy-paste of the FB instance +
+    // one MAIN call block + one HMI symbol pair (stXxxAuto + stXxxAutoCfg).
+    fbSepSol1Auto  : FB_PistonAutoCycle;
+    fbPushSol1Auto : FB_PistonAutoCycle;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -43,9 +45,10 @@ GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
 
 (* ==========================================
    Pin separators (SOL-Spring, 2 limit switches, single Extend coil).
-   SepSol1 is driven by fbSepSol1Auto (called first so its outputs
-   feed the piston FB this cycle). Other pistons still manual-only —
-   their bAutoCmd* pins stay wired to FALSE until each gets its own
+   SepSol1 and PushSol1 are driven by their own FB_PistonAutoCycle
+   instances (called first so their outputs feed the piston FB this
+   cycle). SepSol2/3 and PushSol2/3 remain manual-only — their
+   bAutoCmd* pins stay wired to FALSE until each gets its own
    sequencer instance.
    ========================================== *)
 fbSepSol1Auto(
@@ -86,9 +89,17 @@ fbSepSol3(
 (* ==========================================
    Pin pushers
    ========================================== *)
+fbPushSol1Auto(
+    sName        := 'PushSol1Auto',
+    stHmi        := GVL_HMI.stPushSol1,
+    stAuto       := GVL_HMI.stPushSol1Auto,
+    stCfg        := GVL_HmiPersistent.stPushSol1AutoCfg
+    // bCmdExtend / bCmdRetract wired inline in the fbPushSol1 call below
+);
+
 fbPushSol1(
-    bAutoCmdExtend   := FALSE,
-    bAutoCmdRetract  := FALSE,
+    bAutoCmdExtend   := fbPushSol1Auto.bCmdExtend,
+    bAutoCmdRetract  := fbPushSol1Auto.bCmdRetract,
     bSwitchExtended  := GVL_App.bSensorPushExtended1,
     bSwitchRetracted := GVL_App.bSensorPushRetracted1,
     stHmi            := GVL_HMI.stPushSol1,

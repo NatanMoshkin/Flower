@@ -13,7 +13,11 @@ VAR_GLOBAL
 
     // Runtime state for the SepSol1 auto sequencer. Config for it lives in
     // GVL_HmiPersistent.stSepSol1AutoCfg (PERSISTENT).
-    stSepSol1Auto : ST_HmiPistonAuto;
+    stSepSol1Auto  : ST_HmiPistonAuto;
+
+    // Runtime state for the PushSol1 auto sequencer. Config for it lives in
+    // GVL_HmiPersistent.stPushSol1AutoCfg (PERSISTENT).
+    stPushSol1Auto : ST_HmiPistonAuto;
 END_VAR
 ]]></Declaration>
   </GVL>
