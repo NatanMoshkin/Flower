@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_MasterAutoCycle" Id="{6b4ee376-0a0c-47a5-84cf-72c0a19ed5f4}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_MasterAutoCycle
@@ -60,7 +60,7 @@ VAR_OUTPUT
     (* TRUE while the master cycle is in any state other than IDLE or ERR.
        MAIN reads this to force enabled pistons' stHmi.eMode := Automatic
        while running, so bAutoCmd* actually reaches the piston coil (in
-       Manual mode the piston FB ignores bAutoCmd*). *)
+       Manual mode the piston FB ignores bAutoCmd*)
     bAnyRunning           : BOOL;
 END_VAR
 
