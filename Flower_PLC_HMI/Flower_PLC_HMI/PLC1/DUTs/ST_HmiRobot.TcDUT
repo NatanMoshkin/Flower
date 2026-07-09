@@ -19,6 +19,22 @@ STRUCT
     // Bridge writes — diagnostics
     nPacketsRx     : UDINT;
     sLastMessage   : STRING(80);
+
+    // Outbound pulses — PLC (FB_MasterAutoCycle) writes TRUE for one cycle.
+    // Bridge polls each on rising edge, sends the corresponding TCP frame,
+    // then clears the flag. If the bridge is disconnected the flag stays
+    // TRUE until reconnect; no queue, no lost pulses.
+    bTxAutoStarted  : BOOL;
+    bTxPushDone     : BOOL;
+    bTxPistonsError : BOOL;
+
+    // Inbound pulse — bridge writes TRUE on receiving a RESET_ERROR frame.
+    // FB_MasterAutoCycle consumes on rising edge and clears the flag.
+    bRxResetError   : BOOL;
+
+    // Bridge writes — outbound diagnostics
+    nPacketsTx      : UDINT;
+    sLastTxMessage  : STRING(80);
 END_STRUCT
 END_TYPE
 ]]></Declaration>

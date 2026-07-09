@@ -9,6 +9,10 @@ VAR_GLOBAL PERSISTENT
     // to the struct defaults only on a full cold-boot reset.
     stSepSol1AutoCfg  : ST_HmiPistonAutoCfg;
     stPushSol1AutoCfg : ST_HmiPistonAutoCfg;
+
+    // Config for the master (multi-piston + robot-coordinated) auto sequence.
+    // See ST_HmiMasterAutoCfg for the tunable list; defaults land on cold-boot.
+    stMasterAutoCfg   : ST_HmiMasterAutoCfg;
 END_VAR
 ]]></Declaration>
   </GVL>

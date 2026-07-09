@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiMasterAuto" Id="{d8256873-a04f-4e94-90b4-5238eec564a2}">
+    <Declaration><![CDATA[TYPE ST_HmiMasterAuto :
+STRUCT
+    // Display label ('MasterAuto'). Set from GVL_HMI init, never written by FB.
+    Name             : STRING(30);
+
+    // HMI writes -- momentary command buttons (R_TRIG inside FB latches the rising edge)
+    bStart           : BOOL;
+    bStop            : BOOL;
+    bReset           : BOOL;
+
+    // FB writes -- status
+    eStep            : E_MasterAutoStep;
+    sStepText        : STRING(20);   // human-readable mirror of eStep
+    tElapsedS        : LREAL;        // seconds spent in the current step (0.0 on transition)
+    iErrorCode       : INT;          // 0 = OK; see FB_MasterAutoCycle header for the code table
+    sErrorText       : STRING(80);
+    nCyclesCompleted : UDINT;        // incremented at end of SEP_RETRACTED_DWELL
+
+    // HMI writes -- per-step Simulate flags. Rising edge shortcuts the current
+    // step's wait condition (FB clears the flag on consumption via R_TRIG.Q).
+    bSimStep_Idle          : BOOL;
+    bSimStep_SepExt        : BOOL;
+    bSimStep_WaitPos2      : BOOL;
+    bSimStep_PushExt       : BOOL;
+    bSimStep_DwellPush     : BOOL;
+    bSimStep_PushRet       : BOOL;
+    bSimStep_PushRetDwell  : BOOL;
+    bSimStep_SepRet        : BOOL;
+    bSimStep_SepRetDwell   : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
