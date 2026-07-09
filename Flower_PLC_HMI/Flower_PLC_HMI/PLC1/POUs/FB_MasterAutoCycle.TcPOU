@@ -138,7 +138,7 @@ IF fbTrigRxReset.Q THEN stRobot.bRxResetError := FALSE; END_IF;
 
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
 IF fbSim_SepExt.Q       THEN stHmi.bSimStep_SepExt       := FALSE; END_IF;
-IF fbSim_WaitPos2.Q     THEN stHmi.bSimStep_WaitPos2     := FALSE; END_IF;
+// IF fbSim_WaitPos2.Q     THEN stHmi.bSimStep_WaitPos2     := FALSE; END_IF; // Temporary for continues simulation stHmi.bSimStep_WaitPos2
 IF fbSim_PushExt.Q      THEN stHmi.bSimStep_PushExt      := FALSE; END_IF;
 IF fbSim_DwellPush.Q    THEN stHmi.bSimStep_DwellPush    := FALSE; END_IF;
 IF fbSim_PushRet.Q      THEN stHmi.bSimStep_PushRet      := FALSE; END_IF;
@@ -271,13 +271,13 @@ CASE stHmi.eStep OF
             bPushCmdRetract[i] := FALSE;
         END_FOR;
 
-        IF fbTrigPos2.Q OR fbSim_WaitPos2.Q THEN
+        IF fbTrigPos2.Q OR fbSim_WaitPos2.Q OR stHmi.bSimStep_WaitPos2  THEN // Temporary for continues simulation stHmi.bSimStep_WaitPos2
             stHmi.eStep := E_MasterAutoStep.PUSH_EXTENDING;
-        ELSIF tonStep.Q THEN
-            stHmi.iErrorCode := 2;
-            stHmi.sErrorText := 'WAIT_POS2 timed out';
-            stHmi.eStep := E_MasterAutoStep.ERR;
-            stRobot.bTxPistonsError := TRUE;
+//         ELSIF tonStep.Q THEN
+//             stHmi.iErrorCode := 2;
+//             stHmi.sErrorText := 'WAIT_POS2 timed out';
+//             stHmi.eStep := E_MasterAutoStep.ERR;
+//             stRobot.bTxPistonsError := TRUE;
         END_IF;
 
     E_MasterAutoStep.PUSH_EXTENDING:
