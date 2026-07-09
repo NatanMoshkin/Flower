@@ -2,15 +2,66 @@
 
 ## TODO:
 
- * Auto sequence:
-  - Wait trigger from the Robot - Pos1
-  - SeparatePiston.Extend
-  - Wait trigger - Pos2
-  - PushPiston.Extend
-  - Timer
-  - PushPiston.Retract
-  - SeparatePiston.Retract
+ * (empty — auto-sequence TODO landed as FB_MasterAutoCycle; see DECISION below)
 
+## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
+
+The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`
+(commit `9ba7a14`, with mode-forcing added in `8a39fae`). It coordinates
+1..3 pairs of (SepSolN, PushSolN) pistons in parallel with the robot's
+Pos1/Pos2 signals.
+
+**Ten-state state machine** (`E_MasterAutoStep`):
+
+```
+IDLE                    Wait for operator START OR stRobot.bAtPos1 rising OR
+                        bSimStep_Idle. On trigger: emit AUTO_STARTED to robot.
+SEP_EXTENDING           Drive SepCmdExtend[1..N]; wait AND of enabled SepIsExtended.
+WAIT_POS2               Wait for stRobot.bAtPos2 rising.
+PUSH_EXTENDING          Drive PushCmdExtend[1..N]; wait AND of enabled PushIsExtended.
+DWELL_PUSH              Hold both extended; wait tDwellPushMs (default 2000).
+PUSH_RETRACTING         Drive PushCmdRetract[1..N]; wait AND of enabled PushIsRetracted.
+                        Emit PUSH_DONE to robot on sensor-reached.
+PUSH_RETRACTED_DWELL    Wait tPushRetractedDwellMs (default 500).
+SEP_RETRACTING          Drive SepCmdRetract[1..N]; wait AND of enabled SepIsRetracted.
+SEP_RETRACTED_DWELL     Wait tSepRetractedDwellMs (default 500). Increment nCyclesCompleted.
+                        → IDLE (or immediately re-arm bStart if Continuous).
+ERR                     Latched. Emit PISTONS_ERROR. iErrorCode = step's fault code.
+                        Reset on HMI RESET rising edge OR stRobot.bRxResetError rising edge.
+```
+
+**Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
+
+| Code | Meaning                            |
+|------|------------------------------------|
+| 0    | OK                                 |
+| 1    | SEP_EXTENDING timeout              |
+| 2    | WAIT_POS2 timeout                  |
+| 3    | PUSH_EXTENDING timeout             |
+| 4    | PUSH_RETRACTING timeout            |
+| 5    | SEP_RETRACTING timeout             |
+| 99   | Operator STOP while running        |
+
+**Piston mode is forced to Automatic** on any pair with index ≤ uiPairCount
+while the master is in any non-IDLE, non-ERR state (MAIN.TcPOU block right
+after the `fbMasterAutoCycle()` call, gated on `bAnyRunning`). Without this
+the piston FB ignores `bAutoCmd*` when in Manual mode. On IDLE/ERR the block
+does nothing so operator's manual choice is preserved.
+
+**Coexists** with the per-piston `fbSepSol1Auto` / `fbPushSol1Auto` tiles
+via OR-merge on `bAutoCmd*` at each piston call site. Bench-testing loops
+independently still works.
+
+**Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
+operator advance any waiting step without physical sensors — rising-edge
+triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
+exposes all 9 sim checkboxes plus `Sim bAtPos1` / `Sim bAtPos2` for
+sensorless testing.
+
+**Bidirectional protocol** with the robot (see the RobotBridge DECISION
+below). Outbound: `AUTO_STARTED`, `PUSH_DONE`, `PISTONS_ERROR`. Inbound:
+`RESET_ERROR`. Frame tokens are commissioning-tunable (constants live in
+`RobotBridge/robot_bridge.py`'s `PlcRobotSymbol.TX_FRAMES`).
 
 ## DECISION: robot is the TCP server; bridge is the client
 
