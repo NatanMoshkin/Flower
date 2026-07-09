@@ -2,6 +2,15 @@
 
 ## TODO:
 
+ * Auto sequence:
+  - Wait trigger from the Robot - Pos1
+  - SeparatePiston.Extend
+  - Wait trigger - Pos2
+  - PushPiston.Extend
+  - Timer
+  - PushPiston.Retract
+  - SeparatePiston.Retract
+
 
 ## DECISION: robot is the TCP server; bridge is the client
 
