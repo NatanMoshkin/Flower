@@ -171,6 +171,13 @@
     <Content Include="Pages\StartPage.content">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="UserControls\UC_MasterAutoCycle.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_MasterAutoCycle.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_MasterAutoCycle.usercontrol</DependentUpon>
+    </Content>
     <Content Include="UserControls\UC_Piston.usercontrol">
       <SubType>Content</SubType>
     </Content>

@@ -9,7 +9,7 @@
     "CACHEMAXAGE": "P30D",
     "CACHEMAXENTRYSIZE": 1048576,
     "CACHEMAXSIZE": 2097152,
-    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQwVENDQXJtZ0F3SUJBZ0lKQUx6WmVLRVM4bjBTTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3T1RFeE5Ea3hNRm9YRFRJNU1EY3dPVEExTkRreE1Gb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBd2tPcQpGQTAvMDlnRGR4eGYrOUh4VFF2czRKREZtMldmaThtUUVGd1FHRXZlSE1YcUl5cWpLV0NINWNFVDRXNW5yUnIwCmk4b1oyRmUzUnNCVGlLemt2VndOQjQ0c3JLRGNBWTltSmtTRzVPU2puQlhsUXJOaldFbTl5OFJZeHRtR2RrcGMKZncwVWZIemV5YVQrK21kdjQ4S2pBK0FOWmRJNUFrRXQ4OERXb2pSU1lzWmF2VDRJQWQwVDVqWkpZWVFXN29tcQpucUlsT1BiVUxpSmloMEQxZ0NTSU5XWG9JVkg5cGMyRk90WS9jaSt1cTN3Z3hKazFPRkludTJ3aWdoQmViWkJMClNHYWN4QzYxbGJ6UnR1VzE3d25XcWlsbTFpUzdiWHNTQmdXanJJRXR1MEVkLzJhYmpKNm96UmxTaTdQTHcwN1AKNXNWV2JlNk9ha0JHOWIzMjN3SURBUUFCbzRITU1JSEpNR2tHQTFVZEVRUmlNR0NDQ1d4dlkyRnNhRzl6ZEljRQpmd0FBQVljUUFBQUFBQUFBQUFBQUFBQUFBQUFBQVlJSlRGQXRUbUYwWVc1TmdoaE1VQzFPWVhSaGJrMHVhMkYxClptMWhiaTF5WkM1amIyMkhCTUNvZUNTSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpVd0hRWURWUjBPQkJZRUZMSVgKeTR5S2lSUmRYZ1ZtTDFZd1ZkVzFzcVNHTUI4R0ExVWRJd1FZTUJhQUZOV0Y3RTdnV3BzSVVLL2NxMlFKSWtzegpRaUFyTUF3R0ExVWRFd0VCL3dRQ01BQXdEZ1lEVlIwUEFRSC9CQVFEQWdXZ01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUFTR29STEJGYjQ0dlFzRVhYSkNDSTJYbGhaaHhORm5rbW91OEVscEEvN1BpRi8yYWNtZVhtbk85aWQKRTdkWDUwTzQvUGl5bHcvZTZjM2hXRDZOR2ovQlJ6WDZiSVBGZ2JDQlNuQmdERzNzMXRXSmdFTU5FcTZRME4vVQpEQnh0MEtsL2NIM3hFK0R2UHVHVTk4bGRRMXlON1EwVjFPb0hVcUdKREtIL2l6Z1piVXpzYzhoTlVtd0VpUlBLClpHZlVEMjJsdGkrNnc5Z2dOVkpGTFFwaFRvcGYvZVNSNFdkWFhEQlVPNHZqYWNSSmQrVURRNERpdWhEbmdPTmgKblZ0ZHVXQ3FMaVlPQWw0T0x1V0I1RTlyaXl0OEpUams2amVDaUQ3eExMbmE4bW43N1lPOGJoMVA5US8rTFVXQgp4TEdkWkNudXhmNXJRdHJZajdMVVFaOVhJTGpFCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQ4akNDQXRxZ0F3SUJBZ0lKQU1HS25QTGswNU9zTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TlRFek5EWTFNMW9YRFRJNU1EY3dOVEEzTkRZMU0xb3dRekVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVYTUJVR0ExVUUKQXd3T1RGQXRUbUYwWVc1TlgzSnZiM1F3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQgpBUURNSURVV3c4TkNkRjRhRThtcTdsaUN1OFdsUDZyK1BjV3UrMVRSL1FXZVZkQVhzdGMxUUNpeXdzRldpNk9BCnVjUlc1YUx6VUZ3YUpMcGEyZVlnR056aE1lelVQS25UK3gzVnRZTWI0Ky9qdlZyczlHVnI5ZnV6M1RoVXU5R2cKdTNWNmxtNXgvSDUySm0vS1ZpZXk3NEhMK3BMQm0wZlZsc0hiNmhKcUFhOEFZRVRwZHp4MkNFank3SlFZNys0MAptTE5mNzhwd1BwS1lVY0VZNXlnOElLdlphaTVEZml3UU1CMDBFYXM2eWpFSERvdlBOTTBQc2ZGRUJ3ZGhBa1o5CkZtYXFNS1YxK1lVeHcrdGlZNEM4NWFRL21tWVZLbm9iaDlXY2I3V09sVk1Pb2F6dHNEN251OXFjZUNkb1lBK2gKSzRGMmhyVFFteFhtcDZFSitobDFWQnEvQWdNQkFBR2pnZWd3Z2VVd2dZRUdBMVVkRVFSNk1IaUNDV3h2WTJGcwphRzl6ZEljRWZ3QUFBWWNRQUFBQUFBQUFBQUFBQUFBQUFBQUFBWUlKVEZBdFRtRjBZVzVOZ2hoTVVDMU9ZWFJoCmJrMHVhMkYxWm0xaGJpMXlaQzVqYjIySEJLbis4RnFIQk1Db2VFYUhFUDZBQUFBQUFBQUFLS1pMY0ZjYTV6V0gKRVA2QUFBQUFBQUFBZGNBYm1xNXR0dzh3SFFZRFZSME9CQllFRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBcgpNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1BOEdBMVVkRXdFQi93UUZNQU1CCkFmOHdEZ1lEVlIwUEFRSC9CQVFEQWdFR01BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQldXWjdEajdUU1g0S08KRTA5UTJnY2NVODZINkRzc3FlMFdkU1pFaXp0UUg5WUFyVGZvL3hKR0ViK05VRVg2ejU3d0JQdTZ4UmlES1BmMwpLQ0hYOUpsTVRVUGJvRTY0UFNGejFGVkxqWkFzaEtQZjlQNS9QaHd2bkdtYnhLZndPaFNITGl3ZWtRZlJhcGE3Ci9sQTlIQnFXdTdsUlI5M3FjK0QveDBQUXAyYWdDNHpMN3I5K1NXa3puQ2x5aHd6cDVCOW0wY1VoZ1Y4RUJ5NGEKTHY3UkRnVUorSWxUQ1JxZVdoYW5ZdXNiOUU3L1dRRXUzTjNNd3d0dzZXUFgzMHJaaHhxcVNqeUd5NitRRXhpawo5UXBsbjhHU20zYXdQWmE4UDhXZ3dlYlA5QmUrRjlxcG9CcmtOVXJDdk9KS3JTeC9hSUlaZnZsVzNpck43RGhsCmsyQitSN04xCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQwVENDQXJtZ0F3SUJBZ0lKQU5PN1lVcVFtVUNGTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3T1RFeU1EazBOMW9YRFRJNU1EY3dPVEEyTURrME4xb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBbGhseApzRWdUbzRiWXhwQkZHVFR3cWFHVkRRYWFLV21ac3FkdmloWjJqTkxFSS85c3BobEdsY1JYQ1VhekpuRkJpbVNNCjRTZzZSVEdrY1VaYkgyUVMyNGdoLzd5eHRtUE5GM0JhMFpjWGVudWJHRldyT2tGc2wwTi9FTkkwbnUwU3lhRzcKQTdHTXcvNTBzdytpREthQUpjSm53RDVyVXlrNSszNmM0azJPRVlvbnA0TzFveUl5anhOWFVwaFk4RjJxZ0RqZQpVZzR3SGF6UWNETDdUR21vZTQzWGdxSHdxK0t2RWtia1cwZWRzREhqQ1FxZVZTUnBGWFZhcURXZ0x0MndtNmRIClFmeHhYTm5ucWM5dEozcktrQVIyV0lJSTlLMGJLYmM4MGxTc2d6dEF0T21jaFQrYy9KQ2o3eWk5aWtYV0x3ZisKbWZnb3laR3A0MXg1RDluQTd3SURBUUFCbzRITU1JSEpNR2tHQTFVZEVRUmlNR0NDQ1d4dlkyRnNhRzl6ZEljRQpmd0FBQVljUUFBQUFBQUFBQUFBQUFBQUFBQUFBQVlJSlRGQXRUbUYwWVc1TmdoaE1VQzFPWVhSaGJrMHVhMkYxClptMWhiaTF5WkM1amIyMkhCTUNvZUNTSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpVd0hRWURWUjBPQkJZRUZPSEkKYTh3RUdMY0ZqSWJYSExyVS9iT1hVWGpnTUI4R0ExVWRJd1FZTUJhQUZOV0Y3RTdnV3BzSVVLL2NxMlFKSWtzegpRaUFyTUF3R0ExVWRFd0VCL3dRQ01BQXdEZ1lEVlIwUEFRSC9CQVFEQWdXZ01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUJXeXpZaDdJYmNkLzk5WTgxUTJIZEZZbXMvUkg4V0JFeTZBVERYUFUrUEQwR1NyRU8zbVNyYms5S2wKbXRvQ0Y2SHgvT1B6V0ljRVNpaTJ5aXFnbUxUcCtGUjN3L0VGZmlaaVFsMkpNWU5OZys1RXdtSUlpbU5nLy9aQQpvaWRoeURrcWZEK1JsQktiVzRjQWQ2eG53djlYYWFvVzFHeGxvWG90SnRYYWJXOHhuWHVnb2pYaXIxNG4zeWk0CmY3dDAzd3pjeTJtSkJwaDFqYlc5M2gwVkZiQllhcE83QytpUG95aEcrT2xjZTNsaXJVbUFPOHRyUWpZbVVaRCsKaVYvVUZxOUZhZUQ3Mi9zdVB2MitodlBBWGhTc0NXQmJnWGpmSlQrekpidWF5emhJVlJ4dDgyNWJ2UUxlMUxVUApjcHNzZ01LeVVQTHp0ank5WGdOYmU5M3VOMW04Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQ4akNDQXRxZ0F3SUJBZ0lKQU1HS25QTGswNU9zTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TlRFek5EWTFNMW9YRFRJNU1EY3dOVEEzTkRZMU0xb3dRekVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVYTUJVR0ExVUUKQXd3T1RGQXRUbUYwWVc1TlgzSnZiM1F3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQgpBUURNSURVV3c4TkNkRjRhRThtcTdsaUN1OFdsUDZyK1BjV3UrMVRSL1FXZVZkQVhzdGMxUUNpeXdzRldpNk9BCnVjUlc1YUx6VUZ3YUpMcGEyZVlnR056aE1lelVQS25UK3gzVnRZTWI0Ky9qdlZyczlHVnI5ZnV6M1RoVXU5R2cKdTNWNmxtNXgvSDUySm0vS1ZpZXk3NEhMK3BMQm0wZlZsc0hiNmhKcUFhOEFZRVRwZHp4MkNFank3SlFZNys0MAptTE5mNzhwd1BwS1lVY0VZNXlnOElLdlphaTVEZml3UU1CMDBFYXM2eWpFSERvdlBOTTBQc2ZGRUJ3ZGhBa1o5CkZtYXFNS1YxK1lVeHcrdGlZNEM4NWFRL21tWVZLbm9iaDlXY2I3V09sVk1Pb2F6dHNEN251OXFjZUNkb1lBK2gKSzRGMmhyVFFteFhtcDZFSitobDFWQnEvQWdNQkFBR2pnZWd3Z2VVd2dZRUdBMVVkRVFSNk1IaUNDV3h2WTJGcwphRzl6ZEljRWZ3QUFBWWNRQUFBQUFBQUFBQUFBQUFBQUFBQUFBWUlKVEZBdFRtRjBZVzVOZ2hoTVVDMU9ZWFJoCmJrMHVhMkYxWm0xaGJpMXlaQzVqYjIySEJLbis4RnFIQk1Db2VFYUhFUDZBQUFBQUFBQUFLS1pMY0ZjYTV6V0gKRVA2QUFBQUFBQUFBZGNBYm1xNXR0dzh3SFFZRFZSME9CQllFRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBcgpNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1BOEdBMVVkRXdFQi93UUZNQU1CCkFmOHdEZ1lEVlIwUEFRSC9CQVFEQWdFR01BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQldXWjdEajdUU1g0S08KRTA5UTJnY2NVODZINkRzc3FlMFdkU1pFaXp0UUg5WUFyVGZvL3hKR0ViK05VRVg2ejU3d0JQdTZ4UmlES1BmMwpLQ0hYOUpsTVRVUGJvRTY0UFNGejFGVkxqWkFzaEtQZjlQNS9QaHd2bkdtYnhLZndPaFNITGl3ZWtRZlJhcGE3Ci9sQTlIQnFXdTdsUlI5M3FjK0QveDBQUXAyYWdDNHpMN3I5K1NXa3puQ2x5aHd6cDVCOW0wY1VoZ1Y4RUJ5NGEKTHY3UkRnVUorSWxUQ1JxZVdoYW5ZdXNiOUU3L1dRRXUzTjNNd3d0dzZXUFgzMHJaaHhxcVNqeUd5NitRRXhpawo5UXBsbjhHU20zYXdQWmE4UDhXZ3dlYlA5QmUrRjlxcG9CcmtOVXJDdk9KS3JTeC9hSUlaZnZsVzNpck43RGhsCmsyQitSN04xCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
     "CERTIFICATEEXPIRATION": "P1095DT18H",
     "CHECKSUMENABLED": true,
     "CHUNKSIZE": 1048576,
@@ -97,6 +97,69 @@
                 ],
                 "type": "integer"
             },
+            "ADS-PLC1.E_MasterAutoStep": {
+                "attributes": {
+                    "generate_implicit_init_function": "",
+                    "qualified_only": "",
+                    "strict": "",
+                    "to_string": ""
+                },
+                "enum": [
+                    0,
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    99
+                ],
+                "options": [
+                    {
+                        "label": "IDLE",
+                        "value": 0
+                    },
+                    {
+                        "label": "SEP_EXTENDING",
+                        "value": 1
+                    },
+                    {
+                        "label": "WAIT_POS2",
+                        "value": 2
+                    },
+                    {
+                        "label": "PUSH_EXTENDING",
+                        "value": 3
+                    },
+                    {
+                        "label": "DWELL_PUSH",
+                        "value": 4
+                    },
+                    {
+                        "label": "PUSH_RETRACTING",
+                        "value": 5
+                    },
+                    {
+                        "label": "PUSH_RETRACTED_DWELL",
+                        "value": 6
+                    },
+                    {
+                        "label": "SEP_RETRACTING",
+                        "value": 7
+                    },
+                    {
+                        "label": "SEP_RETRACTED_DWELL",
+                        "value": 8
+                    },
+                    {
+                        "label": "ERR",
+                        "value": 99
+                    }
+                ],
+                "type": "integer"
+            },
             "ADS-PLC1.E_RobotConnState": {
                 "attributes": {
                     "generate_implicit_init_function": "",
@@ -159,6 +222,311 @@
                         "$ref": "tchmi:general#/definitions/String"
                     }
                 ]
+            },
+            "ADS-PLC1.ST_HmiMasterAuto": {
+                "additionalProperties": false,
+                "properties": {
+                    "Name": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-30"
+                            },
+                            {
+                                "comment": "Display label ('MasterAuto'). Set from GVL_HMI init, never written by FB.",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    },
+                    "bReset": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 4
+                            }
+                        ]
+                    },
+                    "bSimStep_DwellPush": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 15
+                            }
+                        ]
+                    },
+                    "bSimStep_Idle": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "HMI writes -- per-step Simulate flags. Rising edge shortcuts the current\r\n step's wait condition (FB clears the flag on consumption via R_TRIG.Q).",
+                                "propertyOrder": 11
+                            }
+                        ]
+                    },
+                    "bSimStep_PushExt": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 14
+                            }
+                        ]
+                    },
+                    "bSimStep_PushRet": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 16
+                            }
+                        ]
+                    },
+                    "bSimStep_PushRetDwell": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 17
+                            }
+                        ]
+                    },
+                    "bSimStep_SepExt": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 12
+                            }
+                        ]
+                    },
+                    "bSimStep_SepRet": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 18
+                            }
+                        ]
+                    },
+                    "bSimStep_SepRetDwell": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 19
+                            }
+                        ]
+                    },
+                    "bSimStep_WaitPos2": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 13
+                            }
+                        ]
+                    },
+                    "bStart": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "HMI writes -- momentary command buttons (R_TRIG inside FB latches the rising edge)",
+                                "propertyOrder": 2
+                            }
+                        ]
+                    },
+                    "bStop": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "eStep": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.E_MasterAutoStep"
+                            },
+                            {
+                                "comment": "FB writes -- status",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "iErrorCode": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/INT"
+                            },
+                            {
+                                "comment": "0 = OK; see FB_MasterAutoCycle header for the code table",
+                                "propertyOrder": 8
+                            }
+                        ]
+                    },
+                    "nCyclesCompleted": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "incremented at end of SEP_RETRACTED_DWELL",
+                                "propertyOrder": 10
+                            }
+                        ]
+                    },
+                    "sErrorText": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/STRING%2880%29"
+                            },
+                            {
+                                "propertyOrder": 9
+                            }
+                        ]
+                    },
+                    "sStepText": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-20"
+                            },
+                            {
+                                "comment": "human-readable mirror of eStep",
+                                "propertyOrder": 6
+                            }
+                        ]
+                    },
+                    "tElapsedS": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/LREAL"
+                            },
+                            {
+                                "comment": "seconds spent in the current step (0.0 on transition)",
+                                "propertyOrder": 7
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "Name",
+                    "bStart",
+                    "bStop",
+                    "bReset",
+                    "eStep",
+                    "sStepText",
+                    "tElapsedS",
+                    "iErrorCode",
+                    "sErrorText",
+                    "nCyclesCompleted",
+                    "bSimStep_Idle",
+                    "bSimStep_SepExt",
+                    "bSimStep_WaitPos2",
+                    "bSimStep_PushExt",
+                    "bSimStep_DwellPush",
+                    "bSimStep_PushRet",
+                    "bSimStep_PushRetDwell",
+                    "bSimStep_SepRet",
+                    "bSimStep_SepRetDwell"
+                ],
+                "type": "object"
+            },
+            "ADS-PLC1.ST_HmiMasterAutoCfg": {
+                "additionalProperties": false,
+                "properties": {
+                    "bContinuous": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "If TRUE, SEP_RETRACTED_DWELL returns to IDLE and immediately re-arms;\r\n otherwise it goes to IDLE and waits for the next Start / bAtPos1.",
+                                "propertyOrder": 6
+                            }
+                        ]
+                    },
+                    "tDwellPushMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "DWELL_PUSH -- hold at push-extended",
+                                "propertyOrder": 2
+                            }
+                        ]
+                    },
+                    "tPushRetractedDwellMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "PUSH_RETRACTED_DWELL -- hold after push retract",
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "tSepRetractedDwellMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "SEP_RETRACTED_DWELL -- hold after sep retract before IDLE",
+                                "propertyOrder": 4
+                            }
+                        ]
+                    },
+                    "tStepTimeoutMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "Timeout guards every non-DWELL waiting state. On expiry, iErrorCode is\r\n set to the step's numeric code and the cycle enters ERR.",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "uiPairCount": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/USINT"
+                            },
+                            {
+                                "comment": "How many piston pairs participate in the cycle (1..3). All enabled pairs\r\n move in parallel; the FB waits for AND of all enabled sensors before\r\n advancing. Clamped 1..3 by the FB at read time.",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "uiPairCount",
+                    "tDwellPushMs",
+                    "tPushRetractedDwellMs",
+                    "tSepRetractedDwellMs",
+                    "tStepTimeoutMs",
+                    "bContinuous"
+                ],
+                "type": "object"
             },
             "ADS-PLC1.ST_HmiPiston": {
                 "additionalProperties": false,
@@ -587,6 +955,48 @@
                             }
                         ]
                     },
+                    "bRxResetError": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "Inbound pulse — bridge writes TRUE on receiving a RESET_ERROR frame.\r\n FB_MasterAutoCycle consumes on rising edge and clears the flag.",
+                                "propertyOrder": 12
+                            }
+                        ]
+                    },
+                    "bTxAutoStarted": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "Outbound pulses — PLC (FB_MasterAutoCycle) writes TRUE for one cycle.\r\n Bridge polls each on rising edge, sends the corresponding TCP frame,\r\n then clears the flag. If the bridge is disconnected the flag stays\r\n TRUE until reconnect; no queue, no lost pulses.",
+                                "propertyOrder": 9
+                            }
+                        ]
+                    },
+                    "bTxPistonsError": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 11
+                            }
+                        ]
+                    },
+                    "bTxPushDone": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 10
+                            }
+                        ]
+                    },
                     "eConnState": {
                         "allOf": [
                             {
@@ -609,6 +1019,17 @@
                             }
                         ]
                     },
+                    "nPacketsTx": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "Bridge writes — outbound diagnostics",
+                                "propertyOrder": 13
+                            }
+                        ]
+                    },
                     "sConnStateText": {
                         "allOf": [
                             {
@@ -628,6 +1049,16 @@
                                 "propertyOrder": 8
                             }
                         ]
+                    },
+                    "sLastTxMessage": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/STRING%2880%29"
+                            },
+                            {
+                                "propertyOrder": 14
+                            }
+                        ]
                     }
                 },
                 "required": [
@@ -638,7 +1069,13 @@
                     "bAtPos2",
                     "bAtPos3",
                     "nPacketsRx",
-                    "sLastMessage"
+                    "sLastMessage",
+                    "bTxAutoStarted",
+                    "bTxPushDone",
+                    "bTxPistonsError",
+                    "bRxResetError",
+                    "nPacketsTx",
+                    "sLastTxMessage"
                 ],
                 "type": "object"
             }
@@ -865,7 +1302,7 @@
     "HTTP_FLOODPROTECTION": 100,
     "INITTIMEOUT": "PT10S",
     "KEEP_ALIVE": "PT40S",
-    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRRENRNm9VRFQvVDJBTjMKSEYvNzBmRk5DK3pna01XYlpaK0x5WkFRWEJBWVM5NGN4ZW9qS3FNcFlJZmx3UlBoYm1ldEd2U0x5aG5ZVjdkRwp3Rk9Jck9TOVhBMEhqaXlzb053QmoyWW1SSWJrNUtPY0ZlVkNzMk5ZU2IzTHhGakcyWVoyU2x4L0RSUjhmTjdKCnBQNzZaMi9qd3FNRDRBMWwwamtDUVMzendOYWlORkppeGxxOVBnZ0IzUlBtTmtsaGhCYnVpYXFlb2lVNDl0UXUKSW1LSFFQV0FKSWcxWmVnaFVmMmx6WVU2MWo5eUw2NnJmQ0RFbVRVNFVpZTdiQ0tDRUY1dGtFdElacHpFTHJXVgp2TkcyNWJYdkNkYXFLV2JXSkx0dGV4SUdCYU9zZ1MyN1FSMy9acHVNbnFqTkdWS0xzOHZEVHMvbXhWWnQ3bzVxClFFYjF2ZmJmQWdNQkFBRUNnZ0VBSDlPNGZUYmJLQWpYaEgrOGNBUS9rdWtWd3QybEttWldEZHBxUlJhTmpTclMKTmR6dEZSdzFXc3JyRTVGMFZ1RGc1b09vaTNDRFFkRVpLMlBJMW5jYnRnbkFtV1lmTVVjeUthVkYrSllONkZsWApQc2w0T1ZzczRiaEVlcXB0V3cxNkVmanhPaldPajROaElzcy8rbVFtVGp2dUVPMU5IMHROQzI2dlZIb0VaWDJBCjI2c3Y2VjFtTXd6TWpkZW9mOGdJYUtZdmxZMTBZUFMxc1dyYUdmbHBWWDY5ZmJIazBlV0U0REdyQ3NoNVVDdngKQlhxbVRYdDB4aUNNMWI2d0pMaVFZS3FhTTJRNlB3eDI3TC80Zk9EbGFJV3BGZHQ2YSs2VE1qYXdqakVxNjRwRQorTDNZU1hQZlFwQlBHMWNmb3NGODJZQTFhako1ZnMrYUJPYThvdmROR1FLQmdRRG9nSTRKOVAvQ3haRGl6emttCmJSR0pnVExWSGlyOFJjY3RBTDZrSnJpckhhOEFYYUNRck5aMVdQU3NNRkhwZDdyczFLWmNnTHB2Nk5sYWpqZHkKeFNNbHl4Q01TdXl5bWxqZTM0RFJzVURPVGk1ZzVHMHVnZGd3eUVSeEh1dS9zUU9yVVRxZlV4REc4d0xFYi9UagphSmZxTjVoRWhzV3JCZmFWcnhsRDBiTzBLUUtCZ1FEVjVjdVdsM0E0QWhnbk9EcGdKdCtZWGM2OWFVd3psLytyCnJDdXNmZENGa2xoR3ZSd2VwY0srUkRINEY5QUxqd2d2cHJ5Z1JaZTB6enRRRW9hTlZPS2tDeGVhQUxSaGh5SXoKMy8wcFpXNExaTmdocCtzMDhCZm5CUmdyM3Y5UnlhT2pIQnZYVHVlc1pqY0kyTnp5ZXQydGVXU0xYNDVvMWRRRgpjMit0MS9yenh3S0JnUURJRTZDbnB1TFZiSWlDOWNwN2E4NTBvdTdvZ1I2Q20xV01QNkRPeDllUXdXbVFpZ0diCm5uQ3E2Uk1jZmpSdkVhNlZFV1hjSXBiTnFQWXFQRW94Qkw1N1RtVCtKWmZORm8rMXMyWTZqU3QwbmNqQmJyRWEKSFhpNmVneVR3QVVsbjZIRnNwQWMvVEZwMDBPbFlhYStiNHFUYnFZbENrbGVKREtQbXUvRjhkYVFDUUtCZ0NvaAp5bmxPT1JkL0toekhrWkFRK0NmK0NsUDY0cnlpNndSNHRGMlVwcmM0dlZTcHVWazhFMkVBODhySGZmNVkzU2J0CnMrZnA3Vmo3SE5iSDMyTUZYbU1yb0NtQWpBZE40K25ON0FMMGJMbW4wbjdHb2FqYXhncUdVVjJLM2tYUTd2K1kKOE03M1J1RUpmVHVyNDlHTGJCRFlnWHFHaHZtVmJON3Avd3lDSjNkUEFvR0JBSXBuZnNZdkxjalRhNXJSR0RqNApqclczNGFuZlVxb080SU84MjU0SmltQ0UzemtzZG9ob0M1VVZoMytIUml1UkR3ZzBHejM3ZjRXQ3VXVVRNREY5CmVrL2UwWGlYanF5N0NtSVFyaDl4ZTQreWM4ZUZoTmo0Vm1sSnZtcGV2U1lrcXdyWVQ4Rzkwd1JFVktBOVNRWHEKZXllTC82bEtsZWpFWXNXQnpzZUxHclRqCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ1dHWEd3U0JPamh0akcKa0VVWk5QQ3BvWlVOQnBvcGFabXlwMitLRm5hTTBzUWovMnltR1VhVnhGY0pSck1tY1VHS1pJemhLRHBGTWFSeApSbHNmWkJMYmlDSC92TEcyWTgwWGNGclJseGQ2ZTVzWVZhczZRV3lYUTM4UTBqU2U3UkxKb2JzRHNZekQvblN6CkQ2SU1wb0Fsd21mQVBtdFRLVG43ZnB6aVRZNFJpaWVuZzdXaklqS1BFMWRTbUZqd1hhcUFPTjVTRGpBZHJOQncKTXZ0TWFhaDdqZGVDb2ZDcjRxOFNSdVJiUjUyd01lTUpDcDVWSkdrVmRWcW9OYUF1M2JDYnAwZEIvSEZjMmVlcAp6MjBuZXNxUUJIWllnZ2owclJzcHR6elNWS3lETzBDMDZaeUZQNXo4a0tQdktMMktSZFl2Qi82WitDakprYW5qClhIa1AyY0R2QWdNQkFBRUNnZ0VBQ3c2OHpWdkI5cDRNZ2pSR291Qy9pZitaVjJoUkd4UG9lcnpTL3IxQTVvYncKWkNhQS9vdUdJNnBmTHhQQ1J1YTVDVlQyKys5V3U1bzRudytyenRnMGUyKy84WE1aTkhLTnZWaE5tSHNsQTZUdgpmQTl6bWNzUUVPU3NDN1V3b3pTYjJiYk1iQzA4VFlRRlhOdWQrSWlia0N5T01COXBFS3RNMWpZeG9JcE9HUVNUCm00bjVLWEprbHRDd2JqbjVEVGJVZGJqNmcxalhWQmY1NlFzOEMvNGZSekRCejlSTGY3YnQzUDRRdlNlMWpRbDcKT0F4NU05bm9kUERRVlhjNkhQYzVtUkhhSnZmZ2gyWGMvN3ZRa0xlaUZwTUFYcFFRN1EzMXVMRXpDUXA4amVIaQoreUwzbWZxUWF2QUtMWDhRVHJvOEpmZ2IzbW9xV0JxWEZVY0YxVFJLNFFLQmdRRElsaVRmZEhKd1M5RDlCY0d2CnRpaVd1SVRiUkQ2eno2cm1uUi80V3JEZnFZN0RIM0dGTTlkOTQxYk1LZFo5L3M1VjNmaEdxMDQ4YTlMTWdNN3UKdXY5L0NHQ3RkTld3RnUydXpPRG1sSmhWOTZtL2FrZHZNN0RsRzZFa3VjV3hyS1kvREF5UFg0dFcrN0lsbTBzZApQeFplVGpqVEFtRFVPODhxeFVWUFNVaUNSUUtCZ1FDL2tNR2k0c2VlSkcvK1R0VUFwM0Z2bHFINHBOdHU1S0h3CmpyZjI1VTRqaHgvbXdYWFBrK2xpbXh4VXJvNEptR213UzRubDluTlNROEx3TzhrZ3l2ZnU5aVJJVUI2Q2gvaEsKWWQ5emRQZnd4RE5TR2VYSjF4b3VmYlRCcDI0N2dnblRYbEIvb1FlQUNjQzlxYkxtTU1BdGErNUFQbWNrN0lSbApQN084dndnRG93S0JnRTk4UCt4VWhxeTlQbm1sZUZVYXlBYkI0OVBIdlZrZnA4ZHU2Q1pRT2RySHBBenFQdC9iCjVUNjdnYit4ckkrTkUxS3ZmUnp6OFRLOFAzSk9jTEhsWkMyQXNsN0o5NHVwNmxIa1doTEZPNENGZmJ5ZWJ1UkEKQlk4a1hiemg2TmM1WlQrQ2xNK1R1dkdqRjdzVFNMYTBNemIzcEVqcG5sazd3aUpldmRKblpkWkpBb0dCQUlwcApGUCtUeTVjL3pJdDZlZnhXLzJjWTl6Nm9Ic1FvL2JqSjViSEdUSWJ2QXVXL3NsZWhEMmZubXJpMHhudTRXK1M5Ckw0MndXL0o4YzBVUWJXbjhQTmV6a05PT3oveVFNWjNNeVo2cVROcnhhQU5TSXUyTE5hZVJ2Q0NQME4yK1Awc3gKUWdoMVdPM3lIZ2pyckE4VitrVFhUdldzSU9wVTJmUXQ2cmZkYnZUeEFvR0JBTUhIVzhqTVFKd0diRndjajNZLwpSdmRWWjM3QU1GMWRJYm5MQXZ4RU1ZV213SGl2bmMyZHZMbnNsV3dOQjRudTNIS2g1Zk9mL0NLUUF4c3BRQzZnCnNiZ01mcjE3em9xdmhjcXhad1ZyMUpsU1dta1BYQ1grR0FLbXJEeXR5N3dJY1pwR0lRNDhRZCtMelllRVVCSUIKZzQwQ29ua2Q1VUpCcnJoc2lyaVlHTy9nCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
     "KEYPASSWORD": "",
     "MAXCONNECTIONSPERCLIENT": 32,
     "MAXHTTPHEADERSIZE": 32768,
