@@ -173,6 +173,13 @@
  "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
  "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
 {
+ "id": "AutoCycle",
+ "name": "%l%L_AutoCycle%/l%",
+ "content": "Pages/AutoCycle.content",
+ "icon": "%tr%TR_Icon_StartPage_normal%/tr%",
+ "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
+ "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
+{
  "id": "Robot",
  "name": "%l%L_Robot%/l%",
  "content": "Pages/Robot.content",

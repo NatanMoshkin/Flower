@@ -153,6 +153,9 @@
     <Content Include=".eslintrc.json">
       <Visible>false</Visible>
     </Content>
+    <Content Include="Pages\AutoCycle.content">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Pages\Events.content">
       <SubType>Content</SubType>
     </Content>

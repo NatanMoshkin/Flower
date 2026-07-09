@@ -59,6 +59,9 @@
   ],
   "userControls": [
     {
+      "url": "UserControls/UC_MasterAutoCycle.usercontrol"
+    },
+    {
       "url": "UserControls/UC_Piston.usercontrol"
     },
     {
@@ -70,6 +73,13 @@
   ],
   "controls": [],
   "content": [
+    {
+      "url": "Pages/AutoCycle.content",
+      "preload": false,
+      "keepAlive": false,
+      "loadSync": false,
+      "preloadBindings": false
+    },
     {
       "url": "Pages/Events.content",
       "preload": false,
