@@ -563,6 +563,93 @@
         "bOutSolenoidExtend",
         "bOutSolenoidRetract"
       ]
+    },
+    "PLC1.E_MasterAutoStep": {
+      "attributes": {
+        "qualified_only": "",
+        "strict": "",
+        "to_string": ""
+      },
+      "type": "integer",
+      "enum": [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 99 ],
+      "options": [
+        { "value": 0,  "label": "IDLE" },
+        { "value": 1,  "label": "SEP_EXTENDING" },
+        { "value": 2,  "label": "WAIT_POS2" },
+        { "value": 3,  "label": "PUSH_EXTENDING" },
+        { "value": 4,  "label": "DWELL_PUSH" },
+        { "value": 5,  "label": "PUSH_RETRACTING" },
+        { "value": 6,  "label": "PUSH_RETRACTED_DWELL" },
+        { "value": 7,  "label": "SEP_RETRACTING" },
+        { "value": 8,  "label": "SEP_RETRACTED_DWELL" },
+        { "value": 99, "label": "ERR" }
+      ]
+    },
+    "PLC1.ST_HmiMasterAutoCfg": {
+      "additionalProperties": {},
+      "properties": {
+        "uiPairCount":           { "allOf": [ { "$ref": "tchmi:general#/definitions/USINT" }, { "propertyOrder": 1 } ] },
+        "tDwellPushMs":          { "allOf": [ { "$ref": "tchmi:general#/definitions/UDINT" }, { "propertyOrder": 2 } ] },
+        "tPushRetractedDwellMs": { "allOf": [ { "$ref": "tchmi:general#/definitions/UDINT" }, { "propertyOrder": 3 } ] },
+        "tSepRetractedDwellMs":  { "allOf": [ { "$ref": "tchmi:general#/definitions/UDINT" }, { "propertyOrder": 4 } ] },
+        "tStepTimeoutMs":        { "allOf": [ { "$ref": "tchmi:general#/definitions/UDINT" }, { "propertyOrder": 5 } ] },
+        "bContinuous":           { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" },  { "propertyOrder": 6 } ] }
+      },
+      "type": "object",
+      "required": [
+        "uiPairCount",
+        "tDwellPushMs",
+        "tPushRetractedDwellMs",
+        "tSepRetractedDwellMs",
+        "tStepTimeoutMs",
+        "bContinuous"
+      ]
+    },
+    "PLC1.ST_HmiMasterAuto": {
+      "additionalProperties": {},
+      "properties": {
+        "Name":                  { "allOf": [ { "$ref": "tchmi:general#/definitions/String" }, { "maxLength": 30, "propertyOrder": 1 } ] },
+        "eStep":                 { "allOf": [ { "$ref": "tchmi:project#/definitions/PLC1.E_MasterAutoStep" }, { "propertyOrder": 2 } ] },
+        "sStepText":             { "allOf": [ { "$ref": "tchmi:general#/definitions/String" }, { "maxLength": 20, "propertyOrder": 3 } ] },
+        "bStart":                { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 4 } ] },
+        "bStop":                 { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 5 } ] },
+        "bReset":                { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 6 } ] },
+        "tElapsedS":             { "allOf": [ { "$ref": "tchmi:general#/definitions/LREAL" }, { "propertyOrder": 7 } ] },
+        "iErrorCode":            { "allOf": [ { "$ref": "tchmi:general#/definitions/INT" }, { "propertyOrder": 8 } ] },
+        "sErrorText":            { "allOf": [ { "$ref": "tchmi:general#/definitions/String" }, { "maxLength": 80, "propertyOrder": 9 } ] },
+        "nCyclesCompleted":      { "allOf": [ { "$ref": "tchmi:general#/definitions/UDINT" }, { "propertyOrder": 10 } ] },
+        "bSimStep_Idle":         { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 11 } ] },
+        "bSimStep_SepExt":       { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 12 } ] },
+        "bSimStep_WaitPos2":     { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 13 } ] },
+        "bSimStep_PushExt":      { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 14 } ] },
+        "bSimStep_DwellPush":    { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 15 } ] },
+        "bSimStep_PushRet":      { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 16 } ] },
+        "bSimStep_PushRetDwell": { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 17 } ] },
+        "bSimStep_SepRet":       { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 18 } ] },
+        "bSimStep_SepRetDwell":  { "allOf": [ { "$ref": "tchmi:general#/definitions/BOOL" }, { "propertyOrder": 19 } ] }
+      },
+      "type": "object",
+      "required": [
+        "Name",
+        "eStep",
+        "sStepText",
+        "bStart",
+        "bStop",
+        "bReset",
+        "tElapsedS",
+        "iErrorCode",
+        "sErrorText",
+        "nCyclesCompleted",
+        "bSimStep_Idle",
+        "bSimStep_SepExt",
+        "bSimStep_WaitPos2",
+        "bSimStep_PushExt",
+        "bSimStep_DwellPush",
+        "bSimStep_PushRet",
+        "bSimStep_PushRetDwell",
+        "bSimStep_SepRet",
+        "bSimStep_SepRetDwell"
+      ]
     }
   }
 }
