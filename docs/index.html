@@ -62,22 +62,22 @@
 <header>
   <h1>Flower — Documentation Index</h1>
   <div class="sub">
-    Pneumatic pin-separator / pin-pusher test rig: <b>TwinCAT PLC</b> (6 SOL-SOL pistons) + <b>TwinCAT HMI</b> + <b>Python-ADS robot bridge</b> for TCP/IP communication with the industrial robot.<br>
+    Pneumatic pin-separator / pin-pusher test rig: <b>TwinCAT PLC</b> (6 SOL-Spring pistons, coordinated by <code>FB_MasterAutoCycle</code>) + <b>TwinCAT HMI</b> + <b>Python-ADS robot bridge</b> for bidirectional TCP/IP with the industrial robot.<br>
     Repo: <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
-    &middot; Docs generated <b>2026-07-07</b>
+    &middot; Docs generated <b>2026-07-09</b>
   </div>
   <div class="stats">
     <div class="stat"><div class="n">6</div><div class="l">Pistons</div></div>
-    <div class="stat"><div class="n">2</div><div class="l">HMI pages</div></div>
+    <div class="stat"><div class="n">3</div><div class="l">HMI pages</div></div>
     <div class="stat"><div class="n">3</div><div class="l">Robot positions</div></div>
-    <div class="stat"><div class="n">2</div><div class="l">Open issues</div></div>
+    <div class="stat"><div class="n">1</div><div class="l">Open issue</div></div>
   </div>
 </header>
 
 <main>
 
 <div class="tldr">
-  <b>What this project is.</b> A 6-piston pneumatic test rig driven by a TwinCAT PLC and controlled from a TcHmi web HMI. Each piston is a <b>SOL-SOL two-position actuator with two limit switches</b>, driven by one instance of <code>FB_SolSolPiston_2Pos</code>. The rig also receives <b>"in position 1/2/3"</b> signals from an industrial robot over TCP/IP — but the socket layer lives in a <b>Python bridge</b> (<code>RobotBridge/robot_bridge.py</code>) that translates to ADS, deliberately avoiding Beckhoff's paid TF6310 TCP/IP supplement.
+  <b>What this project is.</b> A 6-piston pneumatic test rig driven by a TwinCAT PLC and controlled from a TcHmi web HMI. Each piston is a <b>SOL-Spring two-position actuator</b> — a single Extend coil, mechanical spring returns it — driven by one instance of <code>FB_SolSpringPiston_2Pos</code>. <code>FB_MasterAutoCycle</code> coordinates up to three pairs of (Sep, Push) pistons in parallel with the robot's Pos1/Pos2 signals. The rig exchanges <b>"in position 1/2/3"</b> plus <b>AUTO_STARTED / PUSH_DONE / PISTONS_ERROR</b> / <b>RESET_ERROR</b> frames with the robot over TCP/IP — the robot is the <b>TCP server</b>, the socket layer lives in a <b>Python bridge</b> (<code>RobotBridge/robot_bridge.py</code>) that dials in and translates each direction into ADS reads/writes, deliberately avoiding Beckhoff's paid TF6310 TCP/IP supplement.
 </div>
 
 <section class="cat">
@@ -120,7 +120,7 @@
   <div class="grid">
     <a class="card" data-c="issues" href="open-issues.html">
       <div class="title">Open issues <span class="kind" style="background:var(--danger)">HTML</span></div>
-      <div class="desc">2 open items: (1) Robot TCP/IP role — server vs client, decided by <code>RobotBridge/config.yaml</code> at commissioning; (2) EtherCAT channel assignment for SepSol2/3 + PushSol2/3 (soft-only until wired).</div>
+      <div class="desc">1 open item: DI channel assignment for SepSol2/3 + PushSol2/3 (Extend coils are already on <code>dOut[2..3]</code> and <code>dOut[5..6]</code>; only the Extended/Retracted position sensors are still Simulate-only). The robot-role decision landed as robot=server / bridge=client and is now archived.</div>
       <div class="path">docs/open-issues.html</div>
     </a>
   </div>

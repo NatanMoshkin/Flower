@@ -56,7 +56,7 @@
 <header>
   <h1>Flower — Operation &amp; Install Guide</h1>
   <div class="meta">
-    Branch <b>master</b> &middot; docs generated <b>2026-07-07</b>
+    Branch <b>master</b> &middot; docs generated <b>2026-07-09</b>
     &middot; <a href="index.html">← Doc index</a>
     &middot; <a href="configuration.html">← Configuration</a>
     &middot; <a href="open-issues.html">Open issues</a>
@@ -209,14 +209,16 @@ cp config.example.yaml config.yaml
     <h3>Daily startup checklist</h3>
     <ol class="compact">
       <li><b>TwinCAT runtime → Run mode.</b> Usually automatic on boot. Verify with the TwinCAT icon in the tray (green = Run).</li>
+      <li><b>Robot controller.</b> Power it up first — it's the TCP <b>server</b>, so it must be listening at <code>192.168.201.1:6001</code> before the bridge tries to dial in. In a bench setup with no real robot, run any TCP server on that port (the bridge GUI's simulator panel does this for you).</li>
       <li><b>HMI server.</b> The published TcHmiSrv runs as a Windows service; confirm <code>http://127.0.0.1:3003</code> is reachable.</li>
       <li><b>Python bridge.</b> Double-click <code>RobotBridge\start_bridge.bat</code>, or start it as a Scheduled Task / NSSM service. Logs should show:
-        <pre>YYYY-MM-DD HH:MM:SS  INFO     loaded config: role=server port=2000 ams=127.0.0.1.1.1
+        <pre>YYYY-MM-DD HH:MM:SS  INFO     loaded config: role=client host=192.168.201.1 port=6001 ams=127.0.0.1.1.1
 YYYY-MM-DD HH:MM:SS  INFO     ADS opened to 127.0.0.1.1.1:851
-YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
+YYYY-MM-DD HH:MM:SS  INFO     connecting to 192.168.201.1:6001
+YYYY-MM-DD HH:MM:SS  INFO     connected</pre>
       </li>
-      <li><b>Browser.</b> Open the HMI. Go to the Robot page — connection indicator should be yellow (<code>Connecting</code>).</li>
-      <li><b>Robot.</b> Power up / start the robot controller. On its first frame the connection indicator flips green (<code>Connected</code>) and the corresponding AT POS N lights.</li>
+      <li><b>Browser.</b> Open the HMI. Go to the Robot page — connection indicator should be yellow (<code>Connecting</code>) briefly, then green (<code>Connected</code>).</li>
+      <li><b>Master cycle.</b> Optionally open the AutoCycle page. On operator START (or on the first <code>POS1</code> from the robot), the FB emits <code>AUTO_STARTED</code>, forces the enabled pistons into Automatic, and drives through the ten-state sequence.</li>
     </ol>
   </div>
 
@@ -224,9 +226,9 @@ YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
     <h3>What each state means on the HMI Robot page</h3>
     <table class="kv-table">
       <tr><th>State</th><th>Color</th><th>Meaning</th></tr>
-      <tr><td class="k">Disconnected</td><td class="v">Grey</td><td class="n">Bridge running but no socket up. In server mode: no robot has dialed in yet. In client mode: reconnect delay in progress.</td></tr>
-      <tr><td class="k">Connecting</td><td class="v">Yellow</td><td class="n">Bridge is actively trying to establish the socket (calling <code>accept()</code> or <code>connect()</code>).</td></tr>
-      <tr><td class="k">Connected</td><td class="v">Green</td><td class="n">Socket up, receiving. Position bits reflect the last frame received.</td></tr>
+      <tr><td class="k">Disconnected</td><td class="v">Grey</td><td class="n">Bridge is in the reconnect-delay sleep between dial attempts, or has just started and hasn't dialed yet.</td></tr>
+      <tr><td class="k">Connecting</td><td class="v">Yellow</td><td class="n">Bridge is calling <code>connect()</code> against <code>192.168.201.1:6001</code>. Usually flashes by if the robot is reachable.</td></tr>
+      <tr><td class="k">Connected</td><td class="v">Green</td><td class="n">Socket up. Bridge is receiving frames and polling Tx flags.</td></tr>
       <tr><td class="k">Error</td><td class="v">Red</td><td class="n">Bridge caught an exception (ADS write failed, socket error, bad config). Check the bridge console for the traceback.</td></tr>
     </table>
     <div class="callout warn">
@@ -248,36 +250,67 @@ YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
 <!-- SMOKE TEST                                                   -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-smoke">
-  <h2>Smoke test — robot → bridge → PLC → HMI</h2>
-  <p>End-to-end verification without a real robot. Two options, depending on how much you want to see:</p>
+  <h2>Smoke test — robot ↔ bridge ↔ PLC ↔ HMI</h2>
+  <p>End-to-end verification without a real robot. In production the robot is the <b>TCP server</b> and the bridge is the <b>client</b>; for the smoke test we flip that around and let the GUI's simulator play a client against a server-mode bridge. Two options:</p>
   <ul class="compact" style="margin-bottom:14px">
-    <li><b>GUI (recommended if TCP/IP is new to you)</b> — <code>python RobotBridge/bridge_gui.py</code>. Everything in one window with a contextual explanation panel that narrates what's happening as you click. See the card below.</li>
-    <li><b>Scripted</b> — <code>python RobotBridge/sim_robot.py</code>. Cross-platform TCP client that sends a fixed sequence. Good for CI / automation.</li>
+    <li><b>GUI (recommended)</b> — <code>RobotBridge\start_gui.bat</code>. One window with three panels — bridge process, PLC live state, and a robot-simulator client that opens a TCP connection to the bridge and lets you send POS / RESET_ERROR frames button-by-button. Every send shows the exact bytes on the wire.</li>
+    <li><b>Manual PowerShell TCP server</b> — keeps the shipped client-mode bridge unchanged; the PowerShell script hosts a listener on <code>:6001</code> that the bridge dials into. Good for CI or headless boxes. See the "Manual" card below.</li>
   </ul>
 
   <div class="card">
-    <h3>Option A — the GUI (bridge_gui.py)</h3>
+    <h3>Option A — the GUI (bridge_gui.py) — full walk-through</h3>
     <p>A single-window tkinter desktop app that ties three things together — no extra dependencies beyond what the bridge already needs (<code>pyads</code>, <code>pyyaml</code>).</p>
     <ul class="compact">
       <li><b>Bridge process panel</b> — Start / Stop <code>robot_bridge.py</code> as a subprocess. Live stdout tail. Bridge PID + colored LED.</li>
-      <li><b>PLC live state panel</b> — reads <code>GVL_Robot.stRobot</code> via <code>pyads</code> five times per second and shows: connection state (colored banner), three AT POS N LEDs, packet counter, last message.</li>
-      <li><b>Robot simulator panel</b> — opens a TCP client to the bridge and plays the robot. <code>POS1</code> / <code>POS2</code> / <code>POS3</code> / custom-frame buttons. Every send shows the exact bytes that left the process, hex + ASCII, so you can see the framing (each frame ends in <code>0x0A</code> = <code>\n</code>).</li>
+      <li><b>PLC live state panel</b> — reads <code>GVL_Robot.stRobot</code> via <code>pyads</code> 5× per second and shows: connection state (colored banner), three AT POS N LEDs, packet counters (Rx + Tx), last messages (Rx + Tx).</li>
+      <li><b>Robot simulator panel</b> — opens a TCP <b>client</b> to the bridge and sends <code>POS1</code> / <code>POS2</code> / <code>POS3</code> / <code>RESET_ERROR</code> / custom-frame at the click of a button. Every send shows the exact bytes that left the process, hex + ASCII, so you can see the framing (each frame ends in <code>0x0A</code> = <code>\n</code>).</li>
       <li><b>Event log</b> — merged feed of GUI events + bridge stdout + PLC state changes. Colored per source.</li>
-      <li><b>"What is happening right now"</b> — a live-updating explanation panel at the bottom. Describes the current step in plain English: what "listening" means, what a client does, why the position bits latch, what an ADS write does. If you're learning TCP/IP, keep an eye on this.</li>
+      <li><b>"What is happening right now"</b> panel — describes the current step in plain English: what "listening" means, what a client does, why the position bits latch, what an ADS write does.</li>
     </ul>
-    <p>Launch (assumes <code>config.yaml</code> is already created — copy from <code>config.example.yaml</code> if not):</p>
+    <div class="callout warn">
+      <b>Flip <code>role</code> before running.</b> The GUI's simulator is a TCP client. To make it work, temporarily edit <code>config.yaml</code>:
+      <pre style="margin-top:6px">robot:
+  role: "server"     # was "client"
+  port: 6001</pre>
+      When the walkthrough is done, revert to <code>role: "client"</code>. The shipped default matches production (robot is the server), but the GUI's tutorial-friendly path is the mirror direction.
+    </div>
+    <p>Launch:</p>
     <pre>python RobotBridge/bridge_gui.py --config RobotBridge/config.yaml
 
 # or double-click on Windows:
 RobotBridge\start_gui.bat</pre>
-    <div class="callout">
-      <b>How to use it as a tutorial.</b> Open the GUI, then follow: press <b>Start bridge</b> → watch the explanation update from "bridge not running" to "listening" → press <b>Connect</b> in the simulator panel → watch the flow diagram at the top light up green → press <b>POS1</b> and observe the byte view (<code>50 4F 53 31 0A</code>) + PLC state change + event log entry, all in the same beat.
-    </div>
+    <p>Recommended step-by-step:</p>
+    <ol class="compact">
+      <li><b>Bridge panel → Start bridge.</b> Log shows <code>listening on :6001</code>. PLC live state shows <code>eConnState = Connecting</code> (yellow).</li>
+      <li><b>Simulator panel → Connect</b> to <code>127.0.0.1:6001</code>. The panel goes to "connected"; PLC panel flips to <code>Connected</code> (green).</li>
+      <li><b>Simulator → POS1.</b> Byte view shows <code>50 4F 53 31 0A</code>. PLC panel: <code>bAtPos1 = TRUE</code>, <code>nPacketsRx = 1</code>, <code>sLastMessage = "POS1"</code>. Master AutoCycle can now trigger on Pos1 rising if it's IDLE.</li>
+      <li><b>Simulator → POS2.</b> Same, but <code>bAtPos2</code> latches (POS1 clears). If the master is in WAIT_POS2, it advances to PUSH_EXTENDING.</li>
+      <li><b>AutoCycle page in browser → START.</b> Bridge log shows outbound send: <code>tx: 'AUTO_STARTED'</code>. Simulator panel doesn't currently display inbound frames from the bridge, but PLC panel's <code>nPacketsTx</code> increments and <code>sLastTxMessage</code> updates.</li>
+      <li><b>Complete the cycle</b> either by pressing the per-step Sim checkboxes on the AutoCycle page (fastest) or by ticking each piston's Simulate ✓ Extended/Retracted to satisfy the sensor AND. Watch <code>tx: 'PUSH_DONE'</code> land on PUSH_RETRACTING complete.</li>
+      <li><b>Force an error</b>: with no sims and no real sensors, wait for the step timeout. Bridge log shows <code>tx: 'PISTONS_ERROR'</code>, PLC <code>iErrorCode</code> non-zero.</li>
+      <li><b>Simulator → RESET_ERROR.</b> Byte view shows the frame. PLC <code>bRxResetError</code> pulses; FB consumes it and drops back to IDLE.</li>
+    </ol>
   </div>
 
   <div class="card">
-    <h3>Option B — the scripted client (sim_robot.py)</h3>
-    <p>Same underlying protocol, no GUI. Same Python + stdlib as the bridge itself, so no extra dependencies.</p>
+    <h3>Option B — manual PowerShell TCP server</h3>
+    <p>Same underlying protocol, no GUI. Uses only .NET stdlib. Run this <b>before</b> the bridge so the bridge has something to dial into.</p>
+    <pre>$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, 6001)
+$listener.Start()
+Write-Host "listening on :6001"
+$client = $listener.AcceptTcpClient()
+Write-Host "bridge connected"
+$stream = $client.GetStream()
+$w = [System.IO.StreamWriter]::new($stream)
+$w.NewLine = "`n"; $w.AutoFlush = $true
+
+$w.WriteLine("POS1"); Start-Sleep 1
+$w.WriteLine("POS2"); Start-Sleep 1
+$w.WriteLine("POS3"); Start-Sleep 1
+$w.WriteLine("RESET_ERROR")
+Start-Sleep 3
+$client.Close(); $listener.Stop()</pre>
+    <p>Point <code>config.yaml → robot.host</code> at <code>127.0.0.1</code> for a local run, or the machine's LAN IP for a two-box test.</p>
   </div>
 
   <div class="card">
@@ -285,52 +318,23 @@ RobotBridge\start_gui.bat</pre>
     <ol class="compact">
       <li>PLC in Run mode with the latest build activated.</li>
       <li>HMI running; browser open on the Robot page.</li>
-      <li>Bridge running in server mode (<code>robot.role: "server"</code>, port 2000). Start via <code>RobotBridge\start_bridge.bat</code> or <code>python robot_bridge.py --config config.yaml</code>.</li>
-      <li>Bridge console shows <code>listening on :2000</code>.</li>
-      <li>HMI Robot page shows: <b>eConnState = Connecting</b> (yellow), all AT POS N grey.</li>
+      <li>Something acting as the robot's TCP <b>server</b> on <code>:6001</code> — either the GUI's simulator panel or the PowerShell one-liner above.</li>
+      <li>Bridge running in client mode (<code>robot.role: "client"</code>, <code>host: "192.168.201.1"</code> or wherever your server is, <code>port: 6001</code>). Start via <code>start_bridge.bat</code> or <code>python robot_bridge.py --config config.yaml</code>.</li>
+      <li>Bridge console shows <code>connected</code>.</li>
+      <li>HMI Robot page shows: <b>eConnState = Connected</b> (green), all AT POS N grey.</li>
     </ol>
-  </div>
-
-  <div class="card">
-    <h3>Run the simulation (recommended)</h3>
-    <p>From another shell on the same machine — cross-platform, no <code>nc.exe</code> needed:</p>
-    <pre>cd RobotBridge
-
-# Default script: POS1, POS2, POS3, FOO with a 1s gap
-python sim_robot.py
-
-# Custom sequence
-python sim_robot.py POS1 POS3
-
-# Remote bridge, faster gap
-python sim_robot.py --host 192.168.1.10 --port 2000 --gap 0.3 POS2</pre>
-    <p>Expected console output:</p>
-    <pre>connecting to 127.0.0.1:2000
-connected
-  sent [1/4]: POS1
-  sent [2/4]: POS2
-  sent [3/4]: POS3
-  sent [4/4]: FOO
-closing</pre>
-    <p>Matching bridge log (in the bridge's own console):</p>
-    <pre>YYYY-MM-DD HH:MM:SS  INFO     robot connected from ('127.0.0.1', 61592)
-YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS1'
-YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS2'
-YYYY-MM-DD HH:MM:SS  INFO     rx: 'POS3'
-YYYY-MM-DD HH:MM:SS  INFO     rx: 'FOO'
-YYYY-MM-DD HH:MM:SS  INFO     robot closed the connection
-YYYY-MM-DD HH:MM:SS  INFO     listening on :2000</pre>
   </div>
 
   <div class="card">
     <h3>Expected HMI behavior</h3>
     <ul class="checklist">
-      <li>Robot page's connection indicator flips <b>green</b> (Connected) as soon as <code>sim_robot.py</code> establishes the socket.</li>
+      <li>Robot page's connection indicator flips <b>green</b> (Connected) as soon as the bridge dials in.</li>
       <li>After <code>POS1</code>: <b>AT POS 1 lights green</b>. <code>nPacketsRx = 1</code>. <code>sLastMessage = "POS1"</code>.</li>
-      <li>After <code>POS2</code>: POS 1 clears, <b>POS 2 lights</b>. <code>nPacketsRx = 2</code>. <code>sLastMessage = "POS2"</code>.</li>
-      <li>After <code>POS3</code>: POS 2 clears, <b>POS 3 lights</b>. <code>nPacketsRx = 3</code>. <code>sLastMessage = "POS3"</code>.</li>
-      <li>After <code>FOO</code>: <b>no AT POS N change</b> (POS 3 stays lit). <code>nPacketsRx = 4</code>. <code>sLastMessage = "FOO"</code> — the unknown-frame path still updates the counter and last-message for debugging.</li>
-      <li>After <code>sim_robot.py</code> exits: bridge logs <code>robot closed the connection</code>, HMI eConnState → <b>Disconnected</b> (grey). AT POS N indicators retain their last state. After <code>reconnect.delay_seconds</code> (default 2s), bridge logs <code>listening on :2000</code> again and eConnState → <b>Connecting</b> (yellow).</li>
+      <li>After <code>POS2</code>: POS 1 clears, <b>POS 2 lights</b>. <code>nPacketsRx = 2</code>.</li>
+      <li>After <code>POS3</code>: POS 2 clears, <b>POS 3 lights</b>. <code>nPacketsRx = 3</code>.</li>
+      <li>Master cycle START on the AutoCycle page: <code>nPacketsTx = 1</code>, <code>sLastTxMessage = "AUTO_STARTED"</code>.</li>
+      <li>After the simulated cycle completes: <code>sLastTxMessage = "PUSH_DONE"</code>, <code>nCyclesCompleted</code> increments.</li>
+      <li><b>Bridge disconnect scenario:</b> stop the simulator's TCP server. Bridge logs the drop; HMI <code>eConnState → Disconnected</code> (grey). <code>reconnect.delay_seconds</code> later, bridge redials. If the server is back up: green again. If not: it cycles Connecting → Error → Disconnected → Connecting until it succeeds.</li>
     </ul>
   </div>
 
@@ -342,34 +346,12 @@ import pyads
 plc = pyads.Connection('127.0.0.1.1.1', 851); plc.open()
 for f, t in [('bAtPos1', pyads.PLCTYPE_BOOL), ('bAtPos2', pyads.PLCTYPE_BOOL),
              ('bAtPos3', pyads.PLCTYPE_BOOL), ('nPacketsRx', pyads.PLCTYPE_UDINT),
-             ('sLastMessage', pyads.PLCTYPE_STRING)]:
+             ('nPacketsTx', pyads.PLCTYPE_UDINT),
+             ('sLastMessage', pyads.PLCTYPE_STRING),
+             ('sLastTxMessage', pyads.PLCTYPE_STRING)]:
     print(f, '=', plc.read_by_name(f'GVL_Robot.stRobot.{f}', t))
 plc.close()
 "</pre>
-    <p>After the default 4-frame sim script, expect <code>bAtPos3 = True</code>, <code>nPacketsRx = 4</code>, <code>sLastMessage = 'FOO'</code>.</p>
-    <div class="callout">
-      <b>Verified end-to-end</b> on 2026-07-07 with a fresh install (pyads 3.6.0, TwinCAT 3.1.4026). Bridge logs, PLC symbol reads, and (post-rebuild) HMI indicators all agreed.
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>Alternatives (if <code>sim_robot.py</code> isn't available)</h3>
-    <pre># Linux / WSL / Git Bash — netcat
-nc 127.0.0.1 2000
-POS1
-POS2
-POS3
-FOO
-
-# Windows PowerShell — no netcat needed
-$c = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 2000)
-$w = New-Object System.IO.StreamWriter($c.GetStream())
-$w.NewLine = "`n"; $w.AutoFlush = $true
-$w.WriteLine("POS1"); Start-Sleep 1
-$w.WriteLine("POS2"); Start-Sleep 1
-$w.WriteLine("POS3"); Start-Sleep 1
-$w.WriteLine("FOO");  Start-Sleep 1
-$c.Close()</pre>
   </div>
 
   <div class="card">
@@ -377,9 +359,9 @@ $c.Close()</pre>
     <p>Even without the bridge running, the pneumatic pistons are fully operable from the HMI:</p>
     <ol class="compact">
       <li>Go to the Piston page. Six UCs in a 3×2 grid.</li>
-      <li>For SepSol1 or PushSol1 (wired to real IO), press EXTEND. Solenoid indicator turns green, coil energizes. When the extended limit switch trips, the button un-highlights (target reached).</li>
-      <li>Press-and-hold JOG next to EXTEND — coil energizes only while the button is held.</li>
-      <li>For SepSol2/3 + PushSol2/3 (soft-only), the same UI works but no hardware output flows. See <a href="open-issues.html">Open issues</a>.</li>
+      <li>For SepSol1 or PushSol1 (wired to real IO), press EXTEND. Solenoid indicator turns green, coil energizes and <b>stays energized</b> (SOL-Spring latch). Retract by pressing RETRACT — coil drops, spring returns the piston.</li>
+      <li>Press-and-hold JOG next to EXTEND — coil energizes only while the button is held; releasing lets the spring pull the piston back.</li>
+      <li>For SepSol2/3 + PushSol2/3 (soft coil, no DI yet), the coil write reaches <code>dOut[2..3]</code> and <code>dOut[5..6]</code> — the DI sensor indicators just don't light up until real switches are wired. See <a href="open-issues.html">Open issues</a>.</li>
     </ol>
   </div>
 </section>

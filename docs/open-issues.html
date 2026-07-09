@@ -65,7 +65,7 @@
 <header>
   <h1>Flower — Open Issues &amp; Deferred Decisions</h1>
   <div class="meta">
-    Branch <b>master</b> &middot; docs generated <b>2026-07-07</b>
+    Branch <b>master</b> &middot; docs generated <b>2026-07-09</b>
     &middot; <a href="index.html">← Doc index</a>
     &middot; <a href="configuration.html">Configuration</a>
     &middot; <a href="operation.html">Operation</a>
@@ -74,72 +74,47 @@
 
 <main>
 
-<p>These items are documented decisions that need external input to close (channel numbers, integration protocol) — not bugs. The system runs fine without them being decided, but hardware / robot commissioning will hit them.</p>
+<p>These items are documented decisions that need external input to close (channel numbers) — not bugs. The system runs fine without them being decided, but hardware / robot commissioning will hit them.</p>
 
 <div class="stats">
-  <div class="stat"><b>2</b> open items</div>
-  <div class="stat"><b>4</b> soft-only pistons</div>
-  <div class="stat"><b>1</b> deferred protocol decision</div>
+  <div class="stat"><b>1</b> open item</div>
+  <div class="stat"><b>4</b> soft-only pistons (DI only)</div>
+  <div class="stat"><b>0</b> deferred protocol decisions</div>
 </div>
 
 <!-- ISSUE 1 -->
-<div class="issue deferred">
-  <h3>#1 — Robot TCP/IP role: server or client? <span class="tag">Deferred</span></h3>
-  <div class="sub">Owner: commissioning · Blocks: real-robot integration only · Introduced: initial robot bridge commit</div>
-
-  <div class="body">
-    <p><b>Question.</b> Does the robot dial the bridge (bridge = TCP server), or does the bridge dial the robot (bridge = TCP client)?</p>
-
-    <p><b>Why deferred.</b> Different robot vendors default to different roles: some expose their own TCP server (bridge should be client), others expect a listening endpoint (bridge should be server). Choosing before we know the specific controller model risks committing code that has to be flipped anyway.</p>
-
-    <p><b>How to resolve.</b> One line in <code>RobotBridge/config.yaml</code>:</p>
-    <pre>robot:
-  role: "server"   # or "client"
-  host: "192.168.1.50"   # ignored when role=server
-  port: 2000</pre>
-    <p>Restart the bridge process. No code change, no rebuild.</p>
-
-    <p><b>Default in git.</b> <code>role: "server"</code>, <code>port: 2000</code>, placeholder <code>host</code>. This works out of the box for the <code>nc</code>-based smoke test.</p>
-
-    <p><b>Related code.</b> <code>RobotBridge/robot_bridge.py</code>: <code>accept_from_robot()</code> vs <code>connect_to_robot()</code> — both feed the same parser and PLC writer, so the choice is truly cosmetic in the source.</p>
-
-    <div class="callout">
-      <b>Broader constraint.</b> This choice sits inside a bigger decision — the whole bridge exists to avoid Beckhoff's paid <b>TF6310 TCP/IP</b> supplement. Do not "solve" this by adding <code>Tc2_TcpIp</code> to the PLC project; see <code>configuration.html#bridge</code> and the memory note <code>feedback_avoid_licensed_beckhoff_libs</code> for the rationale.
-    </div>
-  </div>
-</div>
-
-<!-- ISSUE 2 -->
 <div class="issue blocking">
-  <h3>#2 — Physical IO channel assignment for SepSol2/3 + PushSol2/3 <span class="tag">Blocking hw</span></h3>
-  <div class="sub">Owner: electrical integrator · Blocks: full-rig operation · Software already wired</div>
+  <h3>#1 — Physical DI channel assignment for SepSol2/3 + PushSol2/3 <span class="tag">Blocking hw</span></h3>
+  <div class="sub">Owner: electrical integrator · Blocks: full-rig sensor feedback · DO side fully assigned; software already wired</div>
 
   <div class="body">
-    <p><b>Question.</b> Which <code>GVL_IO.dIn[]</code> / <code>dOut[]</code> array slots are wired to the physical proximity switches and solenoid valves of the four unassigned pistons?</p>
+    <p><b>Question.</b> Which <code>GVL_IO.dIn[]</code> array slots are wired to the physical proximity switches of the four unassigned pistons?</p>
 
-    <p><b>Current state.</b> <code>GVL_IO.dIn</code> and <code>GVL_IO.dOut</code> are sized <code>ARRAY[1..16]</code>. Slots 1..8 were re-verified after the array grew; slots 9..16 are unassigned. Two pistons are wired:</p>
+    <p><b>Current state.</b> <code>GVL_IO.dIn</code> and <code>GVL_IO.dOut</code> are sized <code>ARRAY[1..16]</code>. The SOL-Spring migration packed all six Extend coils into <code>dOut[1..6]</code>, so <b>DO is fully assigned</b>. DI still needs SepSol2/3 + PushSol2/3.</p>
 
     <table class="kv-table">
-      <tr><th>Actuator</th><th>DI (Retract)</th><th>DI (Extend)</th><th>DO (Retract)</th><th>DO (Extend)</th></tr>
-      <tr><td class="k">SepSol1</td><td class="v">dIn[1]</td><td class="v">dIn[2]</td><td class="v">dOut[1]</td><td class="v">dOut[2]</td></tr>
-      <tr><td class="k">SepSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-      <tr><td class="k">SepSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-      <tr><td class="k">PushSol1</td><td class="v">dIn[7]</td><td class="v">dIn[8]</td><td class="v">dOut[7]</td><td class="v">dOut[8]</td></tr>
-      <tr><td class="k">PushSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
-      <tr><td class="k">PushSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="tbd">TBD</td></tr>
+      <tr><th>Actuator</th><th>DI (Retract sensor)</th><th>DI (Extend sensor)</th><th>DO (Extend coil)</th></tr>
+      <tr><td class="k">SepSol1</td><td class="v">dIn[1]</td><td class="v">dIn[2]</td><td class="v">dOut[1]</td></tr>
+      <tr><td class="k">SepSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="v">dOut[2]</td></tr>
+      <tr><td class="k">SepSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="v">dOut[3]</td></tr>
+      <tr><td class="k">PushSol1</td><td class="v">dIn[7]</td><td class="v">dIn[8]</td><td class="v">dOut[4]</td></tr>
+      <tr><td class="k">PushSol2</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="v">dOut[5]</td></tr>
+      <tr><td class="k">PushSol3</td><td class="tbd">TBD</td><td class="tbd">TBD</td><td class="v">dOut[6]</td></tr>
     </table>
 
-    <p><b>What "soft-only" means.</b> The four unassigned pistons already run — HMI operator can drive them and see UI feedback — but the FB outputs never reach hardware. The <code>GVL_App</code> alias variables stay in software; the copies to/from <code>GVL_IO</code> in MAIN's READ INPUTS / WRITE OUTPUTS bookends are commented out with <code>TODO</code> markers.</p>
+    <p><code>dOut[7]</code> and <code>dOut[8]</code> — previously PushSol1's SOL-SOL retract coil pair — are freed by the SOL-Spring migration and available for reuse. Slots 9..16 on both DI and DO are unassigned.</p>
+
+    <p><b>What "soft-only" means today.</b> All six actuators drive their coil correctly (the DO layout is fully populated). What's missing on SepSol2/3 + PushSol2/3 is the <b>Extended / Retracted position feedback</b>: the FB's <code>bIsExtended</code> / <code>bIsRetracted</code> stay FALSE until the operator flips the Simulate checkbox on the corresponding piston tile — or on the AutoCycle page via <code>bSimStep_*</code>.</p>
 
     <p><b>How to resolve.</b> Once channels are assigned:</p>
     <ol class="compact" style="margin-left:22px">
       <li>Fill in the four TBD rows above.</li>
-      <li>Open <code>Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU</code>. Ten lines are currently commented placeholders like <code>// GVL_App.bSensorSepRetracted2 := GVL_IO.dIn[??];</code>.</li>
+      <li>Open <code>Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU</code>. Eight lines in the READ INPUTS block are commented placeholders like <code>// GVL_App.bSensorSepRetracted2 := GVL_IO.dIn[??];</code>.</li>
       <li>Replace each <code>[??]</code> with the actual slot number, uncomment the line, and remove its <code>TODO</code> marker.</li>
-      <li>Rebuild + Activate. In the Watch window, force <code>GVL_IO.dIn[N]</code> for each new switch and confirm the corresponding <code>bAtPos</code> / sensor indicator on the HMI updates.</li>
+      <li>Rebuild + Activate. In the Watch window, force <code>GVL_IO.dIn[N]</code> for each new switch and confirm the corresponding <code>bIsExtended</code> / <code>bIsRetracted</code> indicator on the HMI updates.</li>
     </ol>
 
-    <p><b>Tag convention.</b> <code>&lt;Device&gt;Sol&lt;N&gt;&lt;slot&gt;</code> where slot 1 = RETRACT, slot 2 = EXTEND. E.g. the SepSol1 retract sensor is <code>DiSepSol11</code> and the extend sensor is <code>DiSepSol12</code>.</p>
+    <p><b>Tag convention.</b> <code>&lt;Device&gt;Sol&lt;N&gt;</code> is a single Extend coil (SOL-Spring); the retract sensor still exists on the DI side because the retracted-position feedback is useful even without a retract coil.</p>
 
     <p><b>Related caveat.</b> After the array grew from <code>[1..8]</code> to <code>[1..16]</code>, the EtherCAT links for slots 1..8 must be re-verified in the System Manager — TwinCAT does not always re-attach linked variables when their parent array is resized. Symptom: SepSol1 / PushSol1 sensor indicators stop updating even though nothing else changed.</p>
   </div>
@@ -150,10 +125,26 @@
 <p style="color: var(--muted); font-size: 12.5px;">Items resolved recently, kept here for context.</p>
 
 <div class="issue" style="border-left-color: var(--accent2); opacity: 0.85;">
-  <h3>✓ Robot TCP/IP receive path <span class="tag" style="background: var(--accent2)">Closed</span></h3>
-  <div class="sub">Closed 2026-07-07 · Shipped as Python bridge (RobotBridge/)</div>
+  <h3>✓ Robot TCP/IP role — server or client? <span class="tag" style="background: var(--accent2)">Closed</span></h3>
+  <div class="sub">Closed at commissioning · Decision: robot is the TCP server, bridge is the client</div>
   <div class="body">
-    <p>Original TODO: <i>create protocol to talk to industrial robot via TCP/IP — TC PLC to receive from the robot: in position 1, 2, 3</i>. Delivered via the Python bridge instead of a PLC-native socket implementation, avoiding the paid TF6310 supplement. The role decision (server vs client) is the only surviving open item — see #1 above.</p>
+    <p>Committed defaults in <code>RobotBridge/config.example.yaml</code>: <code>role: "client"</code>, <code>host: "192.168.201.1"</code>, <code>port: 6001</code>, with a 2 s socket timeout, <code>SO_KEEPALIVE</code>, and an optional idle-probe heartbeat. Semantics match the reference client in <code>RobotBridge/Client_working_example/</code>. See the <b>DECISION: robot is the TCP server; bridge is the client</b> section of CLAUDE.md for the durable rationale.</p>
+  </div>
+</div>
+
+<div class="issue" style="border-left-color: var(--accent2); opacity: 0.85;">
+  <h3>✓ Full-machine auto sequence <span class="tag" style="background: var(--accent2)">Closed</span></h3>
+  <div class="sub">Landed as <code>FB_MasterAutoCycle</code> — see CLAUDE.md DECISION section</div>
+  <div class="body">
+    <p>Ten-state coordinator across 1..3 pairs of (SepSolN, PushSolN) pistons plus the robot's Pos1/Pos2 signals. Outbound <code>AUTO_STARTED</code> / <code>PUSH_DONE</code> / <code>PISTONS_ERROR</code> pulses; inbound <code>RESET_ERROR</code>. INT error code (0=OK, 1..5 = step timeout, 99 = STOP-while-running). Own HMI page (<code>AutoCycle.content</code>) with 9 per-step Sim checkboxes for sensorless bench testing.</p>
+  </div>
+</div>
+
+<div class="issue" style="border-left-color: var(--accent2); opacity: 0.85;">
+  <h3>✓ SOL-Spring piston migration + coil latch fix <span class="tag" style="background: var(--accent2)">Closed</span></h3>
+  <div class="sub">All six pistons retyped to <code>FB_SolSpringPiston_2Pos</code>; DO layout packed into <code>dOut[1..6]</code></div>
+  <div class="body">
+    <p>SOL-Spring topology: single Extend coil, mechanical spring returns the piston. The Section 2 ladder is intentionally <b>latch-and-retain</b> (no ELSE branch) so the coil stays energised until the next command — a plain "clear when target reached" branch would let the spring pull the piston back mid-cycle. The retracted-position DI sensor still exists (position feedback), but no retract coil is driven.</p>
   </div>
 </div>
 
