@@ -18,14 +18,26 @@ plc:
 robot:
   # "server" = the bridge listens on `port`, robot dials in.
   # "client" = the bridge dials `host`:`port` on the robot.
-  role: "server"
+  # Decided: robot is the TCP server, so the bridge is the client.
+  role: "client"
 
   # Robot's TCP endpoint. `host` is ignored when role = "server".
-  host: "192.168.1.50"
-  port: 2000
+  host: "192.168.201.1"
+  port: 6001
 
   # Character encoding used by the robot's ASCII frames.
   encoding: "ascii"
+
+  # Seconds the socket blocks on recv/connect/send before raising. Matches
+  # the reference client (`RobotBridge/Client_working_example/tcp client.py`).
+  socket_timeout: 2
+
+  # Optional idle-probe: after `heartbeat_idle_seconds` with no data from
+  # the robot, send `heartbeat_payload` bytes. Purpose is only to catch a
+  # half-open TCP connection quickly; we do not wait for a specific reply.
+  # Set heartbeat_idle_seconds: 0 to disable.
+  heartbeat_idle_seconds: 5
+  heartbeat_payload: "HEARTBEAT"
 
 reconnect:
   # Seconds to wait after a disconnect or error before reconnecting.

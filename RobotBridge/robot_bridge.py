@@ -64,6 +64,9 @@ class Config:
     host: str            # ignored when role == "server"
     port: int
     encoding: str
+    socket_timeout: float
+    heartbeat_idle_seconds: float   # 0 disables the idle probe
+    heartbeat_payload: bytes
     reconnect_delay: float
     # Logger settings — see csv_logger.py / log_pump.py / retention.py
     log_dir: Path
@@ -77,14 +80,18 @@ class Config:
         with path.open("r", encoding="utf-8") as f:
             raw = yaml.safe_load(f)
         logger_cfg = raw.get("logger", {}) or {}
+        robot_cfg = raw["robot"]
         return cls(
             ams_net_id=raw["plc"]["ams_net_id"],
             ams_port=int(raw["plc"]["ams_port"]),
             symbol_prefix=raw["plc"]["symbol_prefix"],
-            role=raw["robot"]["role"],
-            host=raw["robot"].get("host", ""),
-            port=int(raw["robot"]["port"]),
-            encoding=raw["robot"].get("encoding", "ascii"),
+            role=robot_cfg["role"],
+            host=robot_cfg.get("host", ""),
+            port=int(robot_cfg["port"]),
+            encoding=robot_cfg.get("encoding", "ascii"),
+            socket_timeout=float(robot_cfg.get("socket_timeout", 2.0)),
+            heartbeat_idle_seconds=float(robot_cfg.get("heartbeat_idle_seconds", 0)),
+            heartbeat_payload=str(robot_cfg.get("heartbeat_payload", "HEARTBEAT")).encode("ascii"),
             reconnect_delay=float(raw.get("reconnect", {}).get("delay_seconds", 2.0)),
             log_dir=Path(logger_cfg.get("dir", "./logs")),
             log_retention_days=int(logger_cfg.get("retention_days", 30)),
@@ -160,6 +167,18 @@ def parse_position(line: str) -> Optional[int]:
 # Socket helpers — one function per role
 # ---------------------------------------------------------------------------
 
+def _tune_connected_socket(conn: socket.socket, cfg: Config) -> None:
+    """Apply socket options common to both roles once a connection is up."""
+    # SO_KEEPALIVE lets the OS detect a half-open TCP connection (peer power
+    # loss, cable pulled) even when the robot is idle and never sends POS
+    # frames. Keepalive tuning uses OS defaults — good enough for a robot
+    # that emits frames often; if the plant network drops packets silently
+    # for longer than the default (~2 hours on Linux, ~2 hours on Windows)
+    # a broken link will linger, but the heartbeat idle-probe below catches
+    # that within `heartbeat_idle_seconds`.
+    conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+
+
 def accept_from_robot(cfg: Config) -> socket.socket:
     """Server mode: bind + listen + accept. Blocks until a robot connects."""
     listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -172,6 +191,7 @@ def accept_from_robot(cfg: Config) -> socket.socket:
     finally:
         listener.close()
     logging.info("robot connected from %s", addr)
+    _tune_connected_socket(conn, cfg)
     return conn
 
 
@@ -179,8 +199,10 @@ def connect_to_robot(cfg: Config) -> socket.socket:
     """Client mode: dial the robot's TCP server."""
     logging.info("connecting to robot %s:%d", cfg.host, cfg.port)
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn.settimeout(cfg.socket_timeout)
     conn.connect((cfg.host, cfg.port))
     logging.info("connected to %s:%d", cfg.host, cfg.port)
+    _tune_connected_socket(conn, cfg)
     return conn
 
 
@@ -202,12 +224,42 @@ def run_once(cfg: Config, plc_symbol: PlcRobotSymbol) -> None:
     plc_symbol.set_conn_state(ConnState.CONNECTED)
     accumulator = LineAccumulator(cfg.encoding)
 
+    # Set a short recv timeout so we can probe the connection when the robot
+    # is idle. The heartbeat_idle_seconds gate below throttles actual probes
+    # so we only send one every N idle windows, not on every recv timeout.
+    if cfg.heartbeat_idle_seconds > 0:
+        recv_timeout = min(cfg.socket_timeout, cfg.heartbeat_idle_seconds)
+    else:
+        recv_timeout = cfg.socket_timeout
+    conn.settimeout(recv_timeout)
+
+    idle_seconds = 0.0
+
     try:
         while True:
-            data = conn.recv(4096)
+            try:
+                data = conn.recv(4096)
+            except socket.timeout:
+                idle_seconds += recv_timeout
+                if cfg.heartbeat_idle_seconds > 0 and idle_seconds >= cfg.heartbeat_idle_seconds:
+                    # Half-open detection: send the heartbeat payload. We do
+                    # not wait for a response — the send itself will raise if
+                    # the TCP path is broken (BrokenPipeError / ConnectionReset
+                    # once the OS notices), and TCP KEEPALIVE covers slower
+                    # cases. On success, just reset the idle counter.
+                    try:
+                        conn.sendall(cfg.heartbeat_payload)
+                        logging.debug("heartbeat sent (idle %.1fs)", idle_seconds)
+                    except OSError as exc:
+                        logging.info("heartbeat send failed (%s); dropping connection", exc)
+                        break
+                    idle_seconds = 0.0
+                continue
+
             if not data:
                 logging.info("robot closed the connection")
                 break
+            idle_seconds = 0.0
             for line in accumulator.feed(data):
                 if not line:
                     continue

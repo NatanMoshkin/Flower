@@ -3,7 +3,7 @@
 ## TODO:
 
 
-## OPEN ISSUE: robot TCP/IP role (server vs client)
+## DECISION: robot is the TCP server; bridge is the client
 
 The robot comms are done via a **Python bridge** in `RobotBridge/` that
 talks TCP/IP to the robot and ADS to the PLC. This sidesteps Beckhoff's
@@ -11,19 +11,29 @@ paid TF6310 TCP/IP supplement — see
 `.claude/projects/…/memory/feedback_avoid_licensed_beckhoff_libs.md`
 for the rationale.
 
-The choice of whether the **PLC-side bridge is the TCP server** (robot
-dials in) or the **TCP client** (bridge dials the robot) is deferred
-until commissioning. It's a one-line flip in `RobotBridge/config.yaml`:
+**Robot side is the TCP server, bridge dials in.** Committed values in
+`RobotBridge/config.yaml`:
 
 ```yaml
 robot:
-  role: "server"   # or "client"
-  host: "192.168.1.50"   # ignored when role=server
-  port: 2000
+  role: "client"
+  host: "192.168.201.1"
+  port: 6001
 ```
 
-Default committed value: `server`, port 2000, placeholder IP. Update at
-integration time.
+The connection semantics follow the reference client at
+`RobotBridge/Client_working_example/tcp client.py`:
+
+- Persistent socket (one open TCP connection while up).
+- 2-second socket timeout on connect/recv/send.
+- `SO_KEEPALIVE` enabled so a half-open TCP (peer power loss, cable pulled)
+  is eventually detected by the OS.
+- Optional idle-probe: after `heartbeat_idle_seconds` with no data from
+  the robot, the bridge sends `HEARTBEAT` bytes just to see whether the
+  send raises. We do not require the robot to reply — this only catches
+  a half-open connection faster than TCP KEEPALIVE would.
+- On any exception, the top-level supervisor closes the socket, waits
+  `reconnect.delay_seconds`, and re-dials.
 
 ## DECISION: HMI contract lives in any GVL with the `TcHmiSymbol.AddSymbol` pragma
 
@@ -75,3 +85,8 @@ lines in the READ INPUTS block are placeholders.
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side because the
 retracted-position feedback is useful even without a retract coil.
+
+## Playwright
+
+- http://127.0.0.1:3003/liveview_64DA0B941E542F0480ED7063192BC500.html
+- Put the screenshots to some temp folder
