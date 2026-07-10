@@ -4,6 +4,31 @@
 
  * (empty — auto-sequence TODO landed as FB_MasterAutoCycle; see DECISION below)
 
+## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
+
+The current design (`RobotBridge/` Python + pyads) cannot run on the CP6606
+because Windows Embedded Compact 7 on ARM has no supported CPython + pyads.
+Discovered 2026-07-10. Four options on the table; details, tradeoffs, and
+cost/effort estimates in `docs/robot-integration-options.md`.
+
+Summary of the options:
+
+| # | Option | Blocks / gating question |
+|---|--------|--------------------------|
+| 1 | Discrete I/O between robot and PLC (skip TCP entirely) | Does the robot expose DO/DI channels? Simplest and best if yes. |
+| 2 | Replace CP6606 with an x86 Beckhoff (CX5340 + panel, or CP2xxx) | Capital cost, downtime, license transfer. |
+| 3 | Add a companion box (RPi 4 Linux or industrial NUC) hosting `RobotBridge/` | Adds one production-critical device; violates single-box principle. |
+| 4 | Serial (RS-232 / RS-485) between robot and PLC via EL6001 / EL6021, using free Tc2_SerialCom | Does the robot expose a serial port? Same "no middleware" property as Option 1 with richer message payloads. |
+| — | Rewrite bridge in C#/.NET CF 3.5 for CE 7 (rejected: dead tooling) | — |
+
+Note: `FlowerPyHmi/` is engineering-side (runs on any developer laptop) —
+it is **not** part of this decision and stays on the engineering PC
+regardless of which option wins. Only `RobotBridge/` is at stake.
+
+**Next step:** verify robot HW capabilities for discrete I/O (unlocks
+Option 1) and serial port (unlocks Option 4). Those two facts eliminate
+most of the option space at once.
+
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
 
 The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`
