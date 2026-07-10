@@ -18,7 +18,7 @@ STRUCT
     tStepTimeoutMs          : UDINT := 10000;
 
     // If TRUE, SEP_RETRACTED_DWELL returns to IDLE and immediately re-arms;
-    // otherwise it goes to IDLE and waits for the next Start / bAtPos1.
+    // otherwise it goes to IDLE and waits for the next Start / bStartAssembly.
     bContinuous             : BOOL  := FALSE;
 END_STRUCT
 END_TYPE

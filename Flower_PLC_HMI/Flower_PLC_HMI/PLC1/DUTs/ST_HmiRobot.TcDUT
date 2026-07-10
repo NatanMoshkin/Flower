@@ -6,33 +6,40 @@ STRUCT
     // Display label ('Robot'). Set from GVL_Robot, never written by bridge.
     Name           : STRING(30);
 
-    // Bridge writes — connection state (enum + string mirror for HMI text binding)
+    // ------------------------------------------------------------------
+    // Active interface — discrete-IO handshake (2026-07-10)
+    // See docs/robot-integration-options.md (Option 1). Replaces the former
+    // TCP protocol (POS1/POS2/POS3 + AUTO_STARTED/PUSH_DONE/PISTONS_ERROR).
+    // The Dobot side uses STAND_SEQ_DO (robot -> PLC) and STAND_SEQ_DI
+    // (PLC -> robot); see global.lua in ..\167-01-Saad.
+    // ------------------------------------------------------------------
+
+    // FROM robot: level driven by robot's STAND_SEQ_DO (robot DO 2).
+    // FB_MasterAutoCycle triggers on rising edge in IDLE.
+    bStartAssembly    : BOOL;
+
+    // TO robot: level driving robot's STAND_SEQ_DI (robot DI 1).
+    // FB_MasterAutoCycle sets TRUE in every non-IDLE state (including ERR
+    // so the robot times out on PLC error) and FALSE in IDLE. The robot's
+    // src0.lua polls for OFF as "assembler finished".
+    bAssemblyRunning  : BOOL;
+
+    // ------------------------------------------------------------------
+    // Deprecated — kept for HMI-page binding compat until the Robot page
+    // is migrated to the discrete-IO interface. Not read/written by
+    // FB_MasterAutoCycle anymore. Can be deleted once the HMI is updated.
+    // ------------------------------------------------------------------
     eConnState     : E_RobotConnState;
     sConnStateText : STRING(20);
-
-    // Bridge writes — latched "in position N" flags. Bridge holds the last-seen
-    // position TRUE and clears the other two when a new POS frame arrives.
     bAtPos1        : BOOL;
     bAtPos2        : BOOL;
     bAtPos3        : BOOL;
-
-    // Bridge writes — diagnostics
     nPacketsRx     : UDINT;
     sLastMessage   : STRING(80);
-
-    // Outbound pulses — PLC (FB_MasterAutoCycle) writes TRUE for one cycle.
-    // Bridge polls each on rising edge, sends the corresponding TCP frame,
-    // then clears the flag. If the bridge is disconnected the flag stays
-    // TRUE until reconnect; no queue, no lost pulses.
     bTxAutoStarted  : BOOL;
     bTxPushDone     : BOOL;
     bTxPistonsError : BOOL;
-
-    // Inbound pulse — bridge writes TRUE on receiving a RESET_ERROR frame.
-    // FB_MasterAutoCycle consumes on rising edge and clears the flag.
     bRxResetError   : BOOL;
-
-    // Bridge writes — outbound diagnostics
     nPacketsTx      : UDINT;
     sLastTxMessage  : STRING(80);
 END_STRUCT

@@ -50,27 +50,41 @@ protocol mismatch as part of that work.
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
 
 The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`
-(commit `9ba7a14`, with mode-forcing added in `8a39fae`). It coordinates
-1..3 pairs of (SepSolN, PushSolN) pistons in parallel with the robot's
-Pos1/Pos2 signals.
+(commit `9ba7a14`, with mode-forcing added in `8a39fae`, and simplified
+robot interface added 2026-07-10). It coordinates 1..3 pairs of (SepSolN,
+PushSolN) pistons in parallel with a single robot handshake signal.
 
-**Ten-state state machine** (`E_MasterAutoStep`):
+**Robot interface (simplified 2026-07-10):** two discrete signals, both
+level (not pulsed), per the Option 1 decision in
+`docs/robot-integration-options.md`. See the OPEN ISSUE section above.
+
+| Direction | ST_HmiRobot field | Wire to Dobot (from `..\167-01-Saad\global.lua`) | Semantic |
+|---|---|---|---|
+| Robot → PLC | `bStartAssembly` | robot DO 2 (`STAND_SEQ_DO`) | Rising edge triggers a cycle from IDLE |
+| PLC → Robot | `bAssemblyRunning` | robot DI 1 (`STAND_SEQ_DI`) | TRUE in every non-IDLE state (including ERR); FALSE in IDLE |
+
+The former `POS1/POS2/POS3` + `AUTO_STARTED/PUSH_DONE/PISTONS_ERROR` TCP
+protocol is retired. `WAIT_POS2` is retired too — the Dobot's
+`PerformStandSequence` moves the arm clear of the stand *before* raising
+`STAND_SEQ_DO`, so no intermediate "robot moved away" wait is needed.
+
+**Nine-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value still
+declared in the enum but unused — safe to remove once the HMI is cleaned):
 
 ```
-IDLE                    Wait for operator START OR stRobot.bAtPos1 rising OR
-                        bSimStep_Idle. On trigger: emit AUTO_STARTED to robot.
+IDLE                    Wait for operator START OR stRobot.bStartAssembly rising
+                        OR bSimStep_Idle. bAssemblyRunning drops LOW here.
 SEP_EXTENDING           Drive SepCmdExtend[1..N]; wait AND of enabled SepIsExtended.
-WAIT_POS2               Wait for stRobot.bAtPos2 rising.
 PUSH_EXTENDING          Drive PushCmdExtend[1..N]; wait AND of enabled PushIsExtended.
 DWELL_PUSH              Hold both extended; wait tDwellPushMs (default 2000).
 PUSH_RETRACTING         Drive PushCmdRetract[1..N]; wait AND of enabled PushIsRetracted.
-                        Emit PUSH_DONE to robot on sensor-reached.
 PUSH_RETRACTED_DWELL    Wait tPushRetractedDwellMs (default 500).
 SEP_RETRACTING          Drive SepCmdRetract[1..N]; wait AND of enabled SepIsRetracted.
 SEP_RETRACTED_DWELL     Wait tSepRetractedDwellMs (default 500). Increment nCyclesCompleted.
                         → IDLE (or immediately re-arm bStart if Continuous).
-ERR                     Latched. Emit PISTONS_ERROR. iErrorCode = step's fault code.
-                        Reset on HMI RESET rising edge OR stRobot.bRxResetError rising edge.
+ERR                     Latched. iErrorCode = step's fault code. bAssemblyRunning
+                        stays HIGH so the robot's own polling times out and its
+                        error handler fires. Reset on HMI RESET rising edge only.
 ```
 
 **Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
@@ -79,11 +93,12 @@ ERR                     Latched. Emit PISTONS_ERROR. iErrorCode = step's fault c
 |------|------------------------------------|
 | 0    | OK                                 |
 | 1    | SEP_EXTENDING timeout              |
-| 2    | WAIT_POS2 timeout                  |
 | 3    | PUSH_EXTENDING timeout             |
 | 4    | PUSH_RETRACTING timeout            |
 | 5    | SEP_RETRACTING timeout             |
 | 99   | Operator STOP while running        |
+
+(Code 2 was the retired `WAIT_POS2` timeout.)
 
 **Piston mode is forced to Automatic** on any pair with index ≤ uiPairCount
 while the master is in any non-IDLE, non-ERR state (MAIN.TcPOU block right
@@ -98,13 +113,10 @@ independently still works.
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
 triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
-exposes all 9 sim checkboxes plus `Sim bAtPos1` / `Sim bAtPos2` for
-sensorless testing.
-
-**Bidirectional protocol** with the robot (see the RobotBridge DECISION
-below). Outbound: `AUTO_STARTED`, `PUSH_DONE`, `PISTONS_ERROR`. Inbound:
-`RESET_ERROR`. Frame tokens are commissioning-tunable (constants live in
-`RobotBridge/robot_bridge.py`'s `PlcRobotSymbol.TX_FRAMES`).
+today still exposes a `bSimStep_WaitPos2` checkbox and `Sim bAtPos1` /
+`Sim bAtPos2` for the old interface — those are now dead in code and
+should be swapped for a single `Sim bStartAssembly` binding in a follow-up
+HMI edit.
 
 ## DECISION: robot is the TCP server; bridge is the client
 

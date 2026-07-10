@@ -70,11 +70,10 @@ fbMasterAutoCycle.bPushIsRetracted[1] := GVL_HMI.stPushSol1.bIsRetracted;
 fbMasterAutoCycle.bPushIsRetracted[2] := GVL_HMI.stPushSol2.bIsRetracted;
 fbMasterAutoCycle.bPushIsRetracted[3] := GVL_HMI.stPushSol3.bIsRetracted;
 fbMasterAutoCycle(
-    bAtPos1 := GVL_Robot.stRobot.bAtPos1,
-    bAtPos2 := GVL_Robot.stRobot.bAtPos2,
-    stHmi   := GVL_HMI.stMasterAuto,
-    stCfg   := GVL_HmiPersistent.stMasterAutoCfg,
-    stRobot := GVL_Robot.stRobot
+    bStartAssembly := GVL_Robot.stRobot.bStartAssembly,
+    stHmi          := GVL_HMI.stMasterAuto,
+    stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
+    stRobot        := GVL_Robot.stRobot
 );
 
 (* Force enabled pistons into Automatic while the master cycle is running,
