@@ -2,6 +2,72 @@
 
 **Status:** open architectural decision, no commit yet. Written 2026-07-10 after discovering that the current design (`RobotBridge/` Python bridge + pyads) cannot run on the CP6606 (Windows Embedded Compact 7 ARM). Decision deferred until robot hardware capabilities are verified.
 
+**Update 2026-07-10 — robot code inspected** (`C:\Users\Natan.Moshkin\source\repos\167-01-Saad`). Key findings changed the ranking of options; see the callout below.
+
+## Update 2026-07-10 — what the actual robot code tells us
+
+The target robot is a **Dobot** (Lua-scriptable arm; `.dcrp` project file). The full robot program lives in the SAAD 167-01 project. Reading it produced three material discoveries:
+
+### 1. The robot already has extensive digital I/O in use
+
+From `global.lua`, currently used channels:
+
+**Robot DI (inputs to the robot):** 1 (`STAND_SEQ_DI`), 2 (`PISTON1_CLOSE_DI`), 3 (`PISTON1_OPEN_DI`), 4 (`PISTON2_OPEN_DI`), 5 (`PISTON2_CLOSE_DI`), 6 (`TRAY_IN_PLACE_DI`), 7 (`NEW_BULB_IN`), 8 (universal abort — used as `stopcond` on every `MovJ`/`MovL`), 10 (`RESET_ALARM`), 14 (`STOP_PROG`). At least 10 DI channels wired.
+
+**Robot DO (outputs from the robot):** 1 (`GRIPPER_DO`), 2 (`STAND_SEQ_DO`), 3 (`GREEN_LIGHT`), 4 (`RED_LIGHT_DO`). At least 4 DO channels wired.
+
+Plus tool DI (`GRIPPER_CLOSE_DI`, inductive gripper-close sensor) and tool AI (`WAX_LEVEL_AI`, `WATER_LEVEL_AI`).
+
+So the Dobot has **plenty of DIO capacity available** — Option 1 is definitely feasible on the robot side.
+
+### 2. The Dobot ↔ Flower handshake is already partially built via DIO
+
+The signals `STAND_SEQ_DO` (robot → external) and `STAND_SEQ_DI` (external → robot) are **exactly the "start the assembly sequence / assembly finished" handshake** that `FB_MasterAutoCycle` needs. The robot programmer has already wired this pair for discrete I/O. From `src0.lua:204-212`:
+
+```lua
+-- Wait to response from Assembler 	
+for i=0, 20 do
+  Wait(STAND_WAIT//20)
+  if(DI(STAND_SEQ_DI)) == OFF then
+    Log("Assembler Finished")
+    return true
+  end	
+end
+ERROR_HANDLE("ERROR - Assembler Not Return")
+```
+
+So the robot is *already* expecting to trigger the Flower PLC via one DO channel and wait for completion on one DI channel. **The half-built DIO integration on the robot side is the strongest evidence that Option 1 was the intended design all along.**
+
+### 3. The TCP link on port 6001 is for parameter tuning, not the operational handshake
+
+`src2.lua` implements the robot's TCP server. Full protocol:
+
+| Client sends | Robot replies | Purpose |
+|---|---|---|
+| `GET_SYNC` | `SYNC:J_SPEED=..,L_SPEED=..,REPEATS=..,...` | Read current parameter values |
+| `NAME:VALUE` | `OK: SET NAME` | Set a parameter (speeds, waits) |
+| `HEARTBEAT` | `1` | Health check |
+| `New_Bulb:1` | `OK: SET New_Bulb` | Trigger a cycle from remote UI |
+
+**Critically, there is no `POS1` / `POS2` / `POS3` emission anywhere in the robot code.** The `RobotBridge/robot_bridge.py` design assumes the robot pushes position frames — but the actual robot doesn't do that. Either:
+
+- (a) the robot code was going to be extended to add position emission — which would be duplicating what `STAND_SEQ_DO` already does over discrete I/O, or
+- (b) the bridge was written against an aspirational spec that was never verified against the actual robot code.
+
+Either way, **the `RobotBridge/` protocol doesn't match the real robot today.** This is a bigger inconsistency than "we can't run pyads on CE 7" — the protocol itself is wrong.
+
+The TCP link is still potentially useful, but only for parameter tuning from the Flower HMI (writing `J_SPEED:20\n` etc.). That's a nice-to-have, not on the critical path.
+
+### Consequences for the option ranking
+
+- **Option 1 goes from "possibly viable" to "already partially built and preferred."** The robot has the channels, and the handshake half is already coded on the robot side. The Flower PLC just needs to wire up the other end.
+- **Option 4 (serial) is likely N/A** — the robot code shows no evidence of an RS-232 or RS-485 port. Confirming would require checking the Dobot controller hardware manual, but it's unlikely to be a stronger option than DIO given Option 1 is already half-built.
+- **Options 2 and 3 remain fallbacks** in case something blocks Option 1 (e.g., channel-count crunch, or a stakeholder demanding rich TCP messaging).
+
+**Additional open issue surfaced by this inspection:** `RobotBridge/`'s `POS1/POS2/POS3` protocol assumption needs to be reconciled with the robot programmer. Either the robot is going to add that protocol (unlikely given the DIO handshake already does the job), or `RobotBridge/` should be repurposed for parameter tuning (small scope) or retired outright.
+
+---
+
 ## The problem, restated
 
 The CP6606-0001-0020 panel PC hosts both the TwinCAT PLC and the operator HMI. It runs Windows Embedded Compact 7 on ARM. That platform cannot host CPython or `pyads`, so the current `RobotBridge/robot_bridge.py` cannot execute on the panel itself.
@@ -21,41 +87,46 @@ Two Python components are involved, and only one is production-critical on the m
 
 ## Comparison at a glance
 
-| # | Option | Bridge lives where | Extra HW | Effort | Latency | Reversibility |
-|---|--------|-------------------|----------|--------|---------|---------------|
-| 1 | Discrete I/O between robot and PLC (no bridge at all) | N/A | EL1xxx / EL2xxx terminals, wiring | 0.5–1 day PLC + robot config | Sub-millisecond | Easy to revert if robot HW supports both |
-| 2 | Replace CP6606 with x86 Beckhoff (e.g., CX5340 + CP2xxx panel) | Same panel PC | New panel PC | 2–5 days migration | Same as today | Hard: capital HW swap |
-| 3 | Add a companion box (RPi 4 Linux or industrial Windows NUC) | Companion box | +1 device | 1–2 days first cut | Same as today (TCP + ADS) | Easy: pull the box, plug it back in later |
-| 4 | Serial (RS-232 or RS-485) between robot and PLC via EL6001 / EL6021 | N/A (PLC handles it directly via Tc2_SerialCom) | EL6001 or EL6021 terminal, serial cable | 1–2 days PLC + robot config | Milliseconds | Easy: unwire terminal |
-| — | Rewrite bridge in C#/.NET CF 3.5 for CE 7 | CP6606 | None | 4–5 days | Same as today | Impractical, dead tooling |
-| — | TF6310 (paid) on CP6606 | CP6606 | License fee | 1–2 days | Same | Money already spent |
+Ranking updated 2026-07-10 after inspecting the Dobot code. **Option 1 is now the recommended default.**
+
+| # | Option | Bridge lives where | Extra HW | Effort | Latency | Reversibility | Ranking |
+|---|--------|-------------------|----------|--------|---------|---------------|---------|
+| **1** | **Discrete I/O between robot and PLC (no bridge at all)** | **N/A** | **EL1xxx / EL2xxx terminals, wiring** | **0.5–1 day PLC + robot config** | **Sub-millisecond** | **Easy to revert** | **★ Recommended — robot side already half-built** |
+| 2 | Replace CP6606 with x86 Beckhoff (e.g., CX5340 + CP2xxx panel) | Same panel PC | New panel PC | 2–5 days migration | Same as today | Hard: capital HW swap | Fallback if Option 1 blocks |
+| 3 | Add a companion box (RPi 4 Linux or industrial Windows NUC) | Companion box | +1 device | 1–2 days first cut | Same as today (TCP + ADS) | Easy: pull the box, plug it back in later | Fallback if Option 1 blocks |
+| 4 | Serial (RS-232 or RS-485) between robot and PLC via EL6001 / EL6021 | N/A (PLC handles it directly via Tc2_SerialCom) | EL6001 or EL6021 terminal, serial cable | 1–2 days PLC + robot config | Milliseconds | Easy: unwire terminal | Likely N/A — no evidence of serial support in Dobot code |
+| — | Rewrite bridge in C#/.NET CF 3.5 for CE 7 | CP6606 | None | 4–5 days | Same as today | Impractical, dead tooling | Rejected |
+| — | TF6310 (paid) on CP6606 | CP6606 | License fee | 1–2 days | Same | Money already spent | Rejected |
 
 ---
 
 ## Option 1 — Discrete I/O between robot and PLC
 
-Skip the entire TCP protocol. Wire the robot's digital outputs to EL1xxx input terminals on the CP6606, and (optionally) the PLC's digital outputs back to the robot's inputs via EL2xxx.
+Skip the entire TCP protocol. Wire the robot's digital outputs to EL1xxx input terminals on the CP6606, and the PLC's digital outputs back to the robot's inputs via EL2xxx.
 
-### Signal mapping (one possible encoding)
+### Signal mapping — using the channels the Dobot already uses
+
+The robot code (`global.lua`) already defines the handshake half. The mapping is basically "wire what's already there to the Flower PLC":
 
 Robot → PLC (robot DO → PLC DI):
 
-| Robot signal | PLC input | Replaces TCP frame |
-|---|---|---|
-| At-Pos-1 | `GVL_IO.dIn[?]` → `stRobot.bAtPos1` | `POS1` |
-| At-Pos-2 | `GVL_IO.dIn[?]` → `stRobot.bAtPos2` | `POS2` |
-| At-Pos-3 (optional, or derive as NOT (Pos1 OR Pos2)) | `GVL_IO.dIn[?]` → `stRobot.bAtPos3` | `POS3` |
-| Reset-Error (optional) | `GVL_IO.dIn[?]` → `stRobot.bRxResetError` | `RESET_ERROR` |
+| Robot DO | Robot's own label | PLC input (proposed) | Semantic |
+|---|---|---|---|
+| DO 2 | `STAND_SEQ_DO` | `GVL_IO.dIn[?]` → rising-edge trigger for `FB_MasterAutoCycle` to leave IDLE | "Start stand assembly sequence" (equivalent to today's `POS1` / `bAtPos1`) |
+| DO 3 | `GREEN_LIGHT` | (optional) → HMI status | Robot in normal running state |
+| DO 4 | `RED_LIGHT_DO` | (optional) → HMI status / `bRxResetError` context | Robot in error state |
 
 PLC → Robot (PLC DO → robot DI):
 
-| PLC output | Robot input | Replaces TCP frame |
-|---|---|---|
-| Auto-started | `GVL_IO.dOut[?]` | `AUTO_STARTED` |
-| Push-done | `GVL_IO.dOut[?]` | `PUSH_DONE` |
-| Pistons-error | `GVL_IO.dOut[?]` | `PISTONS_ERROR` |
+| PLC output (proposed) | Robot DI | Robot's own label | Semantic |
+|---|---|---|---|
+| `GVL_IO.dOut[?]` | DI 1 | `STAND_SEQ_DI` | "Assembler finished" (equivalent to today's `PUSH_DONE` — the robot polls this DI for OFF to leave its `Wait for response from Assembler` loop) |
+| (optional) `GVL_IO.dOut[?]` | DI 10 | `RESET_ALARM` | Trigger a robot-side alarm reset from the operator HMI |
+| (optional) `GVL_IO.dOut[?]` | DI 8 | (universal abort) | E-stop / assembler-error abort — the robot uses this on every `stopcond` |
 
-Minimum viable is **2 DI + 3 DO** if we can live without POS3 and RESET_ERROR (the robot could reset its own error internally). Comfortable is **4 DI + 3 DO**.
+**Minimum viable: 1 DI + 1 DO on the PLC side** (start signal in, done signal out). Comfortable: 2 DI + 3 DO if we want to drive the robot's reset and abort from the PLC and mirror the robot's status lights on the HMI. Both are well within a single EL1008 + EL2008 pair.
+
+Note: the piston-position sensors (`PISTON1_OPEN_DI`, `PISTON1_CLOSE_DI`, `PISTON2_OPEN_DI`, `PISTON2_CLOSE_DI` on robot DI 2-5) are consumed by the *robot* as inputs. These need to be sourced from the Flower PLC's own piston sensors (or from the pistons directly) — the same physical sensors can be wired to both if they're 24V-compatible open-collector sensors. This is a wiring-topology detail, not a protocol question.
 
 ### What changes in the codebase
 
@@ -279,9 +350,11 @@ Excellent. Terminal comes off the DIN rail, cable comes off, PLC code reverts. Z
 
 ### Open questions
 
-1. **Does the target robot have a serial port (RS-232 or RS-485), and if so which?** This is the gating question — same shape as Option 1's discrete-I/O question.
-2. **What baud rate and framing (parity, stop bits) does the robot expect?** Usually configurable, but confirm.
-3. **How far apart are the robot and the panel physically?** Answers whether RS-232 (EL6001) or RS-485 (EL6021) is the right terminal.
+1. **Does the target robot have a serial port (RS-232 or RS-485), and if so which?** — **Likely no.** The Dobot Lua program inspected on 2026-07-10 references only DIO and TCP (via `TCPCreate` / `TCPRead` / `TCPWrite`); no `SerialCreate` or equivalent. Would need to verify against the Dobot controller hardware manual, but this option looks unavailable without an add-on module.
+2. What baud rate and framing (parity, stop bits) would the robot expect? Moot until (1) is answered yes.
+3. How far apart are the robot and the panel physically? Moot until (1) is answered yes.
+
+**Verdict after robot-code inspection: probably N/A.** Kept in the doc for completeness in case a Dobot-controller variant adds serial capability.
 
 ---
 
@@ -301,16 +374,18 @@ Rejected by explicit project preference — see `memory/feedback_avoid_licensed_
 
 ## Decision framework
 
-Rough guidance for picking, once open questions are answered:
+Updated 2026-07-10 after robot-code inspection. The gating question about robot HW capability is now largely answered.
 
-- **If the robot supports discrete I/O with enough channels →** Option 1. Simplest, fastest, most reliable. Nothing else beats no software for uptime.
-- **If the robot has a serial port (RS-232 / RS-485) but not discrete I/O, or you want richer messages than boolean pins allow →** Option 4. Same "one-box, no middleware" property as Option 1, but with the full ASCII-frame semantics of Option 3. Best middle ground.
-- **If the robot exposes neither discrete I/O nor serial, and this machine is a one-off or low-volume →** Option 3 with an RPi. Cheapest way to unblock the current TCP design.
-- **If the robot exposes neither, and this design will ship to multiple customers →** Option 2. The capital cost is amortized across units; the software and support story is dramatically cleaner than shipping a companion RPi to every customer.
-- **If the customer explicitly forbids non-Beckhoff hardware →** Options 1, 4, or 2 (all-Beckhoff paths). Option 3 with a Beckhoff CX9020 companion is a fallback that keeps the plant-floor logo Beckhoff-only.
+- **Default → Option 1.** Robot code inspection confirms the Dobot has plenty of DIO capacity (≥ 10 DI, ≥ 4 DO already in use, more channels available) and has already wired `STAND_SEQ_DO` / `STAND_SEQ_DI` as the machine-side handshake. Finishing the integration is a wiring exercise plus straightforward PLC logic — no middleware, no companion box, no license.
+- **If Option 1 blocks** (e.g., a specific channel-count issue we haven't seen, or a stakeholder rejection) → **Option 3** with an RPi or industrial NUC hosting `RobotBridge/` unchanged. Cheapest fallback that keeps the current design alive.
+- **If Option 1 blocks *and* the design will ship to multiple customers** → **Option 2** (replace CP6606 with x86 Beckhoff). Amortizes the capital cost across units and eliminates the auxiliary-device support burden.
+- **Option 4 (serial)** → skip. The Dobot Lua code shows no serial-port usage; no evidence the controller exposes one.
 
-Note: Options 1 and 4 both retire `RobotBridge/`. Options 2 and 3 keep it. Whichever way this lands, `FlowerPyHmi/` is unaffected — it stays on the engineering laptop.
+Note: Options 1 and 4 both retire `RobotBridge/` as it stands. Options 2 and 3 keep the bridge alive but require reconciling its `POS1/POS2/POS3` protocol with what the Dobot actually emits (which today is *nothing* — see the "Robot code inspected" callout at the top). Whichever way this lands, `FlowerPyHmi/` is unaffected — it stays on the engineering laptop.
 
 ## Next step
 
-Verify robot HW capabilities: **discrete I/O** (unlocks Option 1) and **serial port availability** (unlocks Option 4). Answers to those two questions eliminate most of the option space in one go. Everything else can wait behind that check.
+Two parallel checks:
+
+1. **Confirm with the robot programmer** that wiring `STAND_SEQ_DO` (robot DO 2) and `STAND_SEQ_DI` (robot DI 1) to the Flower PLC's EL1008/EL2008 is the intended integration approach. If yes → proceed with Option 1 wiring plan.
+2. **Reconcile the `RobotBridge/` protocol mismatch.** The `POS1/POS2/POS3` frames the bridge expects are not emitted by the current robot code. Decide whether `RobotBridge/` should be retired (Option 1 outcome), repurposed for parameter tuning only (secondary use case surfaced by the robot's TCP server), or specified against a robot-side extension that adds position frames (unlikely — duplicates what DIO already does).

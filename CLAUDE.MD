@@ -11,23 +11,41 @@ because Windows Embedded Compact 7 on ARM has no supported CPython + pyads.
 Discovered 2026-07-10. Four options on the table; details, tradeoffs, and
 cost/effort estimates in `docs/robot-integration-options.md`.
 
-Summary of the options:
+Summary of the options (ranking updated 2026-07-10 after robot code inspection):
 
-| # | Option | Blocks / gating question |
-|---|--------|--------------------------|
-| 1 | Discrete I/O between robot and PLC (skip TCP entirely) | Does the robot expose DO/DI channels? Simplest and best if yes. |
-| 2 | Replace CP6606 with an x86 Beckhoff (CX5340 + panel, or CP2xxx) | Capital cost, downtime, license transfer. |
-| 3 | Add a companion box (RPi 4 Linux or industrial NUC) hosting `RobotBridge/` | Adds one production-critical device; violates single-box principle. |
-| 4 | Serial (RS-232 / RS-485) between robot and PLC via EL6001 / EL6021, using free Tc2_SerialCom | Does the robot expose a serial port? Same "no middleware" property as Option 1 with richer message payloads. |
+| # | Option | Status |
+|---|--------|--------|
+| **1** | **Discrete I/O between robot and PLC (skip TCP entirely)** | **★ Recommended.** Dobot code (SAAD 167-01) already defines `STAND_SEQ_DO` / `STAND_SEQ_DI` and has ≥ 10 DI + 4 DO in use — the handshake half is already built on the robot side. |
+| 2 | Replace CP6606 with x86 Beckhoff (CX5340 + panel, or CP2xxx) | Fallback if Option 1 blocks. Capital cost, downtime, license transfer. |
+| 3 | Add companion box (RPi 4 Linux or industrial NUC) hosting `RobotBridge/` | Fallback if Option 1 blocks. Adds one production-critical device. |
+| 4 | Serial (RS-232 / RS-485) via EL6001 / EL6021 + free Tc2_SerialCom | Likely N/A — Dobot Lua code shows no serial usage. |
 | — | Rewrite bridge in C#/.NET CF 3.5 for CE 7 (rejected: dead tooling) | — |
 
 Note: `FlowerPyHmi/` is engineering-side (runs on any developer laptop) —
 it is **not** part of this decision and stays on the engineering PC
 regardless of which option wins. Only `RobotBridge/` is at stake.
 
-**Next step:** verify robot HW capabilities for discrete I/O (unlocks
-Option 1) and serial port (unlocks Option 4). Those two facts eliminate
-most of the option space at once.
+## OPEN ISSUE: RobotBridge protocol mismatch with the actual Dobot code
+
+`RobotBridge/robot_bridge.py` assumes the robot pushes `POS1` / `POS2` /
+`POS3` frames on TCP:6001. Inspection of the SAAD 167-01 Dobot Lua code
+on 2026-07-10 shows that:
+
+- The Dobot's TCP server on port 6001 is used only for **parameter tuning**
+  (`GET_SYNC`, `NAME:VALUE`, `HEARTBEAT`, `New_Bulb:1`). No position frames
+  are emitted.
+- The robot ↔ PLC operational handshake is designed to run over **discrete
+  I/O** (`STAND_SEQ_DO` and `STAND_SEQ_DI`), not TCP.
+
+So `RobotBridge/`'s current protocol is orphaned. Reconcile with the robot
+programmer: either retire the bridge (Option 1 outcome), repurpose it for
+parameter tuning only, or ask the robot side to add position frames
+(unlikely — duplicates DIO).
+
+**Next step:** confirm with the robot programmer that Option 1 wiring
+(`STAND_SEQ_DO`→PLC DI, PLC DO→`STAND_SEQ_DI`) is the intended integration.
+If yes, proceed with Option 1 wiring plan and address the `RobotBridge/`
+protocol mismatch as part of that work.
 
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
 
