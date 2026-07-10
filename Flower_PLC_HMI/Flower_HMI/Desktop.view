@@ -180,13 +180,6 @@
  "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
  "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
 {
- "id": "Robot",
- "name": "%l%L_Robot%/l%",
- "content": "Pages/Robot.content",
- "icon": "%tr%TR_Icon_StartPage_normal%/tr%",
- "iconActive": "%tr%TR_Icon_StartPage_active%/tr%",
- "iconPressed": "%tr%TR_Icon_StartPage_pressed%/tr%"},
-{
  "id": "Events",
  "name": "%l%L_Events%/l%",
  "content": "Pages/Events.content",

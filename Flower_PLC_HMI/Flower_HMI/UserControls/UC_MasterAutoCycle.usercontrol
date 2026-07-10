@@ -104,12 +104,12 @@
 <div id="ErrText" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="34" data-tchmi-height-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-top="296" data-tchmi-top-unit="px" data-tchmi-width="473" data-tchmi-width-unit="px" data-tchmi-text="%pp%auto::sErrorText%/pp%" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-word-wrap="True" data-tchmi-zindex="1">
 </div>
 
-<!-- Robot sim checkboxes -->
-<div id="RobotSimLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="340" data-tchmi-top-unit="px" data-tchmi-width="300" data-tchmi-width-unit="px" data-tchmi-text="Robot triggers (sim):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold">
+<!-- Robot handshake (discrete-IO interface, 2026-07-10) -->
+<div id="RobotSimLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="340" data-tchmi-top-unit="px" data-tchmi-width="400" data-tchmi-width-unit="px" data-tchmi-text="Robot handshake (bench sim):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold">
 </div>
-<div id="SimPos1CB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="362" data-tchmi-top-unit="px" data-tchmi-width="180" data-tchmi-width-unit="px" data-tchmi-text="Sim bAtPos1" data-tchmi-state-symbol="%pp%robot::bAtPos1|BindingMode=TwoWay%/pp%">
+<div id="SimStartAssemblyCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="362" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Sim bStartAssembly" data-tchmi-state-symbol="%pp%robot::bStartAssembly|BindingMode=TwoWay%/pp%">
 </div>
-<div id="SimPos2CB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="200" data-tchmi-left-unit="px" data-tchmi-top="362" data-tchmi-top-unit="px" data-tchmi-width="180" data-tchmi-width-unit="px" data-tchmi-text="Sim bAtPos2" data-tchmi-state-symbol="%pp%robot::bAtPos2|BindingMode=TwoWay%/pp%">
+<div id="AssemblyRunningInd" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="220" data-tchmi-left-unit="px" data-tchmi-top="362" data-tchmi-top-unit="px" data-tchmi-width="220" data-tchmi-width-unit="px" data-tchmi-text="bAssemblyRunning (to robot)" data-tchmi-state-symbol="%pp%robot::bAssemblyRunning%/pp%" data-tchmi-enabled="False">
 </div>
 
 <!-- Per-step sim checkboxes: 3x3 grid. Rising edge shortcuts the current step's wait condition. -->
@@ -120,21 +120,18 @@
 </div>
 <div id="SimSepExtCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="172" data-tchmi-left-unit="px" data-tchmi-top="420" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim SEP EXT" data-tchmi-state-symbol="%pp%auto::bSimStep_SepExt|BindingMode=TwoWay%/pp%">
 </div>
-<div id="SimWaitPos2CB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="420" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim WAIT POS2" data-tchmi-state-symbol="%pp%auto::bSimStep_WaitPos2|BindingMode=TwoWay%/pp%">
+<div id="SimPushExtCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="420" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH EXT" data-tchmi-state-symbol="%pp%auto::bSimStep_PushExt|BindingMode=TwoWay%/pp%">
+</div>
+<div id="SimDwellPushCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim DWELL PUSH" data-tchmi-state-symbol="%pp%auto::bSimStep_DwellPush|BindingMode=TwoWay%/pp%">
+</div>
+<div id="SimPushRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="172" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH RET" data-tchmi-state-symbol="%pp%auto::bSimStep_PushRet|BindingMode=TwoWay%/pp%">
+</div>
+<div id="SimPushRetDwellCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH RET DWELL" data-tchmi-state-symbol="%pp%auto::bSimStep_PushRetDwell|BindingMode=TwoWay%/pp%">
 </div>
 
-<div id="SimPushExtCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH EXT" data-tchmi-state-symbol="%pp%auto::bSimStep_PushExt|BindingMode=TwoWay%/pp%">
+<div id="SimSepRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="468" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim SEP RET" data-tchmi-state-symbol="%pp%auto::bSimStep_SepRet|BindingMode=TwoWay%/pp%">
 </div>
-<div id="SimDwellPushCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="172" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim DWELL PUSH" data-tchmi-state-symbol="%pp%auto::bSimStep_DwellPush|BindingMode=TwoWay%/pp%">
-</div>
-<div id="SimPushRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="444" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH RET" data-tchmi-state-symbol="%pp%auto::bSimStep_PushRet|BindingMode=TwoWay%/pp%">
-</div>
-
-<div id="SimPushRetDwellCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="468" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim PUSH RET DWELL" data-tchmi-state-symbol="%pp%auto::bSimStep_PushRetDwell|BindingMode=TwoWay%/pp%">
-</div>
-<div id="SimSepRetCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="172" data-tchmi-left-unit="px" data-tchmi-top="468" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim SEP RET" data-tchmi-state-symbol="%pp%auto::bSimStep_SepRet|BindingMode=TwoWay%/pp%">
-</div>
-<div id="SimSepRetDwellCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="468" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim SEP RET DWELL" data-tchmi-state-symbol="%pp%auto::bSimStep_SepRetDwell|BindingMode=TwoWay%/pp%">
+<div id="SimSepRetDwellCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="172" data-tchmi-left-unit="px" data-tchmi-top="468" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="Sim SEP RET DWELL" data-tchmi-state-symbol="%pp%auto::bSimStep_SepRetDwell|BindingMode=TwoWay%/pp%">
 </div>
 
 </div>

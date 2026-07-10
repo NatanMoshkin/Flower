@@ -1,6 +1,10 @@
-<div id="RobotPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730">
+<div id="RobotTcpLegacyPage" data-tchmi-type="TcHmi.Controls.System.TcHmiContent" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1100" data-tchmi-height="730">
 
-  <!-- Single Robot user-control card; page reserved for future comms (Modbus, second robot, MQTT, etc.) -->
+  <!-- Legacy TCP-oriented Robot page (retired 2026-07-10 in favor of the
+       discrete-IO handshake — see docs/robot-integration-options.md Option 1
+       and CLAUDE.md DECISION for FB_MasterAutoCycle). Kept in the project
+       for historical reference and diagnostic access; removed from the
+       navigation menu in Desktop.view. Do not delete without confirmation. -->
   <div id="RobotHost"
        data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost"
        data-tchmi-target-user-control="UserControls/UC_Robot.usercontrol"

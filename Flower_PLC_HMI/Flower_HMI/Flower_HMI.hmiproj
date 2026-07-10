@@ -162,7 +162,7 @@
     <Content Include="Pages\Piston.content">
       <SubType>Content</SubType>
     </Content>
-    <Content Include="Pages\Robot.content">
+    <Content Include="Pages\Robot_TCP_Legacy.content">
       <SubType>Content</SubType>
     </Content>
     <Content Include="Pages\Settings.content">

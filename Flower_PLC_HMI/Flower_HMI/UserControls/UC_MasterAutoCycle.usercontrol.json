@@ -46,7 +46,7 @@
       "visible": true,
       "type": "tchmi:project#/definitions/PLC1.ST_HmiRobot",
       "category": "",
-      "description": "Robot state — used by the sim checkboxes to write bAtPos1/bAtPos2 for bench testing. Bind to GVL_Robot.stRobot.",
+      "description": "Robot state — sim checkbox writes bStartAssembly; read-only indicator mirrors bAssemblyRunning. Bind to GVL_Robot.stRobot.",
       "readOnly": false,
       "heritable": true,
       "propertyName": "robot"

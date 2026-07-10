@@ -95,7 +95,7 @@
       "preloadBindings": false
     },
     {
-      "url": "Pages/Robot.content",
+      "url": "Pages/Robot_TCP_Legacy.content",
       "preload": false,
       "keepAlive": false,
       "loadSync": false,
