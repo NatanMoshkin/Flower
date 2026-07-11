@@ -2,11 +2,8 @@
 
 ## TODO:
 
-**IO mapping** (see DECISION section below for the reference architecture)
-- **Assign real channels** for the robot handshake and the four unassigned
-  SepSol2/3 + PushSol2/3 DI pairs. Placeholder `TODO` lines already exist
-  in `PRG_IoMap.ReadInputs` / `WriteOutputs` — pick channels from the open-issue
-  table below and un-comment.
+_(empty — active TODOs land here; deferred items go under "Out of scope
+(Future)" at the bottom.)_
 
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
 
@@ -243,42 +240,31 @@ availability on the CP6606 WinCE 7 ARM target before committing — the
 Vacuum project runs on a beefier CX-class controller. If unsupported,
 Level 1 is the ceiling for this platform.
 
-## OPEN ISSUE: physical DI channel assignment for SepSol2/3 + PushSol2/3
+## DECISION: physical IO channel assignment
 
-`GVL_IO.dIn/dOut` sized `ARRAY[1..16] OF BOOL`. The System Manager
-EtherCAT links for slots 1..8 must be re-verified after the array grew;
-slots 9..16 are unassigned.
+`GVL_IO.dIn` / `GVL_IO.dOut` sized `ARRAY[1..16] OF BOOL`. All six
+pistons and the robot handshake are wired; channels 14..16 (DI) and
+8..16 (DO) are free for future use. The mapping lives in
+`PRG_IoMap.TcPOU` (`ReadInputs` and `WriteOutputs` actions).
 
-**DO is fully assigned** — the SOL-Spring migration packed all six Extend
-coils into `dOut[1..6]`. **DI remains partial** — only SepSol1 and
-PushSol1 have their proximity switches wired:
-
-| Actuator  | DI (Retract) | DI (Extend) | DO (Extend) |
-|-----------|--------------|-------------|-------------|
-| SepSol1   | dIn[1]       | dIn[2]      | dOut[1]     |
-| SepSol2   | **TBD**      | **TBD**     | dOut[2]     |
-| SepSol3   | **TBD**      | **TBD**     | dOut[3]     |
-| PushSol1  | dIn[7]       | dIn[8]      | dOut[4]     |
-| PushSol2  | **TBD**      | **TBD**     | dOut[5]     |
-| PushSol3  | **TBD**      | **TBD**     | dOut[6]     |
-
-`dOut[7]` and `dOut[8]` were freed by the migration (previously PushSol1's
-two coils) and are available for reuse.
-
-The four unassigned DI pairs mean those actuators drive their coil in
-software and on the HMI, but the "Extended" and "Retracted" position
-indicators only light up via the operator's Simulate checkboxes until real
-sensors are wired.
-
-When DI channels are decided, fill in `GVL_IO.dIn[??]` in
-`Flower_PLC_HMI/PLC1/POUs/PRG_IoMap.TcPOU` — the eight commented
-`// GVL_App…` lines inside the `ReadInputs` action are placeholders (plus
-one `bStartAssembly` line for the robot handshake). The paired robot
-`bAssemblyRunning` DO line lives in `PRG_IoMap.WriteOutputs`.
+| Actuator / signal        | DI (Retract) | DI (Extend) | DO (Extend / robot) |
+|--------------------------|--------------|-------------|---------------------|
+| SepSol1                  | dIn[1]       | dIn[2]      | dOut[1]             |
+| SepSol2                  | dIn[3]       | dIn[4]      | dOut[2]             |
+| SepSol3                  | dIn[5]       | dIn[6]      | dOut[3]             |
+| PushSol1                 | dIn[7]       | dIn[8]      | dOut[4]             |
+| PushSol2                 | dIn[9]       | dIn[10]     | dOut[5]             |
+| PushSol3                 | dIn[11]      | dIn[12]     | dOut[6]             |
+| Robot → PLC `bStartAssembly` (STAND_SEQ_DO) | dIn[13] | — | — |
+| PLC → Robot `bAssemblyRunning` (STAND_SEQ_DI) | — | — | dOut[7] |
 
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
-retracts). Retract sensors still exist on the DI side because the
+retracts). Retract sensors still exist on the DI side — the
 retracted-position feedback is useful even without a retract coil.
+
+To add a new actuator, extend `GVL_IO` (already sized 1..16), add its
+GVL_App alias, wire it in `PRG_IoMap.ReadInputs` / `WriteOutputs`, then
+finish the EtherCAT link in the System Manager.
 
 ## Out of scope (Future)
 
