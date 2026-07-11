@@ -30,35 +30,6 @@ it is **not** part of this decision and stays on the engineering PC
 regardless of which option wins. Only `RobotBridge/` is at stake.
 
 
-## Out of scope (Future)
-
-**Remove the "Pair count" parameter from FB_MasterAutoCycle and HMI**
-**bAssemblyRunning change to bAssemblyNOTRunning - safer to write TRUE when It's ok to mave the robot**
-**Review Persistent vars** 
- — saving correctly? Needs bench test (write value → power-cycle → verify), not code review.
-
-**RobotBridge protocol mismatch with the actual Dobot code**
-
-`RobotBridge/robot_bridge.py` assumes the robot pushes `POS1` / `POS2` /
-`POS3` frames on TCP:6001. Inspection of the SAAD 167-01 Dobot Lua code
-on 2026-07-10 shows that:
-
-- The Dobot's TCP server on port 6001 is used only for **parameter tuning**
-  (`GET_SYNC`, `NAME:VALUE`, `HEARTBEAT`, `New_Bulb:1`). No position frames
-  are emitted.
-- The robot ↔ PLC operational handshake is designed to run over **discrete
-  I/O** (`STAND_SEQ_DO` and `STAND_SEQ_DI`), not TCP.
-
-So `RobotBridge/`'s current protocol is orphaned. Reconcile with the robot
-programmer: either retire the bridge (Option 1 outcome), repurpose it for
-parameter tuning only, or ask the robot side to add position frames
-(unlikely — duplicates DIO).
-
-**Next step:** confirm with the robot programmer that Option 1 wiring
-(`STAND_SEQ_DO`→PLC DI, PLC DO→`STAND_SEQ_DI`) is the intended integration.
-If yes, proceed with Option 1 wiring plan and address the `RobotBridge/`
-protocol mismatch as part of that work.
-
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
 
 The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`
@@ -121,17 +92,41 @@ gate is `bAnyRunning AND bForceAllAuto`, so on IDLE/ERR the block never
 touches the operator's mode choice regardless of the flag. HMI checkbox
 lives next to Continuous on the AutoCycle page.
 
-**Coexists** with the per-piston `fbSepSol1Auto` / `fbPushSol1Auto` tiles
-via OR-merge on `bAutoCmd*` at each piston call site. Bench-testing loops
-independently still works.
+**Coexists** with the per-piston `fbSepSol{1..3}Auto` / `fbPushSol{1..3}Auto`
+tiles via OR-merge on `bAutoCmd*` at each piston call site (`fbXxxAuto.bCmd*
+OR fbMasterAutoCycle.bXxxCmd*[i]`). Bench-testing loops independently still
+works — see `DECISION: per-piston auto tiles` below.
 
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
 triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
-today still exposes a `bSimStep_WaitPos2` checkbox and `Sim bAtPos1` /
-`Sim bAtPos2` for the old interface — those are now dead in code and
-should be swapped for a single `Sim bStartAssembly` binding in a follow-up
-HMI edit.
+renders them as a vertical 9-row table (`Row0_*` … `Row8_*` in
+`UC_MasterAutoCycle.usercontrol`) — one row per state, background
+highlights yellow when `auto::eStep` matches the row's enum value, red
+for the ERR row. The `Sim bStartAssembly` checkbox at the top drives the
+robot handshake input.
+
+## DECISION: per-piston auto tiles + sensorless mode
+
+Every piston (SepSol1..3, PushSol1..3) has its own `FB_PistonAutoCycle`
+instance in MAIN and a dedicated tile on `StartPage.content` (3×2 grid,
+337×340 tiles: Sep row on top, Push row on bottom). Each tile binds to
+`GVL_HMI.stXxxAuto` (runtime state) and `GVL_HmiPersistent.stXxxAutoCfg`
+(PERSISTENT config). Callers wire each auto FB's `bCmdExtend` /
+`bCmdRetract` outputs into the piston FB's `bAutoCmd*` inputs OR-merged
+with `fbMasterAutoCycle.bXxxCmd*[i]`, so both the per-piston tile and
+the master sequence can drive the same piston without stepping on each
+other.
+
+**Sensorless mode** (`ST_HmiPistonAutoCfg.bNoSensors`, default FALSE):
+- FALSE — standard sensor-driven behavior. `tTimeoutExtendMs` /
+  `tTimeoutRetractMs` are timeouts; expiry raises an error.
+- TRUE — the state machine ignores sensor feedback and advances on
+  timer expiry. Same fields become fixed extend/retract *durations*
+  (relabelled in the UC as "Extend time (ms)" / "Retract time (ms)"). No
+  feedback-mismatch check, no "sensor never arrived" error path. Use for
+  bench cycling on pistons whose proximity switches aren't wired
+  (SepSol2/3, PushSol2/3 today per the DI channel open issue below).
 
 ## DECISION: robot is the TCP server; bridge is the client
 
@@ -284,6 +279,29 @@ one `bStartAssembly` line for the robot handshake). The paired robot
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side because the
 retracted-position feedback is useful even without a retract coil.
+
+## Out of scope (Future)
+
+- **Remove the "Pair count" parameter** from `FB_MasterAutoCycle` and its
+  HMI tile — the pair count is effectively fixed at 3 for this machine, so
+  the runtime knob mostly adds noise.
+- **Invert `bAssemblyRunning` polarity** → `bAssemblyNOTRunning`. Safer
+  fail-open semantic: PLC writes TRUE when it is *safe* to move the robot,
+  so a broken PLC / cable / loose wire reads as FALSE and the robot holds
+  station.
+- **Review persistent vars** — verify `stXxxAutoCfg` and `stMasterAutoCfg`
+  actually survive a power-cycle. Needs a bench test (set value → hard
+  power cycle → verify), not a code review.
+- **Reconcile `RobotBridge/` protocol with the actual Dobot code.** Its
+  `robot_bridge.py` assumes the robot pushes `POS1` / `POS2` / `POS3` on
+  TCP:6001, but the SAAD 167-01 Dobot Lua only uses port 6001 for
+  parameter tuning (`GET_SYNC`, `NAME:VALUE`, `HEARTBEAT`, `New_Bulb:1`);
+  the operational handshake is discrete I/O (`STAND_SEQ_DO` /
+  `STAND_SEQ_DI`). Options: retire the bridge (Option 1 outcome above),
+  repurpose it for parameter tuning only, or ask the robot side to add
+  position frames (unlikely — duplicates DIO). Confirm with the robot
+  programmer before doing either.
+
 
 ## Playwright
 
