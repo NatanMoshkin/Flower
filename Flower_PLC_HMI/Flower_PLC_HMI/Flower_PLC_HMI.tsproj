@@ -27,22 +27,25 @@
 				<Task Id="3" Priority="20" CycleTime="100000" AmsPort="350" AdtTasks="true">
 					<Name>PlcTask</Name>
 				</Task>
+				<Task Id="4" Priority="15" CycleTime="50000" AmsPort="351" AdtTasks="true">
+					<Name>IOmapTask</Name>
+				</Task>
 			</Tasks>
 		</System>
 		<Plc>
 			<Project GUID="{CDA13425-DE55-41D1-8B6D-E32BEAC7D966}" Name="PLC1" PrjFilePath="PLC1\PLC1.plcproj" TmcFilePath="PLC1\PLC1.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{D7775B63-EAA7-2034-446C-7071F0DFE794}" TmcPath="PLC1\PLC1.tmc">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcHash="{63185701-EE89-A6BE-255E-6078355509B8}" TmcPath="PLC1\PLC1.tmc">
 					<Name>PLC1 Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="2" AreaNo="1">
-						<Name>PlcTask Outputs</Name>
+						<Name>IOmapTask Outputs</Name>
 						<Var>
 							<Name>GVL_IO.dOut</Name>
 							<Type GUID="{46C950DA-5D6E-6516-D69B-F24F38546D38}">ARRAY [1..16] OF BOOL</Type>
 						</Var>
 					</Vars>
 					<Vars VarGrpType="1">
-						<Name>PlcTask Inputs</Name>
+						<Name>IOmapTask Inputs</Name>
 						<Var>
 							<Name>GVL_IO.dIn</Name>
 							<Type GUID="{46C950DA-5D6E-6516-D69B-F24F38546D38}">ARRAY [1..16] OF BOOL</Type>
@@ -51,6 +54,15 @@
 					<Contexts>
 						<Context>
 							<Id>0</Id>
+							<Name>IOmapTask</Name>
+							<ManualConfig>
+								<OTCID>#x02010040</OTCID>
+							</ManualConfig>
+							<Priority>15</Priority>
+							<CycleTime>5000000</CycleTime>
+						</Context>
+						<Context>
+							<Id>1</Id>
 							<Name>PlcTask</Name>
 							<ManualConfig>
 								<OTCID>#x02010030</OTCID>
@@ -61,6 +73,7 @@
 					</Contexts>
 					<JsonDynPous><![CDATA[null]]></JsonDynPous>
 					<TaskPouOids>
+						<TaskPouOid Prio="15" OTCID="#x08502002"/>
 						<TaskPouOid Prio="20" OTCID="#x08502001"/>
 					</TaskPouOids>
 				</Instance>
@@ -187,24 +200,24 @@
 	<Mappings>
 		<OwnerA Name="TIPC^PLC1^PLC1 Instance">
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1100)^Term 2 (EL2008)">
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[1]" VarB="Channel 1^GVL_IO.dOut[1]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[2]" VarB="Channel 2^GVL_IO.dOut[2]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[3]" VarB="Channel 3^GVL_IO.dOut[3]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[4]" VarB="Channel 4^GVL_IO.dOut[4]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[5]" VarB="Channel 5^GVL_IO.dOut[5]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[6]" VarB="Channel 6^GVL_IO.dOut[6]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[7]" VarB="Channel 7^GVL_IO.dOut[7]"/>
-				<Link VarA="PlcTask Outputs^GVL_IO.dOut[8]" VarB="Channel 8^GVL_IO.dOut[8]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[1]" VarB="Channel 1^GVL_IO.dOut[1]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[2]" VarB="Channel 2^GVL_IO.dOut[2]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[3]" VarB="Channel 3^GVL_IO.dOut[3]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[4]" VarB="Channel 4^GVL_IO.dOut[4]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[5]" VarB="Channel 5^GVL_IO.dOut[5]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[6]" VarB="Channel 6^GVL_IO.dOut[6]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[7]" VarB="Channel 7^GVL_IO.dOut[7]"/>
+				<Link VarA="IOmapTask Outputs^GVL_IO.dOut[8]" VarB="Channel 8^GVL_IO.dOut[8]"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1100)^Term 3 (EL1008)">
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[1]" VarB="Channel 1^GVL_IO.dIn[1]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[2]" VarB="Channel 2^GVL_IO.dIn[2]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[3]" VarB="Channel 3^GVL_IO.dIn[3]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[4]" VarB="Channel 4^GVL_IO.dIn[4]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[5]" VarB="Channel 5^GVL_IO.dIn[5]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[6]" VarB="Channel 6^GVL_IO.dIn[6]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[7]" VarB="Channel 7^GVL_IO.dIn[7]"/>
-				<Link VarA="PlcTask Inputs^GVL_IO.dIn[8]" VarB="Channel 8^GVL_IO.dIn[8]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[1]" VarB="Channel 1^GVL_IO.dIn[1]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[2]" VarB="Channel 2^GVL_IO.dIn[2]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[3]" VarB="Channel 3^GVL_IO.dIn[3]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[4]" VarB="Channel 4^GVL_IO.dIn[4]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[5]" VarB="Channel 5^GVL_IO.dIn[5]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[6]" VarB="Channel 6^GVL_IO.dIn[6]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[7]" VarB="Channel 7^GVL_IO.dIn[7]"/>
+				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[8]" VarB="Channel 8^GVL_IO.dIn[8]"/>
 			</OwnerB>
 		</OwnerA>
 	</Mappings>

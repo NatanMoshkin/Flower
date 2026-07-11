@@ -1,6 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1">
-  <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
     fbSepSol1  : FB_SolSpringPiston_2Pos;
@@ -25,30 +25,6 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
-   READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases
-   DI convention: each actuator still has both a Retracted and an Extended
-   proximity switch (SOL-Spring only removes the retract coil, not the
-   retracted-position sensor).
-   ==========================================
-   OPEN ISSUE: physical DI channels for SepSol2/3 and PushSol2/3 are not
-   yet assigned. Their GVL_App sensor aliases stay FALSE until wired, so
-   those FBs' HMI position indicators light up only via the operator's
-   Simulate checkboxes. The DO side is fully assigned (see WRITE OUTPUTS).
-   ========================================== *)
-GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
-GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
-// GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[??];   // TODO: assign SepSol2 DI
-// GVL_App.bSensorSepExtended2   := GVL_IO.dIn[??];
-// GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[??];   // TODO: assign SepSol3 DI
-// GVL_App.bSensorSepExtended3   := GVL_IO.dIn[??];
-GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[7];
-GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
-// GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[??];   // TODO: assign PushSol2 DI
-// GVL_App.bSensorPushExtended2  := GVL_IO.dIn[??];
-// GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[??];   // TODO: assign PushSol3 DI
-// GVL_App.bSensorPushExtended3  := GVL_IO.dIn[??];
-
-(* ==========================================
    Master auto-cycle — coordinates 1..3 pairs of (Sep,Push) pistons
    with the robot's Pos1/Pos2 signals. Called BEFORE the per-piston
    auto FBs and BEFORE the piston FBs so its bSepCmd* / bPushCmd*
@@ -177,21 +153,6 @@ fbPushSol3(
     bOutSolenoid     => GVL_App.bValvePushExtend3
 );
 
-(* ==========================================
-   WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels
-   DO layout: single Extend coil per actuator (SOL-Spring, spring retracts).
-     dOut[1..3] = SepSolN Extend
-     dOut[4..6] = PushSolN Extend
-     dOut[7..8] = free (freed by the SOL-Spring migration — available for reuse)
-   ========================================== *)
-GVL_IO.dOut[1] := GVL_App.bValveSepExtend1;
-GVL_IO.dOut[2] := GVL_App.bValveSepExtend2;
-GVL_IO.dOut[3] := GVL_App.bValveSepExtend3;
-GVL_IO.dOut[4] := GVL_App.bValvePushExtend1;
-GVL_IO.dOut[5] := GVL_App.bValvePushExtend2;
-GVL_IO.dOut[6] := GVL_App.bValvePushExtend3;
-GVL_IO.dOut[7] := FALSE;   // freed — available for reuse
-GVL_IO.dOut[8] := FALSE;   // freed — available for reuse
 ]]></ST>
     </Implementation>
   </POU>

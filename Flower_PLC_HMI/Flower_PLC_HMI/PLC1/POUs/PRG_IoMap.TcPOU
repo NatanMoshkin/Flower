@@ -1,0 +1,71 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="PRG_IoMap" Id="{d3ccb63a-105a-48ed-83cb-e0b3577518bb}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_IoMap
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ReadInputs();
+WriteOutputs();
+
+]]></ST>
+    </Implementation>
+    <Action Name="ReadInputs" Id="{f82895bb-0ca3-4c7d-b548-b9f92e196159}">
+      <Implementation>
+        <ST><![CDATA[(* ==========================================
+   READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases.
+   DI convention: each actuator still has both a Retracted and an Extended
+   proximity switch (SOL-Spring only removes the retract coil, not the
+   retracted-position sensor).
+   ==========================================
+   OPEN ISSUE: physical DI channels for SepSol2/3 and PushSol2/3 are not
+   yet assigned. Their GVL_App sensor aliases stay FALSE until wired, so
+   those FBs' HMI position indicators light up only via the operator's
+   Simulate checkboxes. The DO side is fully assigned (see WriteOutputs).
+   ========================================== *)
+GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
+GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
+// GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[??];   // TODO: assign SepSol2 DI
+// GVL_App.bSensorSepExtended2   := GVL_IO.dIn[??];
+// GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[??];   // TODO: assign SepSol3 DI
+// GVL_App.bSensorSepExtended3   := GVL_IO.dIn[??];
+GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[7];
+GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
+// GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[??];   // TODO: assign PushSol2 DI
+// GVL_App.bSensorPushExtended2  := GVL_IO.dIn[??];
+// GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[??];   // TODO: assign PushSol3 DI
+// GVL_App.bSensorPushExtended3  := GVL_IO.dIn[??];
+
+(* Robot handshake — FROM robot: STAND_SEQ_DO (robot DO 2) -> PLC DI.
+   Level, rising edge in IDLE triggers a cycle. Wire when the DI channel
+   is picked (from the 4 unassigned pairs in the open-issue table). *)
+// GVL_Robot.stRobot.bStartAssembly := GVL_IO.dIn[??];  // TODO(#3): assign robot->PLC DI channel]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="WriteOutputs" Id="{d4911134-0871-485c-a76f-89221ed9b4ed}">
+      <Implementation>
+        <ST><![CDATA[(* ==========================================
+   WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels.
+   DO layout: single Extend coil per actuator (SOL-Spring, spring retracts).
+     dOut[1..3] = SepSolN Extend
+     dOut[4..6] = PushSolN Extend
+     dOut[7..8] = free (freed by the SOL-Spring migration — available for reuse)
+   ========================================== *)
+GVL_IO.dOut[1] := GVL_App.bValveSepExtend1;
+GVL_IO.dOut[2] := GVL_App.bValveSepExtend2;
+GVL_IO.dOut[3] := GVL_App.bValveSepExtend3;
+GVL_IO.dOut[4] := GVL_App.bValvePushExtend1;
+GVL_IO.dOut[5] := GVL_App.bValvePushExtend2;
+GVL_IO.dOut[6] := GVL_App.bValvePushExtend3;
+GVL_IO.dOut[7] := FALSE;   // freed — available for reuse
+GVL_IO.dOut[8] := FALSE;   // freed — available for reuse
+
+(* Robot handshake — TO robot: PLC DO -> STAND_SEQ_DI (robot DI 1).
+   Level, TRUE in every non-IDLE FB_MasterAutoCycle state (including ERR).
+   Wire when the DO channel is picked (dOut[7] or dOut[8], both free). *)
+// GVL_IO.dOut[??] := GVL_Robot.stRobot.bAssemblyRunning;  // TODO(#3): assign PLC->robot DO channel]]></ST>
+      </Implementation>
+    </Action>
+  </POU>
+</TcPlcObject>

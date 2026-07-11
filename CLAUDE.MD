@@ -2,14 +2,11 @@
 
 ## TODO:
 
-**IO mapping** (see DECISION section below for reference architectures)
-- Extract MAIN's READ INPUTS / WRITE OUTPUTS blocks into a dedicated
-  `PRG_IoMap` PROGRAM added to the PLC task chain. Keep `GVL_IO` and
-  `GVL_App` as-is (Level 1 adoption).
-- Bundle #3 into the same edit: wire `GVL_Robot.stRobot.bStartAssembly ←
-  GVL_IO.dIn[??]` and `GVL_Robot.stRobot.bAssemblyRunning → GVL_IO.dOut[??]`
-  as `TODO channel TBD` placeholders. Channels come from the "physical DI
-  channel assignment" open issue table.
+**IO mapping** (see DECISION section below for the reference architecture)
+- **Assign real channels** for the robot handshake and the four unassigned
+  SepSol2/3 + PushSol2/3 DI pairs. Placeholder `TODO` lines already exist
+  in `PRG_IoMap.ReadInputs` / `WriteOutputs` — pick channels from the open-issue
+  table below and un-comment.
 
 ## Out of scope (Future)
 
@@ -212,16 +209,22 @@ interfaces settled on this split — new FBs should follow it:
 
 ## DECISION: IO mapping architecture (Level 1 today; Level 2 for future)
 
-**Current state (Level 0):** MAIN.TcPOU's implementation body contains
-inline READ INPUTS / WRITE OUTPUTS blocks that copy between `GVL_IO.dIn[]`
-(raw `AT %I*` BOOL array) and named `GVL_App.bSensor*` aliases, and vice
-versa on the way out. Ergonomically OK for < 20 channels but doesn't scale
-and doesn't separate concerns.
+**Current state (Level 1):** IO copy lives in a dedicated `PRG_IoMap`
+PROGRAM with two actions — `PRG_IoMap.ReadInputs` and
+`PRG_IoMap.WriteOutputs`. `PRG_IoMap`'s own implementation body is
+`ReadInputs(); WriteOutputs();`, so both fire every time the task calls
+`PRG_IoMap`. PRG_IoMap runs on a dedicated `IOmapTask` (5 ms cycle,
+priority 15) which pre-empts `PlcTask` (10 ms, priority 20). MAIN sees
+fresh sensor state when it starts, and command writes it makes to
+`GVL_App.bValve*` land on the physical outputs within the next 5 ms
+IOmapTask cycle. MAIN no longer touches `GVL_IO` directly. Robot-handshake
+wiring (`GVL_Robot.stRobot.bStartAssembly` from a DI, `bAssemblyRunning`
+to a DO) is stubbed in as commented `TODO(#3)` lines inside the actions —
+un-comment once channels are picked from the open-issue table.
 
-**Target (Level 1, tracked in TODO above):** Extract the same ST body into
-a dedicated `PRG_IoMap` PROGRAM added to the PLC task chain (before/after
-MAIN, depending on split). Keep `GVL_IO` raw arrays and `GVL_App` aliases.
-Small, safe refactor — pure mechanical move.
+**Do not call `PRG_IoMap.ReadInputs` / `.WriteOutputs` from MAIN** — that
+would double-execute them on top of the task-driven call and break scan
+ordering assumptions.
 
 **Reference architecture (Level 2, future):** The Vacuum sister project
 (`C:\Users\Natan.Moshkin\source\repos\Vacuum\KFM010_SCD_PLC`) uses a
@@ -271,8 +274,10 @@ indicators only light up via the operator's Simulate checkboxes until real
 sensors are wired.
 
 When DI channels are decided, fill in `GVL_IO.dIn[??]` in
-`Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU` — the eight commented `// GVL_App…`
-lines in the READ INPUTS block are placeholders.
+`Flower_PLC_HMI/PLC1/POUs/PRG_IoMap.TcPOU` — the eight commented
+`// GVL_App…` lines inside the `ReadInputs` action are placeholders (plus
+one `bStartAssembly` line for the robot handshake). The paired robot
+`bAssemblyRunning` DO line lives in `PRG_IoMap.WriteOutputs`.
 
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side because the
