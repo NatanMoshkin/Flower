@@ -2,20 +2,14 @@
 
 ## TODO:
 
-**FB_MasterAutoCycle**
- - FB_MasterAutoCycle HMI Sim Step advance- Create sort of table (vertical)for the steps, highlight the active step (raw)
-
-**IO mapping**
-- Create separate FB to MAP IO, instead of beeng in MAIN
-- wire GVL_Robot bAssemblyRunning, and StartAssembly to GVL_IO.dIn[??], dOut[??] - put in comment and TODO
-
- **GVL_HMI**
- - Check all exposed to HMI variables. For example GVL_Robot exposed, so or It should be inside or rename to ...HMI...
- - or suggest another restructure
-
- **VAR_IN_OUT usage**
-  (like stHmi, stAuto, stCfg)
- - investigate is It a good practice and suggest other options. For exapmle, like we are using the VAR_OUTPUT in the FB_MasterAutoCycle to control pistons with commands bSepCmd... and the Pistons FBs using It.
+**IO mapping** (see DECISION section below for reference architectures)
+- Extract MAIN's READ INPUTS / WRITE OUTPUTS blocks into a dedicated
+  `PRG_IoMap` PROGRAM added to the PLC task chain. Keep `GVL_IO` and
+  `GVL_App` as-is (Level 1 adoption).
+- Bundle #3 into the same edit: wire `GVL_Robot.stRobot.bStartAssembly ←
+  GVL_IO.dIn[??]` and `GVL_Robot.stRobot.bAssemblyRunning → GVL_IO.dOut[??]`
+  as `TODO channel TBD` placeholders. Channels come from the "physical DI
+  channel assignment" open issue table.
 
 ## Out of scope (Future)
 
@@ -187,6 +181,67 @@ grep -l "TcHmiSymbol.AddSymbol" Flower_PLC_HMI/Flower_PLC_HMI/PLC1/GVLs/
 **Rule for new HMI-facing symbols:** put them in the GVL whose concern
 they match. Do not consolidate into `GVL_HMI`. Add the pragma so they
 show up in the grep.
+
+**Naming convention:** GVL names reflect *concern*, not HMI-facing status —
+`GVL_Robot`, `GVL_Log`, `GVL_HmiPersistent`. The pragma is the marker, not
+the `Hmi*` prefix. `GVL_HMI` (piston state) is a legacy name; it could be
+renamed to `GVL_HmiPistons` for symmetry, but that's cosmetic churn — no
+value if kept as-is. Do not rename `GVL_Robot`/`GVL_Log` to add an `Hmi`
+prefix; their concern is more specific than "HMI-facing".
+
+## DECISION: FB interface convention — VAR_INPUT / VAR_OUTPUT / VAR_IN_OUT
+
+The `FB_MasterAutoCycle` / `FB_PistonAutoCycle` / `FB_SolSpringPiston_2Pos`
+interfaces settled on this split — new FBs should follow it:
+
+| Section | When to use | Rationale |
+|---|---|---|
+| `VAR_INPUT` | Read-once sensors, discrete signals, setpoints (`bSwitchExtended`, `bAtPos1`, per-scan raw values) | Copy-on-call semantics; caller passes a value, FB reads it and doesn't write back. Cheap for scalars. |
+| `VAR_OUTPUT` | FB-produced per-scan signals that the caller reads (`bCmdExtend`, `bSepCmdExtend[]`, `bAnyRunning`, `iErrorCode`) | Caller reads via `.OutputName`. Enables OR-merge at the call site: `fbA.bCmdExtend OR fbB.bCmdExtend`. |
+| `VAR_IN_OUT` | Large shared structs the FB both reads and writes (`stHmi`, `stAuto`, `stCfg`, `stRobot`) | Pass-by-reference under the hood — zero copy cost. Works with persistent structs (VAR_OUTPUT would reset each cold boot). |
+
+**Alternatives considered and rejected:**
+- All-`VAR_OUTPUT` for configs → copies large structs every scan; also
+  breaks persistence (VAR_OUTPUT is not persistent-safe).
+- All-`VAR_IN_OUT` (including for outputs) → breaks the OR-merge pattern
+  at call sites; anyone with the ref can mutate what should be a produced
+  signal.
+- `POINTER TO` / `REFERENCE TO` → lower-level than `VAR_IN_OUT`, no
+  init/bounds checks. Use only for array-of-refs situations; otherwise
+  `VAR_IN_OUT` wins.
+
+## DECISION: IO mapping architecture (Level 1 today; Level 2 for future)
+
+**Current state (Level 0):** MAIN.TcPOU's implementation body contains
+inline READ INPUTS / WRITE OUTPUTS blocks that copy between `GVL_IO.dIn[]`
+(raw `AT %I*` BOOL array) and named `GVL_App.bSensor*` aliases, and vice
+versa on the way out. Ergonomically OK for < 20 channels but doesn't scale
+and doesn't separate concerns.
+
+**Target (Level 1, tracked in TODO above):** Extract the same ST body into
+a dedicated `PRG_IoMap` PROGRAM added to the PLC task chain (before/after
+MAIN, depending on split). Keep `GVL_IO` raw arrays and `GVL_App` aliases.
+Small, safe refactor — pure mechanical move.
+
+**Reference architecture (Level 2, future):** The Vacuum sister project
+(`C:\Users\Natan.Moshkin\source\repos\Vacuum\KFM010_SCD_PLC`) uses a
+richer pattern:
+
+- A top-level `PROGRAM IO` with empty body acts as a namespace container.
+- Its `VAR_OUTPUT` slots are per-station `IOModel` FBs.
+- Each `IOModel` FB is `FUNCTION_BLOCK FINAL` with `VAR_OUTPUT` members of
+  type `TC_Terminals.EL1008` / `TC_Terminals.EL2008` / `TC_Terminals.EL3078`
+  etc. — typed Beckhoff terminal FBs from the free `TC_Terminals` library.
+- Consumers reference `IO.Services.DI_01.Ch2` directly — compile-time
+  typed access, no copy loop, no BOOL-index bookkeeping.
+- Example: `Vacuum/.../IOModels/ServicesIOModel.TcPOU`,
+  `.../MAIN.TcPOU` (declared but never called; TwinCAT auto-instantiates
+  PROGRAM singletons and wires their internal AT % declarations).
+
+**Do not adopt Level 2 blindly.** Verify `TC_Terminals` library
+availability on the CP6606 WinCE 7 ARM target before committing — the
+Vacuum project runs on a beefier CX-class controller. If unsupported,
+Level 1 is the ceiling for this platform.
 
 ## OPEN ISSUE: physical DI channel assignment for SepSol2/3 + PushSol2/3
 
