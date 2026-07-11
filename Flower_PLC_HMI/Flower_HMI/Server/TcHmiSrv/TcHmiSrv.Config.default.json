@@ -9,7 +9,7 @@
     "CACHEMAXAGE": "P30D",
     "CACHEMAXENTRYSIZE": 1048576,
     "CACHEMAXSIZE": 2097152,
-    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVFakNDQXZxZ0F3SUJBZ0lKQU82OTUvRjd3a3JKTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3T1RFME5UVTFNMW9YRFRJNU1EY3dPVEE0TlRVMU0xb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBd3dOcwpMdHdyclJPdzlkMnAvWlNhU0QySEQ3M3dkSUpsOVNuMEFxc0tJZ05ORkJMaHBvSWppSzcvOUxScWg4RkY3cjJWCmNqSGVrL0g2S0tQUzAyaXBEWWNkaVllc01QTmpsaWRHQXBRc054YUpXSEYzOE5PaG1HbFZvZ09vQnlESVBTMXcKaUFqWFdXeXFIVWt6YXVuZDJJVnoyTnU2a2xwdEFXVFlETmFseG1wdjZmWXVUNWgxWXpnWmxTM3lnOFVxeG5JeApPbXBJelYxbW8vMENjTHdnc2t6VWoxMy8wRW9aMVk0dEE4dzYwSi9ic2Fsa0NZOTR0UENUMDFsaHpNL3p0K00zCkpmbjBDNTgvYkRUZDNiUGk5Ykord3lvZUhwVi9NcjMxSjdiMkRadHo4ZTltWGZYM09jVjMrSkpiR255U21kUUYKWUxTbUVZZzhSNU53UENRY013SURBUUFCbzRJQkREQ0NBUWd3Z2FjR0ExVWRFUVNCbnpDQm5JSUpiRzlqWVd4bwpiM04waHdSL0FBQUJoeEFBQUFBQUFBQUFBQUFBQUFBQUFBQUJnZ2xNVUMxT1lYUmhiazJDR0V4UUxVNWhkR0Z1ClRTNXJZWFZtYldGdUxYSmtMbU52YlljRXdLZ0JaNGNFd0tnQnc0Y1FLZzF2d0Fja25RRFJNeGJGdlVkRlE0Y1EKS2cxdndBY2tuUURVWUxpSm44aSs2WWNRL29BQUFBQUFBQUFvcGt0d1Z4cm5OWWNRL29BQUFBQUFBQURWc25oMQovY1FDNkRBZEJnTlZIUTRFRmdRVUpDbnBKaFNQaFNsbXFZRk1vMWQrQnlMV3lFSXdId1lEVlIwakJCZ3dGb0FVCjFZWHNUdUJhbXdoUXI5eXJaQWtpU3pOQ0lDc3dEQVlEVlIwVEFRSC9CQUl3QURBT0JnTlZIUThCQWY4RUJBTUMKQmFBd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFLMFBSeXFocFFzQWwwc3RYVlFlZHJDLzl2T2hlczltN0pPZApnNHFOOGM3bXd6Sy91T0FwNklsR0NJaFJya0Rpb2t2M3BvOEtVa2tHQkxlMUFEb3RHRTNrOWR5UXB4U0RrS0ZEClpCNDdVY0hXMXl1MmVXc01XNExrMkt3RFV6Z3hRNWc1cWFlK1ZUV0F0N1lpK29HN0tFYis3T1RpbTlvUXFLR1gKVEMvWkRramsyZTFidnBkVWphU0tRbWJSeFhYSzlYWUx2c3graGQ4ZitEcFMvZmZsQ0pSV1lFd0IxbW45QUtkMQowQVZpejdhd0NrMC9jaktOWHpUbkZFai84WEIzWGEvaWQxR1BGemlkZHpzb1A0d3FGaUFrbmpCV3g2TlgyOFVYCkdWTXBtb3B5c2kwdEF1QlpXQnlUU2RsdndmSzZhdHZCbGpNTC83QTVmZ2pCZjlTU2Q5MD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
+    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQwVENDQXJtZ0F3SUJBZ0lKQU5PNnAyK01pNVVuTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN4TVRBME5USTBNRm9YRFRJNU1EY3hNREl5TlRJME1Gb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBekppagp2dHZ3bDI4dWU0cm9NQlUwMjNqTWh6aEtta04xc3NxdTZSMkhYbXdSWkFNaXZydndUNEZMb3BUZnBwR1lEMkx2CmwyQkZXWmNHVjdWZzI0c09ETjVFTmtvV09yekU4Q29Uem1WZXUzMG5TU1Nqd0xiNEt5OHZuQzBHaXRBckxTM1EKOW9JOU9TRmhhdlFTVWlmelhmYnRYNG9qbWxkR3VjU0xpejhUbXowRDlYbHhNbVlQeThMeWV4MWlzNmMvYjNqSApsWUpDemZ3b1FXcWdlU1Y4dG9vOUxqVGV3bjlSV040RU5wdkpOWlIrZlE5L01OSUFoUVhCSG5MZ2RGZEhxdzlxCkIvZTJkcHNpN3pqd1cwVHpQM1lwOThlT2pLZ1pIb1Y4NmRlUWFKdGU0RXdKN3NleGR1Mkl2QUZ5N3BvN1dkOFAKbmVQNlRuRjExQnZqUFdORVV3SURBUUFCbzRITU1JSEpNR2tHQTFVZEVRUmlNR0NDQ1d4dlkyRnNhRzl6ZEljRQpmd0FBQVljUUFBQUFBQUFBQUFBQUFBQUFBQUFBQVlJSlRGQXRUbUYwWVc1TmdoaE1VQzFPWVhSaGJrMHVhMkYxClptMWhiaTF5WkM1amIyMkhCTUNvQVc2SEVQNkFBQUFBQUFBQTh1djhiRXFXZms0d0hRWURWUjBPQkJZRUZHRzcKTEJkUFRzcDE4OFRycE9nWjlqMHdJcUVxTUI4R0ExVWRJd1FZTUJhQUZOV0Y3RTdnV3BzSVVLL2NxMlFKSWtzegpRaUFyTUF3R0ExVWRFd0VCL3dRQ01BQXdEZ1lEVlIwUEFRSC9CQVFEQWdXZ01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUJkU2N0ZTlKTTNBVmU3a0sxZEV6VGcxZGNPUVpzRE9CSHlLaUs3Y0o4YXZFaW5QQnB3VDJPM0Zvak4Kc0pOWktLQnFJcTBCVTVTN1poNzcyT2tVWHdWR0NNd21RQ1VZM2ppcVB3Ry9DWnMzU1VwN2FQdk53bXk0bU83SAp5ZjNUa09QYTBHcWdOR3M1aWFRTS81MjBUNitDMVpib3pVeStKaUlQRmowYTBObkdHZGhpcW9USGJlVEVDZ1NPCmZRRXdtRFYxT3JTaUpWTVRDeU42Rmp4cEdSVmRjUUdFSmdzdjRJUG03cEp1dkcyMFhuM1hMenB4L2JjZWtZaWQKdElYVDhHVGdDekdCS1ZvQ3ZEcGVJRStkTUV2cEUyTmNpY0JOT0pzb2hrNHorR1dZdG5IWFBqR2NONUkxTm8wTQp3N0FSUm8reTB6MDN6Z2V3NnAvWENBancwdklhCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQ4akNDQXRxZ0F3SUJBZ0lKQU1HS25QTGswNU9zTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TlRFek5EWTFNMW9YRFRJNU1EY3dOVEEzTkRZMU0xb3dRekVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVYTUJVR0ExVUUKQXd3T1RGQXRUbUYwWVc1TlgzSnZiM1F3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQgpBUURNSURVV3c4TkNkRjRhRThtcTdsaUN1OFdsUDZyK1BjV3UrMVRSL1FXZVZkQVhzdGMxUUNpeXdzRldpNk9BCnVjUlc1YUx6VUZ3YUpMcGEyZVlnR056aE1lelVQS25UK3gzVnRZTWI0Ky9qdlZyczlHVnI5ZnV6M1RoVXU5R2cKdTNWNmxtNXgvSDUySm0vS1ZpZXk3NEhMK3BMQm0wZlZsc0hiNmhKcUFhOEFZRVRwZHp4MkNFank3SlFZNys0MAptTE5mNzhwd1BwS1lVY0VZNXlnOElLdlphaTVEZml3UU1CMDBFYXM2eWpFSERvdlBOTTBQc2ZGRUJ3ZGhBa1o5CkZtYXFNS1YxK1lVeHcrdGlZNEM4NWFRL21tWVZLbm9iaDlXY2I3V09sVk1Pb2F6dHNEN251OXFjZUNkb1lBK2gKSzRGMmhyVFFteFhtcDZFSitobDFWQnEvQWdNQkFBR2pnZWd3Z2VVd2dZRUdBMVVkRVFSNk1IaUNDV3h2WTJGcwphRzl6ZEljRWZ3QUFBWWNRQUFBQUFBQUFBQUFBQUFBQUFBQUFBWUlKVEZBdFRtRjBZVzVOZ2hoTVVDMU9ZWFJoCmJrMHVhMkYxWm0xaGJpMXlaQzVqYjIySEJLbis4RnFIQk1Db2VFYUhFUDZBQUFBQUFBQUFLS1pMY0ZjYTV6V0gKRVA2QUFBQUFBQUFBZGNBYm1xNXR0dzh3SFFZRFZSME9CQllFRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBcgpNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1BOEdBMVVkRXdFQi93UUZNQU1CCkFmOHdEZ1lEVlIwUEFRSC9CQVFEQWdFR01BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQldXWjdEajdUU1g0S08KRTA5UTJnY2NVODZINkRzc3FlMFdkU1pFaXp0UUg5WUFyVGZvL3hKR0ViK05VRVg2ejU3d0JQdTZ4UmlES1BmMwpLQ0hYOUpsTVRVUGJvRTY0UFNGejFGVkxqWkFzaEtQZjlQNS9QaHd2bkdtYnhLZndPaFNITGl3ZWtRZlJhcGE3Ci9sQTlIQnFXdTdsUlI5M3FjK0QveDBQUXAyYWdDNHpMN3I5K1NXa3puQ2x5aHd6cDVCOW0wY1VoZ1Y4RUJ5NGEKTHY3UkRnVUorSWxUQ1JxZVdoYW5ZdXNiOUU3L1dRRXUzTjNNd3d0dzZXUFgzMHJaaHhxcVNqeUd5NitRRXhpawo5UXBsbjhHU20zYXdQWmE4UDhXZ3dlYlA5QmUrRjlxcG9CcmtOVXJDdk9KS3JTeC9hSUlaZnZsVzNpck43RGhsCmsyQitSN04xCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
     "CERTIFICATEEXPIRATION": "P1095DT18H",
     "CHECKSUMENABLED": true,
     "CHUNKSIZE": 1048576,
@@ -457,8 +457,19 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "comment": "If TRUE, SEP_RETRACTED_DWELL returns to IDLE and immediately re-arms;\r\n otherwise it goes to IDLE and waits for the next Start / bAtPos1.",
+                                "comment": "If TRUE, SEP_RETRACTED_DWELL returns to IDLE and immediately re-arms;\r\n otherwise it goes to IDLE and waits for the next Start / bStartAssembly.",
                                 "propertyOrder": 6
+                            }
+                        ]
+                    },
+                    "bForceAllAuto": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "If TRUE, MAIN forces the enabled pistons (index <= uiPairCount) into\r\n Automatic mode while the master cycle is running, so bAutoCmd* reach\r\n the coil. If FALSE (default), pistons already in Manual are skipped —\r\n only pistons the operator explicitly put into Automatic participate.",
+                                "propertyOrder": 7
                             }
                         ]
                     },
@@ -524,7 +535,8 @@
                     "tPushRetractedDwellMs",
                     "tSepRetractedDwellMs",
                     "tStepTimeoutMs",
-                    "bContinuous"
+                    "bContinuous",
+                    "bForceAllAuto"
                 ],
                 "type": "object"
             },
@@ -924,28 +936,18 @@
                             }
                         ]
                     },
+                    "bAssemblyRunning": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "TO robot: level driving robot's STAND_SEQ_DI (robot DI 1).\r\n FB_MasterAutoCycle sets TRUE in every non-IDLE state (including ERR\r\n so the robot times out on PLC error) and FALSE in IDLE. The robot's\r\n src0.lua polls for OFF as \"assembler finished\".",
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
                     "bAtPos1": {
-                        "allOf": [
-                            {
-                                "$ref": "tchmi:general#/definitions/BOOL"
-                            },
-                            {
-                                "comment": "Bridge writes — latched \"in position N\" flags. Bridge holds the last-seen\r\n position TRUE and clears the other two when a new POS frame arrives.",
-                                "propertyOrder": 4
-                            }
-                        ]
-                    },
-                    "bAtPos2": {
-                        "allOf": [
-                            {
-                                "$ref": "tchmi:general#/definitions/BOOL"
-                            },
-                            {
-                                "propertyOrder": 5
-                            }
-                        ]
-                    },
-                    "bAtPos3": {
                         "allOf": [
                             {
                                 "$ref": "tchmi:general#/definitions/BOOL"
@@ -955,14 +957,44 @@
                             }
                         ]
                     },
+                    "bAtPos2": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 7
+                            }
+                        ]
+                    },
+                    "bAtPos3": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "propertyOrder": 8
+                            }
+                        ]
+                    },
                     "bRxResetError": {
                         "allOf": [
                             {
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "comment": "Inbound pulse — bridge writes TRUE on receiving a RESET_ERROR frame.\r\n FB_MasterAutoCycle consumes on rising edge and clears the flag.",
-                                "propertyOrder": 12
+                                "propertyOrder": 14
+                            }
+                        ]
+                    },
+                    "bStartAssembly": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "------------------------------------------------------------------\r\n Active interface — discrete-IO handshake (2026-07-10)\r\n See docs/robot-integration-options.md (Option 1). Replaces the former\r\n TCP protocol (POS1/POS2/POS3 + AUTO_STARTED/PUSH_DONE/PISTONS_ERROR).\r\n The Dobot side uses STAND_SEQ_DO (robot -> PLC) and STAND_SEQ_DI\r\n (PLC -> robot); see global.lua in ..\\167-01-Saad.\r\n ------------------------------------------------------------------\r\n FROM robot: level driven by robot's STAND_SEQ_DO (robot DO 2).\r\n FB_MasterAutoCycle triggers on rising edge in IDLE.",
+                                "propertyOrder": 2
                             }
                         ]
                     },
@@ -972,8 +1004,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "comment": "Outbound pulses — PLC (FB_MasterAutoCycle) writes TRUE for one cycle.\r\n Bridge polls each on rising edge, sends the corresponding TCP frame,\r\n then clears the flag. If the bridge is disconnected the flag stays\r\n TRUE until reconnect; no queue, no lost pulses.",
-                                "propertyOrder": 9
+                                "propertyOrder": 11
                             }
                         ]
                     },
@@ -983,7 +1014,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 11
+                                "propertyOrder": 13
                             }
                         ]
                     },
@@ -993,7 +1024,7 @@
                                 "$ref": "tchmi:general#/definitions/BOOL"
                             },
                             {
-                                "propertyOrder": 10
+                                "propertyOrder": 12
                             }
                         ]
                     },
@@ -1003,8 +1034,8 @@
                                 "$ref": "tchmi:server#/definitions/ADS-PLC1.E_RobotConnState"
                             },
                             {
-                                "comment": "Bridge writes — connection state (enum + string mirror for HMI text binding)",
-                                "propertyOrder": 2
+                                "comment": "------------------------------------------------------------------\r\n Deprecated — kept for HMI-page binding compat until the Robot page\r\n is migrated to the discrete-IO interface. Not read/written by\r\n FB_MasterAutoCycle anymore. Can be deleted once the HMI is updated.\r\n ------------------------------------------------------------------",
+                                "propertyOrder": 4
                             }
                         ]
                     },
@@ -1014,8 +1045,7 @@
                                 "$ref": "tchmi:general#/definitions/UDINT"
                             },
                             {
-                                "comment": "Bridge writes — diagnostics",
-                                "propertyOrder": 7
+                                "propertyOrder": 9
                             }
                         ]
                     },
@@ -1025,8 +1055,7 @@
                                 "$ref": "tchmi:general#/definitions/UDINT"
                             },
                             {
-                                "comment": "Bridge writes — outbound diagnostics",
-                                "propertyOrder": 13
+                                "propertyOrder": 15
                             }
                         ]
                     },
@@ -1036,7 +1065,7 @@
                                 "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-20"
                             },
                             {
-                                "propertyOrder": 3
+                                "propertyOrder": 5
                             }
                         ]
                     },
@@ -1046,7 +1075,7 @@
                                 "$ref": "tchmi:general#/definitions/STRING%2880%29"
                             },
                             {
-                                "propertyOrder": 8
+                                "propertyOrder": 10
                             }
                         ]
                     },
@@ -1056,13 +1085,15 @@
                                 "$ref": "tchmi:general#/definitions/STRING%2880%29"
                             },
                             {
-                                "propertyOrder": 14
+                                "propertyOrder": 16
                             }
                         ]
                     }
                 },
                 "required": [
                     "Name",
+                    "bStartAssembly",
+                    "bAssemblyRunning",
                     "eConnState",
                     "sConnStateText",
                     "bAtPos1",
@@ -1302,7 +1333,7 @@
     "HTTP_FLOODPROTECTION": 100,
     "INITTIMEOUT": "PT10S",
     "KEEP_ALIVE": "PT40S",
-    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRERBMnd1M0N1dEU3RDEKM2FuOWxKcElQWWNQdmZCMGdtWDFLZlFDcXdvaUEwMFVFdUdtZ2lPSXJ2LzB0R3FId1VYdXZaVnlNZDZUOGZvbwpvOUxUYUtrTmh4MkpoNnd3ODJPV0owWUNsQ3czRm9sWWNYZncwNkdZYVZXaUE2Z0hJTWc5TFhDSUNOZFpiS29kClNUTnE2ZDNZaFhQWTI3cVNXbTBCWk5nTTFxWEdhbS9wOWk1UG1IVmpPQm1WTGZLRHhTckdjakU2YWtqTlhXYWoKL1FKd3ZDQ3lUTlNQWGYvUVNoblZqaTBEekRyUW45dXhxV1FKajNpMDhKUFRXV0hNei9PMzR6Y2wrZlFMbno5cwpOTjNkcytMMXNuN0RLaDRlbFg4eXZmVW50dllObTNQeDcyWmQ5ZmM1eFhmNGtsc2FmSktaMUFWZ3RLWVJpRHhICmszQThKQnd6QWdNQkFBRUNnZ0VBT0Fpd3VobzdWb1QwOFFDYlNxaTdXQXlOMVdFZlNXcjZmdUpxSWFZaHlEb28KbUo4QVJZYlpUUG56dzgxZld0aVhEbzFjOXE0THBYai9CMVJqVEttakFhY1VQcU5FUCtCL2VmS1k5RDY5SWFzUgpGZCtzdGY4cFRKRGZzU2paekFxSVhzUEN0T1BOZFAxN04rVURxREhBcytsTXEwQWZzTlBZeEhERWY1UGhtRXdXCm1WQW9EcHNnWjFDMDZBZFQ4aW55RGVYaHdGYTZDcGYyZEtSVzJyZStsTng5eFZRQUNob2hDWXdsejVXNWtJVGgKajUrRFdxbU1hQ1hLR25TZjdRYi9vcVB0SFNITXQ2Z0JwN0hFS25PTUxUWkhLaU1pMmRWNnIzYk1XRXhlemJZdgpuYU1OS3ZqQk9zS3lWcGxTWURCek00cGNEMmFlNmExMWVHUUdObGI0NFFLQmdRRG0zNWdIcXlzOE81c24xdE1TClVJQURERkp1cXNXdUh6OW1zajAzZ09YbWVPeTRNbGRldDBzSnVkZHRWSEtZaVY3UG5nOXM2T3F4S3FYZWw1Tk0KRmh4N0tqSndiMHhrbGhxWi9nVm1BM2VEUk4wcjUwRS9iTmdGSnhxNG5BTGNvck1RdVlqSmZyNTJTdlhiaHMxOQpQNmxicUNINi9UREQwVnE0eE5Ga2NhSHdrUUtCZ1FEWVBMbTdsb2ZNOHdPWUdyYXF1ZHV5NlNZUEgzZW53UGtNCmljN0E3aktFWTFkSysxTVlESTRUaGwvbXpON04rMDcrZ0phZkVxZjVKcXI3UlFJWmpWVnRrdTR2dDY5bDBBVnMKZGFFcGFKMnozeTlKb3VCT01wbFNWaDJzRDVvc1NTcUZXRjNEN2M0TUxPWUcremNQeCtQZ1ZVRTE5bk15N2p6eApDMmQ3OUliaWd3S0JnRnhBWGRRNm5pVU1RRHdVQi9VYWUzdzhVVGZ0UHQ0TG1GN2x1N1pRNkF4R3AzZ1dqWGpJClR0Q05GTHFYOHM1bW5aN2lMcEc3SkFRMDRXQm5PckU5YUpZQ1QzTkQxY2VmZnZPblgrcmFXY2YzSFZVc3E1SzMKWUQzMjJTT0pHMCtrSjE3NGMrTG5wUjFKYUtJV1pFZTJ4MnBiYlhDSCtSTlZ0U1Y5WjVuMkdkb3hBb0dCQUlBKwpZNWtSaWJEUFg0NVNLWXZQZHJFQS9ZVnlrREI1ampzVmIvMlVSM21rd1J6RE9XREY4VzA3QUoyTlc0YW1TUTgvCmpCVURwNE5vbjNjdVVqUjlVZkVPZHh6dHY2U09YdWtZU21DWW53OFNpcVVOYUNKNGQ5NFJITC95OE9qYTY5RHgKdTRwNyt2dlZsUWNHN256NWUvaU1GNFM5aVV6blpsVS9BanpOcFVHcEFvR0FRVy94M1hnNWpSOFFmREdQeGFKSwpNZHB2NkFhK2poQ1NoR0ZLMkMyNW9ZWlByOEJiN3ZFSWFDc1lzOUVzNndYdDBjWFkycFJ3ZnhadzdoZ0xZdnRVClo0YWcwT1FrSFhzTjkvNGJzb0NlSGxoZUI1a2Y2ODBrZ2JDZ3p6V1Nhb0YwN1FrMVhndjY3ZHZLWnc5U3NYUm4KSzl3YytpbWdSN2MvaGIxaWFYcWNOMTA9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRE1tS08rMi9DWGJ5NTcKaXVnd0ZUVGJlTXlIT0VxYVEzV3l5cTdwSFlkZWJCRmtBeUsrdS9CUGdVdWlsTitta1pnUFl1K1hZRVZabHdaWAp0V0RiaXc0TTNrUTJTaFk2dk1Ud0toUE9aVjY3ZlNkSkpLUEF0dmdyTHkrY0xRYUswQ3N0TGREMmdqMDVJV0ZxCjlCSlNKL05kOXUxZmlpT2FWMGE1eEl1TFB4T2JQUVAxZVhFeVpnL0x3dko3SFdLenB6OXZlTWVWZ2tMTi9DaEIKYXFCNUpYeTJpajB1Tk43Q2YxRlkzZ1EybThrMWxINTlEMzh3MGdDRkJjRWVjdUIwVjBlckQyb0g5N1oybXlMdgpPUEJiUlBNL2RpbjN4NDZNcUJrZWhYenAxNUJvbTE3Z1RBbnV4N0YyN1lpOEFYTHVtanRaM3crZDQvcE9jWFhVCkcrTTlZMFJUQWdNQkFBRUNnZ0VBSHFRem96ZC9EUkd1aFZFcDhnZzlzNEJLMHNEb1VnODRERHEvdnhPdGtrTjAKSFZBODZXZVlsNGVyNDJHOExIbW5WajFCTGN0OHgyeWt4Z2tEbWJoMTRSRXBaOG9Udkl0SW9Xd09ndjJsUVBEVQpWcElzQzRZN25RTEM5TXhuZ08ycFhHbW9DZXM2ZzhPNTVTZEFWb1BtTm1udlpoSWpGVHFYVWVZYmtoTmZKUzRBClBvMjBHejhyQlhvZTJUZ09yNGxIZkdsRmNwbjNSajZqWDJkbmJlLzhUaElTRmJ1MHNWSXZWM01wSWpMWEF2Z0UKOVFWV2dIeElneW1PK1RMNmNWWldnV2gvSHF4a0pLeUhBZlVxSXpNN0JYdFdldk5kc2V2YjJSckV2VjdwUm5Xdwo2ZmhlTTlPdG5DcVRQWWVZNXJGcytrRkU0ZkRFbitWRTRUTFVSbFR4ZVFLQmdRRDMvSmlKWi9YekpGVGFhMXRMCmVQN2Q2L1B2UzRNSmJPRzBmZVkrZTNhekpBdHVzSkxjd3ZwYmYxTDU3MkFROUZOVzMwdUZkRno0OEsyN2hpb1UKWGhhdkFTbVJwNG9tdkNyNEk0YmUzaloyNktBdHRlNGl3cEJoVjlEQ3dpam9RVWozRXExb084c2Vudlhxbmw2TAoveCswbkJlWENuK0NWMzBuRzdEbU42ajVDd0tCZ1FEVE5SdVhIYWVFTGNEZzlFenYxWVJGQ2tsN1BHQXNxdUQzCjlKRGlnWC9lTzIyS1lldjNLaWRiTUMzV2hzQ21lZXZmWTd2Z1h5REZnSDVYY2w3M3RzbjNVVnkxa05HUzJRVHcKWVlMTDRRTExqdGl5NjMvMy84eHhPcjM3VHd0ODVUNXF0MEZ2azgzamFTLzkvYU5LY0pKeXBpam13UWxaWWkwYgphdkxkR2phKzJRS0JnUUM3VUxwcmQvS0lvUlhURWlxWW5LRnZRYzQxSDRXd05lVmE3NHBlQWVaTU5GcktWbWZvCmh3S1M0Rjd0MlVsb0pSVmFWanAyYU1uZFkvYm00ZFdoSXR6aGZmQkhUQlVIWXpUVjBBZ05DaTU3clFWbzRiWXAKM1dzdmpDUnRLRG04RGF3dXJKWDlXTVQ1c1RxeDZNUWozU2EyeHZ6dW93aGpqUEJFL1I2bkZyMzB0d0tCZ0E5VwpRTzJsU3AvUGpyMEhJSHNkL3gvZ1VsdXZrN0JLckZGMUlmeEF1UjlUSTI0MEZDVjdteVlGQnA4WVkrN3kxWTBBCk9nbGQvd3c0ZTNRd0t2TkVBOENBMlFHYVJZMnJVcTk5OVRpRzIyUWF1R090dERvM0NncUM0SDdhUzVSRE5WZ2MKZkpUMG43UE8xSnhXQ2NDREVpOWZINE02SzBxaFZYTXpQZldPVE1GcEFvR0FKVSsxNnM0YWUwTjZvbVlxbzBQagpqdGxyRnBqTE1HZEg4L1V6a3V0M3FNYkczV0lrTktjU3pvdkdmaGNnN0FuZEZtTHhCa1dGVzB4VWNoSi9KSVdBClE5Z29qKzRPbDJyT28vVU11ckw0UFFrR0FZR3dhaHAvRk9RSXo3NklnVityM0pkWDgwazBUN2s0Q1FQT3VmOUwKS2YzRUR5d2hVdVNadXNXc2xUTnNrd1U9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
     "KEYPASSWORD": "",
     "MAXCONNECTIONSPERCLIENT": 32,
     "MAXHTTPHEADERSIZE": 32768,

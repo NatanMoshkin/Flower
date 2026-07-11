@@ -2,7 +2,26 @@
 
 ## TODO:
 
- * (empty — auto-sequence TODO landed as FB_MasterAutoCycle; see DECISION below)
+**FB_MasterAutoCycle**
+ - FB_MasterAutoCycle HMI Sim Step advance- Create sort of table (vertical)for the steps, highlight the active step (raw)
+
+**IO mapping**
+- Create separate FB to MAP IO, instead of beeng in MAIN
+- wire GVL_Robot bAssemblyRunning, and StartAssembly to GVL_IO.dIn[??], dOut[??] - put in comment and TODO
+
+ **GVL_HMI**
+ - Check all exposed to HMI variables. For example GVL_Robot exposed, so or It should be inside or rename to ...HMI...
+ - or suggest another restructure
+
+ **VAR_IN_OUT usage**
+  (like stHmi, stAuto, stCfg)
+ - investigate is It a good practice and suggest other options. For exapmle, like we are using the VAR_OUTPUT in the FB_MasterAutoCycle to control pistons with commands bSepCmd... and the Pistons FBs using It.
+
+## Out of scope (Future)
+
+ - Remove the "Pair count" parameter from FB_MasterAutoCycle and HMI
+ - bAssemblyRunning change to bAssemblyNOTRunning - safer to write TRUE when It's ok to mave the robot
+ - **Review Persistent vars** — saving correctly? Needs bench test (write value → power-cycle → verify), not code review.
 
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
 
@@ -100,11 +119,14 @@ ERR                     Latched. iErrorCode = step's fault code. bAssemblyRunnin
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
-**Piston mode is forced to Automatic** on any pair with index ≤ uiPairCount
-while the master is in any non-IDLE, non-ERR state (MAIN.TcPOU block right
-after the `fbMasterAutoCycle()` call, gated on `bAnyRunning`). Without this
-the piston FB ignores `bAutoCmd*` when in Manual mode. On IDLE/ERR the block
-does nothing so operator's manual choice is preserved.
+**Piston mode force ("Put all to Auto")** — optional, off by default. When
+`stMasterAutoCfg.bForceAllAuto` is TRUE, MAIN forces any pair with index ≤
+uiPairCount into Automatic while the master cycle is running so `bAutoCmd*`
+reaches the coil. When FALSE (default), only pistons the operator already
+put into Automatic participate; pistons in Manual mode are skipped. The
+gate is `bAnyRunning AND bForceAllAuto`, so on IDLE/ERR the block never
+touches the operator's mode choice regardless of the flag. HMI checkbox
+lives next to Continuous on the AutoCycle page.
 
 **Coexists** with the per-piston `fbSepSol1Auto` / `fbPushSol1Auto` tiles
 via OR-merge on `bAutoCmd*` at each piston call site. Bench-testing loops

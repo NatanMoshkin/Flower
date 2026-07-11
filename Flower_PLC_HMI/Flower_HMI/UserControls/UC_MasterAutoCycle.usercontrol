@@ -50,8 +50,10 @@
 <div id="ResetBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="32" data-tchmi-height-unit="px" data-tchmi-left="312" data-tchmi-left-unit="px" data-tchmi-top="90" data-tchmi-top-unit="px" data-tchmi-width="140" data-tchmi-width-unit="px" data-tchmi-text="RESET" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bReset|BindingMode=TwoWay%/pp%">
 </div>
 
-<!-- Continuous checkbox -->
+<!-- Continuous checkbox + "Put all to Auto" override -->
 <div id="ContCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="130" data-tchmi-top-unit="px" data-tchmi-width="220" data-tchmi-width-unit="px" data-tchmi-text="Continuous cycling" data-tchmi-state-symbol="%pp%cfg::bContinuous|BindingMode=TwoWay%/pp%">
+</div>
+<div id="ForceAllAutoCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="252" data-tchmi-left-unit="px" data-tchmi-top="130" data-tchmi-top-unit="px" data-tchmi-width="240" data-tchmi-width-unit="px" data-tchmi-text="Put all pistons to Auto on Start" data-tchmi-state-symbol="%pp%cfg::bForceAllAuto|BindingMode=TwoWay%/pp%">
 </div>
 
 <!-- Pair count -->

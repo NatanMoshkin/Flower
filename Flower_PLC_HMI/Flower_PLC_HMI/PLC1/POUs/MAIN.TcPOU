@@ -76,13 +76,13 @@ fbMasterAutoCycle(
     stRobot        := GVL_Robot.stRobot
 );
 
-(* Force enabled pistons into Automatic while the master cycle is running,
-   so bAutoCmd* actually reaches the coil. Mirrors what FB_PistonAutoCycle
-   already does for its own piston. Only touches pistons up to the
-   configured pair count; leaves the others in whatever mode the operator
-   set. When the master is IDLE or ERR, this block does nothing — the
-   operator's manual choice is preserved. *)
-IF fbMasterAutoCycle.bAnyRunning THEN
+(* Optional "Put all to Auto" mode: while the master cycle is running,
+   force enabled pistons (index <= uiPairCount) into Automatic so bAutoCmd*
+   reaches the coil. Gated by stMasterAutoCfg.bForceAllAuto — when FALSE
+   (default), only pistons the operator explicitly put into Automatic
+   participate in the master cycle. On IDLE / ERR this block does nothing,
+   regardless of the flag. *)
+IF fbMasterAutoCycle.bAnyRunning AND GVL_HmiPersistent.stMasterAutoCfg.bForceAllAuto THEN
     IF GVL_HmiPersistent.stMasterAutoCfg.uiPairCount >= 1 THEN
         GVL_HMI.stSepSol1.eMode  := E_ControlMode.Automatic;
         GVL_HMI.stPushSol1.eMode := E_ControlMode.Automatic;

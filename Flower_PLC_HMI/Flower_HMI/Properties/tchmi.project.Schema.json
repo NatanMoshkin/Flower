@@ -274,13 +274,33 @@
             }
           ]
         },
+        "bStartAssembly": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 2
+            }
+          ]
+        },
+        "bAssemblyRunning": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 3
+            }
+          ]
+        },
         "eConnState": {
           "allOf": [
             {
               "$ref": "tchmi:project#/definitions/PLC1.E_RobotConnState"
             },
             {
-              "propertyOrder": 2
+              "propertyOrder": 4
             }
           ]
         },
@@ -291,7 +311,7 @@
             },
             {
               "maxLength": 20,
-              "propertyOrder": 3
+              "propertyOrder": 5
             }
           ]
         },
@@ -301,7 +321,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 4
+              "propertyOrder": 6
             }
           ]
         },
@@ -311,7 +331,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 5
+              "propertyOrder": 7
             }
           ]
         },
@@ -321,7 +341,7 @@
               "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
-              "propertyOrder": 6
+              "propertyOrder": 8
             }
           ]
         },
@@ -331,7 +351,7 @@
               "$ref": "tchmi:general#/definitions/UDINT"
             },
             {
-              "propertyOrder": 7
+              "propertyOrder": 9
             }
           ]
         },
@@ -342,7 +362,68 @@
             },
             {
               "maxLength": 80,
-              "propertyOrder": 8
+              "propertyOrder": 10
+            }
+          ]
+        },
+        "bTxAutoStarted": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 11
+            }
+          ]
+        },
+        "bTxPushDone": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 12
+            }
+          ]
+        },
+        "bTxPistonsError": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 13
+            }
+          ]
+        },
+        "bRxResetError": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 14
+            }
+          ]
+        },
+        "nPacketsTx": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 15
+            }
+          ]
+        },
+        "sLastTxMessage": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/String"
+            },
+            {
+              "maxLength": 80,
+              "propertyOrder": 16
             }
           ]
         }
@@ -350,13 +431,21 @@
       "type": "object",
       "required": [
         "Name",
+        "bStartAssembly",
+        "bAssemblyRunning",
         "eConnState",
         "sConnStateText",
         "bAtPos1",
         "bAtPos2",
         "bAtPos3",
         "nPacketsRx",
-        "sLastMessage"
+        "sLastMessage",
+        "bTxAutoStarted",
+        "bTxPushDone",
+        "bTxPistonsError",
+        "bRxResetError",
+        "nPacketsTx",
+        "sLastTxMessage"
       ]
     },
     "PLC1.E_ControlMode": {
@@ -688,6 +777,16 @@
               "propertyOrder": 6
             }
           ]
+        },
+        "bForceAllAuto": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 7
+            }
+          ]
         }
       },
       "type": "object",
@@ -697,7 +796,8 @@
         "tPushRetractedDwellMs",
         "tSepRetractedDwellMs",
         "tStepTimeoutMs",
-        "bContinuous"
+        "bContinuous",
+        "bForceAllAuto"
       ]
     },
     "PLC1.ST_HmiMasterAuto": {
