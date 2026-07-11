@@ -95,8 +95,11 @@
 <div id="ResetBtn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiButton" data-tchmi-height="32" data-tchmi-height-unit="px" data-tchmi-left="228" data-tchmi-left-unit="px" data-tchmi-top="94" data-tchmi-top-unit="px" data-tchmi-width="98" data-tchmi-width-unit="px" data-tchmi-text="RESET" data-tchmi-text-font-weight="Bold" data-tchmi-state-symbol="%pp%auto::bReset|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
 </div>
 
-<!-- ============ Continuous checkbox ============ -->
-<div id="ContCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="134" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Continuous cycling" data-tchmi-state-symbol="%pp%cfg::bContinuous|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+<!-- ============ Mode checkboxes: Continuous + No sensors ============ -->
+<div id="ContCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="134" data-tchmi-top-unit="px" data-tchmi-width="150" data-tchmi-width-unit="px" data-tchmi-text="Continuous" data-tchmi-state-symbol="%pp%cfg::bContinuous|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
+</div>
+<!-- Sensorless: skips sensor waits, uses "Extend time" / "Retract time" as fixed durations. -->
+<div id="NoSensorsCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="170" data-tchmi-left-unit="px" data-tchmi-top="134" data-tchmi-top-unit="px" data-tchmi-width="160" data-tchmi-width-unit="px" data-tchmi-text="No sensors (timed)" data-tchmi-state-symbol="%pp%cfg::bNoSensors|BindingMode=TwoWay%/pp%" data-tchmi-zindex="1">
 </div>
 
 <!-- ============ Config inputs (PERSISTENT so operator tuning survives restart) ============ -->
@@ -110,12 +113,12 @@
 <div id="DwellRetIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="190" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tDwellRetractedMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
 </div>
 
-<div id="ToExtLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="216" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Timeout EXT (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+<div id="ToExtLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="216" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Extend time (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
 </div>
 <div id="ToExtIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="216" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tTimeoutExtendMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
 </div>
 
-<div id="ToRetLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="242" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Timeout RET (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
+<div id="ToRetLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="242" data-tchmi-top-unit="px" data-tchmi-width="130" data-tchmi-width-unit="px" data-tchmi-text="Retract time (ms):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-zindex="0">
 </div>
 <div id="ToRetIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="150" data-tchmi-left-unit="px" data-tchmi-top="242" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::tTimeoutRetractMs|BindingMode=TwoWay%/pp%" data-tchmi-min-value="0" data-tchmi-max-value="60000" data-tchmi-decimal-digits="0" data-tchmi-zindex="1">
 </div>

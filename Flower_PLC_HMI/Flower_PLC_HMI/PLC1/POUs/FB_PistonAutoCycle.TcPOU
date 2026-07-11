@@ -108,17 +108,24 @@ CASE stAuto.eStep OF
         bCmdExtend  := TRUE;
         bCmdRetract := FALSE;
         stHmi.eMode := E_ControlMode.Automatic;
-        (* Feedback mismatch = physical impossibility, sensor fault. *)
-        IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
-            stAuto.bError     := TRUE;
-            stAuto.sErrorText := 'Both sensors active during EXTENDING (feedback mismatch)';
-            stAuto.eStep      := E_AutoStep.ERR;
-        ELSIF stHmi.bIsExtended THEN
-            stAuto.eStep := E_AutoStep.DWELL_EXT;
-        ELSIF fbTimerExtend.Q THEN
-            stAuto.bError     := TRUE;
-            stAuto.sErrorText := 'Timeout waiting for extended sensor';
-            stAuto.eStep      := E_AutoStep.ERR;
+        IF stCfg.bNoSensors THEN
+            (* Sensorless: PT = extend duration; timer expiry = success. *)
+            IF fbTimerExtend.Q THEN
+                stAuto.eStep := E_AutoStep.DWELL_EXT;
+            END_IF
+        ELSE
+            (* Feedback mismatch = physical impossibility, sensor fault. *)
+            IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
+                stAuto.bError     := TRUE;
+                stAuto.sErrorText := 'Both sensors active during EXTENDING (feedback mismatch)';
+                stAuto.eStep      := E_AutoStep.ERR;
+            ELSIF stHmi.bIsExtended THEN
+                stAuto.eStep := E_AutoStep.DWELL_EXT;
+            ELSIF fbTimerExtend.Q THEN
+                stAuto.bError     := TRUE;
+                stAuto.sErrorText := 'Timeout waiting for extended sensor';
+                stAuto.eStep      := E_AutoStep.ERR;
+            END_IF
         END_IF
 
     E_AutoStep.DWELL_EXT:
@@ -134,16 +141,23 @@ CASE stAuto.eStep OF
         bCmdExtend  := FALSE;
         bCmdRetract := TRUE;
         stHmi.eMode := E_ControlMode.Automatic;
-        IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
-            stAuto.bError     := TRUE;
-            stAuto.sErrorText := 'Both sensors active during RETRACTING (feedback mismatch)';
-            stAuto.eStep      := E_AutoStep.ERR;
-        ELSIF stHmi.bIsRetracted THEN
-            stAuto.eStep := E_AutoStep.DWELL_RET;
-        ELSIF fbTimerRetract.Q THEN
-            stAuto.bError     := TRUE;
-            stAuto.sErrorText := 'Timeout waiting for retracted sensor';
-            stAuto.eStep      := E_AutoStep.ERR;
+        IF stCfg.bNoSensors THEN
+            (* Sensorless: PT = retract duration; timer expiry = success. *)
+            IF fbTimerRetract.Q THEN
+                stAuto.eStep := E_AutoStep.DWELL_RET;
+            END_IF
+        ELSE
+            IF stHmi.bIsExtended AND stHmi.bIsRetracted THEN
+                stAuto.bError     := TRUE;
+                stAuto.sErrorText := 'Both sensors active during RETRACTING (feedback mismatch)';
+                stAuto.eStep      := E_AutoStep.ERR;
+            ELSIF stHmi.bIsRetracted THEN
+                stAuto.eStep := E_AutoStep.DWELL_RET;
+            ELSIF fbTimerRetract.Q THEN
+                stAuto.bError     := TRUE;
+                stAuto.sErrorText := 'Timeout waiting for retracted sensor';
+                stAuto.eStep      := E_AutoStep.ERR;
+            END_IF
         END_IF
 
     E_AutoStep.DWELL_RET:

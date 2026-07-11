@@ -8,7 +8,11 @@ VAR_GLOBAL PERSISTENT
     // values survive an Activate Configuration + PLC restart. Values reset
     // to the struct defaults only on a full cold-boot reset.
     stSepSol1AutoCfg  : ST_HmiPistonAutoCfg;
+    stSepSol2AutoCfg  : ST_HmiPistonAutoCfg;
+    stSepSol3AutoCfg  : ST_HmiPistonAutoCfg;
     stPushSol1AutoCfg : ST_HmiPistonAutoCfg;
+    stPushSol2AutoCfg : ST_HmiPistonAutoCfg;
+    stPushSol3AutoCfg : ST_HmiPistonAutoCfg;
 
     // Config for the master (multi-piston + robot-coordinated) auto sequence.
     // See ST_HmiMasterAutoCfg for the tunable list; defaults land on cold-boot.

@@ -15,6 +15,13 @@ STRUCT
 
     // If TRUE, DWELL_RET loops back to EXTENDING instead of returning to IDLE.
     bContinuous        : BOOL  := FALSE;
+
+    // If TRUE, the state machine ignores sensor feedback and advances on
+    // timers alone: EXTENDING lasts tTimeoutExtendMs, RETRACTING lasts
+    // tTimeoutRetractMs, then dwells run as usual. Use for bench cycling
+    // when proximity switches aren't wired (SepSol2/3, PushSol2/3 today).
+    // No feedback-mismatch check and no "sensor never arrived" error path.
+    bNoSensors         : BOOL  := FALSE;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

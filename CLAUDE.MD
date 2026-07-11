@@ -8,12 +8,6 @@
   in `PRG_IoMap.ReadInputs` / `WriteOutputs` — pick channels from the open-issue
   table below and un-comment.
 
-## Out of scope (Future)
-
- - Remove the "Pair count" parameter from FB_MasterAutoCycle and HMI
- - bAssemblyRunning change to bAssemblyNOTRunning - safer to write TRUE when It's ok to mave the robot
- - **Review Persistent vars** — saving correctly? Needs bench test (write value → power-cycle → verify), not code review.
-
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
 
 The current design (`RobotBridge/` Python + pyads) cannot run on the CP6606
@@ -35,7 +29,15 @@ Note: `FlowerPyHmi/` is engineering-side (runs on any developer laptop) —
 it is **not** part of this decision and stays on the engineering PC
 regardless of which option wins. Only `RobotBridge/` is at stake.
 
-## OPEN ISSUE: RobotBridge protocol mismatch with the actual Dobot code
+
+## Out of scope (Future)
+
+**Remove the "Pair count" parameter from FB_MasterAutoCycle and HMI**
+**bAssemblyRunning change to bAssemblyNOTRunning - safer to write TRUE when It's ok to mave the robot**
+**Review Persistent vars** 
+ — saving correctly? Needs bench test (write value → power-cycle → verify), not code review.
+
+**RobotBridge protocol mismatch with the actual Dobot code**
 
 `RobotBridge/robot_bridge.py` assumes the robot pushes `POS1` / `POS2` /
 `POS3` frames on TCP:6001. Inspection of the SAAD 167-01 Dobot Lua code

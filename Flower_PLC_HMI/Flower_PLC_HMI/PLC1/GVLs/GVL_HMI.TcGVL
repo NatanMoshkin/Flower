@@ -11,13 +11,14 @@ VAR_GLOBAL
     stPushSol2 : ST_HmiPiston := (Name := 'PushSol2');
     stPushSol3 : ST_HmiPiston := (Name := 'PushSol3');
 
-    // Runtime state for the SepSol1 auto sequencer. Config for it lives in
-    // GVL_HmiPersistent.stSepSol1AutoCfg (PERSISTENT).
+    // Runtime state for the per-piston auto sequencers. Config for each
+    // lives in the matching stXxxAutoCfg in GVL_HmiPersistent (PERSISTENT).
     stSepSol1Auto  : ST_HmiPistonAuto;
-
-    // Runtime state for the PushSol1 auto sequencer. Config for it lives in
-    // GVL_HmiPersistent.stPushSol1AutoCfg (PERSISTENT).
+    stSepSol2Auto  : ST_HmiPistonAuto;
+    stSepSol3Auto  : ST_HmiPistonAuto;
     stPushSol1Auto : ST_HmiPistonAuto;
+    stPushSol2Auto : ST_HmiPistonAuto;
+    stPushSol3Auto : ST_HmiPistonAuto;
 
     // Runtime state for the master (multi-piston + robot-coordinated) auto
     // sequence. Config for it lives in GVL_HmiPersistent.stMasterAutoCfg.

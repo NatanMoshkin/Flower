@@ -9,7 +9,7 @@
     "CACHEMAXAGE": "P30D",
     "CACHEMAXENTRYSIZE": 1048576,
     "CACHEMAXSIZE": 2097152,
-    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQwVENDQXJtZ0F3SUJBZ0lKQU5PNnAyK01pNVVuTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN4TVRBME5USTBNRm9YRFRJNU1EY3hNREl5TlRJME1Gb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBekppagp2dHZ3bDI4dWU0cm9NQlUwMjNqTWh6aEtta04xc3NxdTZSMkhYbXdSWkFNaXZydndUNEZMb3BUZnBwR1lEMkx2CmwyQkZXWmNHVjdWZzI0c09ETjVFTmtvV09yekU4Q29Uem1WZXUzMG5TU1Nqd0xiNEt5OHZuQzBHaXRBckxTM1EKOW9JOU9TRmhhdlFTVWlmelhmYnRYNG9qbWxkR3VjU0xpejhUbXowRDlYbHhNbVlQeThMeWV4MWlzNmMvYjNqSApsWUpDemZ3b1FXcWdlU1Y4dG9vOUxqVGV3bjlSV040RU5wdkpOWlIrZlE5L01OSUFoUVhCSG5MZ2RGZEhxdzlxCkIvZTJkcHNpN3pqd1cwVHpQM1lwOThlT2pLZ1pIb1Y4NmRlUWFKdGU0RXdKN3NleGR1Mkl2QUZ5N3BvN1dkOFAKbmVQNlRuRjExQnZqUFdORVV3SURBUUFCbzRITU1JSEpNR2tHQTFVZEVRUmlNR0NDQ1d4dlkyRnNhRzl6ZEljRQpmd0FBQVljUUFBQUFBQUFBQUFBQUFBQUFBQUFBQVlJSlRGQXRUbUYwWVc1TmdoaE1VQzFPWVhSaGJrMHVhMkYxClptMWhiaTF5WkM1amIyMkhCTUNvQVc2SEVQNkFBQUFBQUFBQTh1djhiRXFXZms0d0hRWURWUjBPQkJZRUZHRzcKTEJkUFRzcDE4OFRycE9nWjlqMHdJcUVxTUI4R0ExVWRJd1FZTUJhQUZOV0Y3RTdnV3BzSVVLL2NxMlFKSWtzegpRaUFyTUF3R0ExVWRFd0VCL3dRQ01BQXdEZ1lEVlIwUEFRSC9CQVFEQWdXZ01BMEdDU3FHU0liM0RRRUJDd1VBCkE0SUJBUUJkU2N0ZTlKTTNBVmU3a0sxZEV6VGcxZGNPUVpzRE9CSHlLaUs3Y0o4YXZFaW5QQnB3VDJPM0Zvak4Kc0pOWktLQnFJcTBCVTVTN1poNzcyT2tVWHdWR0NNd21RQ1VZM2ppcVB3Ry9DWnMzU1VwN2FQdk53bXk0bU83SAp5ZjNUa09QYTBHcWdOR3M1aWFRTS81MjBUNitDMVpib3pVeStKaUlQRmowYTBObkdHZGhpcW9USGJlVEVDZ1NPCmZRRXdtRFYxT3JTaUpWTVRDeU42Rmp4cEdSVmRjUUdFSmdzdjRJUG03cEp1dkcyMFhuM1hMenB4L2JjZWtZaWQKdElYVDhHVGdDekdCS1ZvQ3ZEcGVJRStkTUV2cEUyTmNpY0JOT0pzb2hrNHorR1dZdG5IWFBqR2NONUkxTm8wTQp3N0FSUm8reTB6MDN6Z2V3NnAvWENBancwdklhCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQ4akNDQXRxZ0F3SUJBZ0lKQU1HS25QTGswNU9zTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN3TlRFek5EWTFNMW9YRFRJNU1EY3dOVEEzTkRZMU0xb3dRekVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVYTUJVR0ExVUUKQXd3T1RGQXRUbUYwWVc1TlgzSnZiM1F3Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLQW9JQgpBUURNSURVV3c4TkNkRjRhRThtcTdsaUN1OFdsUDZyK1BjV3UrMVRSL1FXZVZkQVhzdGMxUUNpeXdzRldpNk9BCnVjUlc1YUx6VUZ3YUpMcGEyZVlnR056aE1lelVQS25UK3gzVnRZTWI0Ky9qdlZyczlHVnI5ZnV6M1RoVXU5R2cKdTNWNmxtNXgvSDUySm0vS1ZpZXk3NEhMK3BMQm0wZlZsc0hiNmhKcUFhOEFZRVRwZHp4MkNFank3SlFZNys0MAptTE5mNzhwd1BwS1lVY0VZNXlnOElLdlphaTVEZml3UU1CMDBFYXM2eWpFSERvdlBOTTBQc2ZGRUJ3ZGhBa1o5CkZtYXFNS1YxK1lVeHcrdGlZNEM4NWFRL21tWVZLbm9iaDlXY2I3V09sVk1Pb2F6dHNEN251OXFjZUNkb1lBK2gKSzRGMmhyVFFteFhtcDZFSitobDFWQnEvQWdNQkFBR2pnZWd3Z2VVd2dZRUdBMVVkRVFSNk1IaUNDV3h2WTJGcwphRzl6ZEljRWZ3QUFBWWNRQUFBQUFBQUFBQUFBQUFBQUFBQUFBWUlKVEZBdFRtRjBZVzVOZ2hoTVVDMU9ZWFJoCmJrMHVhMkYxWm0xaGJpMXlaQzVqYjIySEJLbis4RnFIQk1Db2VFYUhFUDZBQUFBQUFBQUFLS1pMY0ZjYTV6V0gKRVA2QUFBQUFBQUFBZGNBYm1xNXR0dzh3SFFZRFZSME9CQllFRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBcgpNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1BOEdBMVVkRXdFQi93UUZNQU1CCkFmOHdEZ1lEVlIwUEFRSC9CQVFEQWdFR01BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQldXWjdEajdUU1g0S08KRTA5UTJnY2NVODZINkRzc3FlMFdkU1pFaXp0UUg5WUFyVGZvL3hKR0ViK05VRVg2ejU3d0JQdTZ4UmlES1BmMwpLQ0hYOUpsTVRVUGJvRTY0UFNGejFGVkxqWkFzaEtQZjlQNS9QaHd2bkdtYnhLZndPaFNITGl3ZWtRZlJhcGE3Ci9sQTlIQnFXdTdsUlI5M3FjK0QveDBQUXAyYWdDNHpMN3I5K1NXa3puQ2x5aHd6cDVCOW0wY1VoZ1Y4RUJ5NGEKTHY3UkRnVUorSWxUQ1JxZVdoYW5ZdXNiOUU3L1dRRXUzTjNNd3d0dzZXUFgzMHJaaHhxcVNqeUd5NitRRXhpawo5UXBsbjhHU20zYXdQWmE4UDhXZ3dlYlA5QmUrRjlxcG9CcmtOVXJDdk9KS3JTeC9hSUlaZnZsVzNpck43RGhsCmsyQitSN04xCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K",
+    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQrRENDQXVDZ0F3SUJBZ0lKQU4yQ3lUbUVWZkh0TUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN4TVRBNU1qQTFPVm9YRFRJNU1EY3hNVEF6TWpBMU9Wb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBdGdOQgowY3hQMVpCU0I3S1M4Y0RTMndndmtaMGgrdnBtYitPVXlNMGVkUlRxaHVtU3NCT090L001d0RJdTFqTlJRYjlECkhWQzhEZUJ5TnY0SHNxdG9FVHpmMzVSdE9rNllkSW9icW0vOWttc1dLQ2habUw2MnBTeSsvcG5JUG5xQXlyQVIKS21BV0dkU212RUR3MkQ2NHM2TkhZSHhQQkg5cVlpczg5UDJ5R3I5czh1ZzR0L1llQk01bzFxT08xK0FBaWhUNgpwQXg2UGRUaHYwVnUwTi90WVdnaXJoQTRnRjBFWmVQRUpGUzBEUXNIWkJWY2E2TEtQRmFqMjVNVFY5cjE3THAzCkhSYnd5blJjLzZESThpRDFrNFhUM2ZXdkhReFdmanZCS2Fzck9MYXU4VFhrOUJkZGNVVDNuOFdoM1YxUkNRdHMKSXZpdldwUnFZNE5wZjFiK1p3SURBUUFCbzRIek1JSHdNSUdQQmdOVkhSRUVnWWN3Z1lTQ0NXeHZZMkZzYUc5egpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmhiazB1CmEyRjFabTFoYmkxeVpDNWpiMjJIQk1Db0FXNkhFQ29OYjhBSEpKMEF6TE84WGRiaU14R0hFQ29OYjhBSEpKMEEKOEhFa3ZhTUplZEdIRVA2QUFBQUFBQUFBOHV2OGJFcVdmazR3SFFZRFZSME9CQllFRkJxTWczY1RRY2F6c3l6UwpYQjYyWEVsUkpHTytNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1Bd0dBMVVkCkV3RUIvd1FDTUFBd0RnWURWUjBQQVFIL0JBUURBZ1dnTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFDVGhIM3AKNUVVdjFrZW04RzhHVGZYbnJGckxJSm4rdDlLTEc5amc1ZmQyZnc2bDUvY0FZSkJTVFEyUEdZSCtxNFJ6cVFkWApBZFZKRXRySFdoblVrdjNsZGdXVkNsUXA2RnBLd25nbkoxUUJzMHY5bklXZ3hvZldtV0RVTHh3eFl0WnVEMDljCjBZWWp4Nkh2VUJIcmlPMmlpeG9WYllpbjhYcnIxMjRWK0JIVGNzdHMzTzZVSkdJTjJZME9VNUNqeDB4ZldlRFYKN1AxempxYWgza0MwZUVVYW1HRU1JdGFucWF0d284SDBFajBjdmRVNmVKa2t4TWxpNXdOWDhEakUwZW1BUHlTbApvOVloZVprSFpTN2dEcFRpcTU1d3hlNkppbGRNTkY2VzdINUFWcklNeEVqWUsvVnUxcWN5VXZmQWpmNFUyUjZqClhPamZvcHlMQTdEMDhXVnMKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
     "CERTIFICATEEXPIRATION": "P1095DT18H",
     "CHECKSUMENABLED": true,
     "CHUNKSIZE": 1048576,
@@ -870,6 +870,17 @@
                             }
                         ]
                     },
+                    "bNoSensors": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/BOOL"
+                            },
+                            {
+                                "comment": "If TRUE, the state machine ignores sensor feedback and advances on\r\n timers alone: EXTENDING lasts tTimeoutExtendMs, RETRACTING lasts\r\n tTimeoutRetractMs, then dwells run as usual. Use for bench cycling\r\n when proximity switches aren't wired (SepSol2/3, PushSol2/3 today).\r\n No feedback-mismatch check and no \"sensor never arrived\" error path.",
+                                "propertyOrder": 6
+                            }
+                        ]
+                    },
                     "tDwellExtendedMs": {
                         "allOf": [
                             {
@@ -918,7 +929,8 @@
                     "tDwellRetractedMs",
                     "tTimeoutExtendMs",
                     "tTimeoutRetractMs",
-                    "bContinuous"
+                    "bContinuous",
+                    "bNoSensors"
                 ],
                 "type": "object"
             },
@@ -1333,7 +1345,7 @@
     "HTTP_FLOODPROTECTION": 100,
     "INITTIMEOUT": "PT10S",
     "KEEP_ALIVE": "PT40S",
-    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRE1tS08rMi9DWGJ5NTcKaXVnd0ZUVGJlTXlIT0VxYVEzV3l5cTdwSFlkZWJCRmtBeUsrdS9CUGdVdWlsTitta1pnUFl1K1hZRVZabHdaWAp0V0RiaXc0TTNrUTJTaFk2dk1Ud0toUE9aVjY3ZlNkSkpLUEF0dmdyTHkrY0xRYUswQ3N0TGREMmdqMDVJV0ZxCjlCSlNKL05kOXUxZmlpT2FWMGE1eEl1TFB4T2JQUVAxZVhFeVpnL0x3dko3SFdLenB6OXZlTWVWZ2tMTi9DaEIKYXFCNUpYeTJpajB1Tk43Q2YxRlkzZ1EybThrMWxINTlEMzh3MGdDRkJjRWVjdUIwVjBlckQyb0g5N1oybXlMdgpPUEJiUlBNL2RpbjN4NDZNcUJrZWhYenAxNUJvbTE3Z1RBbnV4N0YyN1lpOEFYTHVtanRaM3crZDQvcE9jWFhVCkcrTTlZMFJUQWdNQkFBRUNnZ0VBSHFRem96ZC9EUkd1aFZFcDhnZzlzNEJLMHNEb1VnODRERHEvdnhPdGtrTjAKSFZBODZXZVlsNGVyNDJHOExIbW5WajFCTGN0OHgyeWt4Z2tEbWJoMTRSRXBaOG9Udkl0SW9Xd09ndjJsUVBEVQpWcElzQzRZN25RTEM5TXhuZ08ycFhHbW9DZXM2ZzhPNTVTZEFWb1BtTm1udlpoSWpGVHFYVWVZYmtoTmZKUzRBClBvMjBHejhyQlhvZTJUZ09yNGxIZkdsRmNwbjNSajZqWDJkbmJlLzhUaElTRmJ1MHNWSXZWM01wSWpMWEF2Z0UKOVFWV2dIeElneW1PK1RMNmNWWldnV2gvSHF4a0pLeUhBZlVxSXpNN0JYdFdldk5kc2V2YjJSckV2VjdwUm5Xdwo2ZmhlTTlPdG5DcVRQWWVZNXJGcytrRkU0ZkRFbitWRTRUTFVSbFR4ZVFLQmdRRDMvSmlKWi9YekpGVGFhMXRMCmVQN2Q2L1B2UzRNSmJPRzBmZVkrZTNhekpBdHVzSkxjd3ZwYmYxTDU3MkFROUZOVzMwdUZkRno0OEsyN2hpb1UKWGhhdkFTbVJwNG9tdkNyNEk0YmUzaloyNktBdHRlNGl3cEJoVjlEQ3dpam9RVWozRXExb084c2Vudlhxbmw2TAoveCswbkJlWENuK0NWMzBuRzdEbU42ajVDd0tCZ1FEVE5SdVhIYWVFTGNEZzlFenYxWVJGQ2tsN1BHQXNxdUQzCjlKRGlnWC9lTzIyS1lldjNLaWRiTUMzV2hzQ21lZXZmWTd2Z1h5REZnSDVYY2w3M3RzbjNVVnkxa05HUzJRVHcKWVlMTDRRTExqdGl5NjMvMy84eHhPcjM3VHd0ODVUNXF0MEZ2azgzamFTLzkvYU5LY0pKeXBpam13UWxaWWkwYgphdkxkR2phKzJRS0JnUUM3VUxwcmQvS0lvUlhURWlxWW5LRnZRYzQxSDRXd05lVmE3NHBlQWVaTU5GcktWbWZvCmh3S1M0Rjd0MlVsb0pSVmFWanAyYU1uZFkvYm00ZFdoSXR6aGZmQkhUQlVIWXpUVjBBZ05DaTU3clFWbzRiWXAKM1dzdmpDUnRLRG04RGF3dXJKWDlXTVQ1c1RxeDZNUWozU2EyeHZ6dW93aGpqUEJFL1I2bkZyMzB0d0tCZ0E5VwpRTzJsU3AvUGpyMEhJSHNkL3gvZ1VsdXZrN0JLckZGMUlmeEF1UjlUSTI0MEZDVjdteVlGQnA4WVkrN3kxWTBBCk9nbGQvd3c0ZTNRd0t2TkVBOENBMlFHYVJZMnJVcTk5OVRpRzIyUWF1R090dERvM0NncUM0SDdhUzVSRE5WZ2MKZkpUMG43UE8xSnhXQ2NDREVpOWZINE02SzBxaFZYTXpQZldPVE1GcEFvR0FKVSsxNnM0YWUwTjZvbVlxbzBQagpqdGxyRnBqTE1HZEg4L1V6a3V0M3FNYkczV0lrTktjU3pvdkdmaGNnN0FuZEZtTHhCa1dGVzB4VWNoSi9KSVdBClE5Z29qKzRPbDJyT28vVU11ckw0UFFrR0FZR3dhaHAvRk9RSXo3NklnVityM0pkWDgwazBUN2s0Q1FQT3VmOUwKS2YzRUR5d2hVdVNadXNXc2xUTnNrd1U9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRQzJBMEhSekUvVmtGSUgKc3BMeHdOTGJDQytSblNINittWnY0NVRJelI1MUZPcUc2Wkt3RTQ2Mzh6bkFNaTdXTTFGQnYwTWRVTHdONEhJMgovZ2V5cTJnUlBOL2ZsRzA2VHBoMGlodXFiLzJTYXhZb0tGbVl2cmFsTEw3K21jZytlb0RLc0JFcVlCWVoxS2E4ClFQRFlQcml6bzBkZ2ZFOEVmMnBpS3p6MC9iSWF2Mnp5NkRpMzloNEV6bWpXbzQ3WDRBQ0tGUHFrREhvOTFPRy8KUlc3UTMrMWhhQ0t1RURpQVhRUmw0OFFrVkxRTkN3ZGtGVnhyb3NvOFZxUGJreE5YMnZYc3VuY2RGdkRLZEZ6LwpvTWp5SVBXVGhkUGQ5YThkREZaK084RXBxeXM0dHE3eE5lVDBGMTF4UlBlZnhhSGRYVkVKQzJ3aStLOWFsR3BqCmcybC9WdjVuQWdNQkFBRUNnZ0VBQ1YwT2lFZjkvV3NneFRPYkdxUEVWUzlOSHkwWnYrc2MxUG04d0QzSktOWE0KSU9lb083V3QzR20vV1ZOYmxIcHNYamtFTDJCbFpFTmRMTllSdUUvWUdUYnIvM2tIeTMyYW16ZzFweVYrd29jTwp5ejhVS09iNngzR1BXOUsyZWZ4Y1h0RUMrUTZiWkhYTHBCaWxLMExDeHI4S0gzMFZwWklXZTNsazkrZUxQNVB1CkZJTkZweXB0ekMxZTAyRjZSS2xYUnpmcjNQTU1KL1h2RmJPNHlFUm1rNnpPWUpuZWtKR0xlbk1mN1VzUVovK2QKZTF3SWY4NmlRQUFNQXZCUWtRMzJ6MHk4NDJuenVvT3UxMGdyRVZkSEZvQlAzMTBWSHloUUZ0QVJHNFJNby9KeQpPL0h5UzJkRmJHQlZTUjZQRHZ0WTUxR29Wb245cUxsNDhXZE1Cd2JGK1FLQmdRRDJMK1ErYU5yQm5mRkhUR3Q1CmhWMWhydVBuZC9aQWNMcHRWbjdGR1FVZE1COGRZN0Mzc1hSemd0VUVzUjR5Z2NpalFMNTYzU2MxSnF4MVF2eHgKbmkvSU9BSjU2U3YxMkJpNlNqSk9MY0hWME9UTEExUEsrcm02NldraFh4bXVuMHlRdDJrays0Z3pGcVJRY2cwUApnVWl3MHZqcWJLVklwVVZ2V0Q1NUs0ZWN1UUtCZ1FDOVJJYkJjUlJnekRmbjQ3ZmMrS05aNkI5cU10QS9hMSt6Ck1ZMGIxN3RRVzR5cnZNZ2ZlRTBoNmkvd1d3ZWFqdkM2czJxaVBobWdwMlFZNFlodXEvK3pHSkJXeWhVdjFiMGsKTmdUeWpBRTl4UWRJNDE0cGhEUEMzYXFUckl0NTdFbERxdlhzamJoTGhrU21uTnR5eFB4ZjdHQ0RjWlZvWm51SwpCOTlGNEdra0h3S0JnUUNYRThqRHErRWpGR1B1MXl6VlJFeU1GNkZ3ZUtPNzQvSGtDMEo4ZmVBdmkwcHM1TEtiCjUrQ0l5bThqRS9adUZFc21OQ013anVyeXFTc0lRdlZjWERFQ2M2ekJWNkJNbkRLQWordlRJaTFqbzIva1RjUnMKT2ZVa2lQeWxLQkZBb2kyQVdhM0Nya0ZrNks0cFYvUS80WnpVTm9QZWlKSGR4TjZaZDlQTzFESENzUUtCZ1FDVwpFRkV2NnZLWFZSUTJmZXozL1FPM2N6NEZPOGkxbi9LKzUxalViSllOdnFpb09nUUtQNTRZZDlBT3FINDg0M3ltCjZ6NXU2UUgweVFPcVhwZUgrRVBDd29VZTZ4Y2xXRGloRDF1WTI3ellOdkh4cnFTb0VqUGdHMVQxeFdiSkFybU0KTjI3SllneHZoVVBGUHJVWUtHdFp1dGRESUxtdmp5SUFiUUZ3SzkveFRRS0JnUUNnckllQ21aY05Bdm5yWEY1Qgo5aSsrNXBvTnp6U3BUSnZyckoxOVdzS0pFTUZnREx5cVh6RURSWGplY0wvV2s5azVIMXdZTW5ackJicEovdFpvCmhUY0xvdHdqVjVpYkJJdzRxZXFEcTJOOEI2MHJLN3A3cTA2L1BmUTJObHVneVoyaTg4NjAwY2NSOWZPNFNoMVgKUkU5OEFXTm5vQitlSmhHdXp1N1h0YWtNV3c9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==",
     "KEYPASSWORD": "",
     "MAXCONNECTIONSPERCLIENT": 32,
     "MAXHTTPHEADERSIZE": 32768,
@@ -1916,14 +1928,7 @@
             "DYNAMIC": true,
             "MAPPING": "PLC1::GVL_HMI::stPushSol1Auto",
             "SCHEMA": {
-                "allOf": [
-                    {
-                        "comment": "Runtime state for the PushSol1 auto sequencer. Config for it lives in\r\n GVL_HmiPersistent.stPushSol1AutoCfg (PERSISTENT)."
-                    },
-                    {
-                        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
-                    }
-                ]
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
             },
             "USEMAPPING": true
         },
@@ -1937,6 +1942,16 @@
             },
             "USEMAPPING": true
         },
+        "ADS.PLC1.GVL_HMI.stPushSol2Auto": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HMI::stPushSol2Auto",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
+            },
+            "USEMAPPING": true
+        },
         "ADS.PLC1.GVL_HMI.stPushSol3": {
             "ACCESS": 3,
             "DOMAIN": "ADS",
@@ -1944,6 +1959,16 @@
             "MAPPING": "PLC1::GVL_HMI::stPushSol3",
             "SCHEMA": {
                 "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPiston"
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HMI.stPushSol3Auto": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HMI::stPushSol3Auto",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
             },
             "USEMAPPING": true
         },
@@ -1965,7 +1990,7 @@
             "SCHEMA": {
                 "allOf": [
                     {
-                        "comment": "Runtime state for the SepSol1 auto sequencer. Config for it lives in\r\n GVL_HmiPersistent.stSepSol1AutoCfg (PERSISTENT)."
+                        "comment": "Runtime state for the per-piston auto sequencers. Config for each\r\n lives in the matching stXxxAutoCfg in GVL_HmiPersistent (PERSISTENT)."
                     },
                     {
                         "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
@@ -1984,6 +2009,16 @@
             },
             "USEMAPPING": true
         },
+        "ADS.PLC1.GVL_HMI.stSepSol2Auto": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HMI::stSepSol2Auto",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
+            },
+            "USEMAPPING": true
+        },
         "ADS.PLC1.GVL_HMI.stSepSol3": {
             "ACCESS": 3,
             "DOMAIN": "ADS",
@@ -1991,6 +2026,16 @@
             "MAPPING": "PLC1::GVL_HMI::stSepSol3",
             "SCHEMA": {
                 "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPiston"
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HMI.stSepSol3Auto": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HMI::stSepSol3Auto",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
             },
             "USEMAPPING": true
         },
@@ -2021,6 +2066,26 @@
             },
             "USEMAPPING": true
         },
+        "ADS.PLC1.GVL_HmiPersistent.stPushSol2AutoCfg": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HmiPersistent::stPushSol2AutoCfg",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HmiPersistent.stPushSol3AutoCfg": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HmiPersistent::stPushSol3AutoCfg",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
+            },
+            "USEMAPPING": true
+        },
         "ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg": {
             "ACCESS": 3,
             "DOMAIN": "ADS",
@@ -2035,6 +2100,26 @@
                         "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
                     }
                 ]
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HmiPersistent.stSepSol2AutoCfg": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HmiPersistent::stSepSol2AutoCfg",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_HmiPersistent.stSepSol3AutoCfg": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_HmiPersistent::stSepSol3AutoCfg",
+            "SCHEMA": {
+                "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
             },
             "USEMAPPING": true
         },
@@ -5073,14 +5158,22 @@
                 "ADS.PLC1.GVL_HMI.stPushSol1": 3,
                 "ADS.PLC1.GVL_HMI.stPushSol1Auto": 3,
                 "ADS.PLC1.GVL_HMI.stPushSol2": 3,
+                "ADS.PLC1.GVL_HMI.stPushSol2Auto": 3,
                 "ADS.PLC1.GVL_HMI.stPushSol3": 3,
+                "ADS.PLC1.GVL_HMI.stPushSol3Auto": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol1": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol1Auto": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol2": 3,
+                "ADS.PLC1.GVL_HMI.stSepSol2Auto": 3,
                 "ADS.PLC1.GVL_HMI.stSepSol3": 3,
+                "ADS.PLC1.GVL_HMI.stSepSol3Auto": 3,
                 "ADS.PLC1.GVL_HmiPersistent.stMasterAutoCfg": 3,
                 "ADS.PLC1.GVL_HmiPersistent.stPushSol1AutoCfg": 3,
+                "ADS.PLC1.GVL_HmiPersistent.stPushSol2AutoCfg": 3,
+                "ADS.PLC1.GVL_HmiPersistent.stPushSol3AutoCfg": 3,
                 "ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg": 3,
+                "ADS.PLC1.GVL_HmiPersistent.stSepSol2AutoCfg": 3,
+                "ADS.PLC1.GVL_HmiPersistent.stSepSol3AutoCfg": 3,
                 "ADS.PLC1.GVL_Log.bDebugMode": 3,
                 "ADS.PLC1.GVL_Robot.stRobot": 3,
                 "ChangeUserSettings": 3,
