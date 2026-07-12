@@ -729,23 +729,13 @@
     "PLC1.ST_HmiMasterAutoCfg": {
       "additionalProperties": {},
       "properties": {
-        "uiPairCount": {
-          "allOf": [
-            {
-              "$ref": "tchmi:general#/definitions/USINT"
-            },
-            {
-              "propertyOrder": 1
-            }
-          ]
-        },
         "tDwellPushMs": {
           "allOf": [
             {
               "$ref": "tchmi:general#/definitions/UDINT"
             },
             {
-              "propertyOrder": 2
+              "propertyOrder": 1
             }
           ]
         },
@@ -755,7 +745,7 @@
               "$ref": "tchmi:general#/definitions/UDINT"
             },
             {
-              "propertyOrder": 3
+              "propertyOrder": 2
             }
           ]
         },
@@ -765,7 +755,7 @@
               "$ref": "tchmi:general#/definitions/UDINT"
             },
             {
-              "propertyOrder": 4
+              "propertyOrder": 3
             }
           ]
         },
@@ -773,6 +763,16 @@
           "allOf": [
             {
               "$ref": "tchmi:general#/definitions/UDINT"
+            },
+            {
+              "propertyOrder": 4
+            }
+          ]
+        },
+        "bNoSensors": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
             },
             {
               "propertyOrder": 5
@@ -802,11 +802,11 @@
       },
       "type": "object",
       "required": [
-        "uiPairCount",
         "tDwellPushMs",
         "tPushRetractedDwellMs",
         "tSepRetractedDwellMs",
         "tStepTimeoutMs",
+        "bNoSensors",
         "bContinuous",
         "bForceAllAuto"
       ]
@@ -1006,6 +1006,16 @@
               "propertyOrder": 19
             }
           ]
+        },
+        "bSimStartAssembly": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 20
+            }
+          ]
         }
       },
       "type": "object",
@@ -1028,7 +1038,8 @@
         "bSimStep_PushRet",
         "bSimStep_PushRetDwell",
         "bSimStep_SepRet",
-        "bSimStep_SepRetDwell"
+        "bSimStep_SepRetDwell",
+        "bSimStartAssembly"
       ]
     }
   }
