@@ -2,8 +2,17 @@
 
 ## TODO:
 
-_(empty — active TODOs land here; deferred items go under "Out of scope
+_(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
+
+- FB_MasterAutoCycle. add "No sensors" checkbox on the Masters Auto Cycle page (and PLC FB) like the Auto settings per pistons option
+
+- FB_MasterAutoCycle. Remove the "Pair count" parameter
+
+- FB_MasterAutoCycle. Check "Sim bStartAssemlby" code and validate  - did not work sometimes to me while testing. It should start the cycle from Idle state
+
+- FB_MasterAutoCycle. "Continues cycling" need to bypass the start or bStartAssemlby and go from Idle to the next state
+
 
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
 
