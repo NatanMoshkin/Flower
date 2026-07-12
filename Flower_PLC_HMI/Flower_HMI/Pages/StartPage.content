@@ -3,20 +3,10 @@
   data-tchmi-type="TcHmi.Controls.System.TcHmiContent"
   data-tchmi-top="0"
   data-tchmi-left="0"
-  data-tchmi-width="1100"
-  data-tchmi-height="730"
+  data-tchmi-width="1624"
+  data-tchmi-height="790"
 ><!-- Top row: Sep pistons 1..3 -->
-<div id="SepSol1AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="12" data-tchmi-top-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol1Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg%/s%" data-tchmi-pistonname="SepSol1 — Auto Cycle">
-</div>
-<div id="SepSol2AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="12" data-tchmi-top-unit="px" data-tchmi-left="365" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol2Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol2AutoCfg%/s%" data-tchmi-pistonname="SepSol2 — Auto Cycle">
-</div>
-<div id="SepSol3AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="12" data-tchmi-top-unit="px" data-tchmi-left="714" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stSepSol3Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stSepSol3AutoCfg%/s%" data-tchmi-pistonname="SepSol3 — Auto Cycle">
-</div>
 <!-- Bottom row: Push pistons 1..3 -->
-<div id="PushSol1AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="364" data-tchmi-top-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stPushSol1Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stPushSol1AutoCfg%/s%" data-tchmi-pistonname="PushSol1 — Auto Cycle">
-</div>
-<div id="PushSol2AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="364" data-tchmi-top-unit="px" data-tchmi-left="365" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stPushSol2Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stPushSol2AutoCfg%/s%" data-tchmi-pistonname="PushSol2 — Auto Cycle">
-</div>
-<div id="PushSol3AutoHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_PistonAuto.usercontrol" data-tchmi-top="364" data-tchmi-top-unit="px" data-tchmi-left="714" data-tchmi-left-unit="px" data-tchmi-width="337" data-tchmi-width-unit="px" data-tchmi-height="340" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stPushSol3Auto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stPushSol3AutoCfg%/s%" data-tchmi-pistonname="PushSol3 — Auto Cycle">
+<div id="MasterAutoCycleHost" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControlHost" data-tchmi-target-user-control="UserControls/UC_MasterAutoCycle.usercontrol" data-tchmi-top="12" data-tchmi-top-unit="px" data-tchmi-left="16" data-tchmi-left-unit="px" data-tchmi-width="1579" data-tchmi-width-unit="px" data-tchmi-height="701" data-tchmi-height-unit="px" data-tchmi-auto="%s%ADS.PLC1.GVL_HMI.stMasterAuto%/s%" data-tchmi-cfg="%s%ADS.PLC1.GVL_HmiPersistent.stMasterAutoCfg%/s%" data-tchmi-robot="%s%ADS.PLC1.GVL_Robot.stRobot%/s%" data-tchmi-title="Master Auto Cycle" data-tchmi-creator-visibility="Visible">
 </div>
 </div>
