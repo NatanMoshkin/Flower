@@ -2,8 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_MasterAutoCycle" Id="{6b4ee376-0a0c-47a5-84cf-72c0a19ed5f4}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_MasterAutoCycle
-(* Full-machine coordinated auto sequence spanning the robot and 1..3
-   pairs of SepSol / PushSol pistons.
+(* Full-machine coordinated auto sequence spanning the robot and the 3
+   pairs of SepSol / PushSol pistons (pair count fixed at 3 for this
+   machine).
 
    Simplified robot interface (2026-07-10, per docs/robot-integration-options.md
    Option 1). Two signals cross the boundary, both level (not pulsed):
@@ -15,17 +16,19 @@
    is TRUE in every non-IDLE state (including ERR, so the robot times out
    on PLC fault) and FALSE in IDLE.
 
-   Sequence (all enabled pairs move in parallel):
+   Sequence (all 3 pairs move in parallel):
 
      IDLE                    START button OR bStartAssembly rising OR SimIdle
-     SEP_EXTENDING           drive SepCmdExtend[1..N]; wait AND of enabled SepIsExtended
-     PUSH_EXTENDING          drive PushCmdExtend[1..N]; wait AND of enabled PushIsExtended
+                             OR bContinuous checked (level - keeps re-arming)
+     SEP_EXTENDING           drive SepCmdExtend[1..3]; wait AND of all SepIsExtended
+     PUSH_EXTENDING          drive PushCmdExtend[1..3]; wait AND of all PushIsExtended
      DWELL_PUSH              hold both extended; wait tDwellPushMs
-     PUSH_RETRACTING         drive PushCmdRetract[1..N]; wait AND of enabled PushIsRetracted
+     PUSH_RETRACTING         drive PushCmdRetract[1..3]; wait AND of all PushIsRetracted
      PUSH_RETRACTED_DWELL    wait tPushRetractedDwellMs
-     SEP_RETRACTING          drive SepCmdRetract[1..N]; wait AND of enabled SepIsRetracted
-     SEP_RETRACTED_DWELL     wait tSepRetractedDwellMs -> IDLE (or immediately re-arm if bContinuous)
-     ERR                     latched; iErrorCode set to step code.
+     SEP_RETRACTING          drive SepCmdRetract[1..3]; wait AND of all SepIsRetracted
+     SEP_RETRACTED_DWELL     wait tSepRetractedDwellMs -> IDLE
+     ERR                     latched; iErrorCode set to step code; bContinuous
+                             cleared so RESET does not restart motion.
                              Reset on HMI RESET rising edge.
 
    Error codes:
@@ -45,7 +48,12 @@
 
    Per-step Sim flags on stHmi (bSimStep_Idle, bSimStep_SepExt, and so on)
    let a bench operator advance any waiting step without physical sensors.
-   Rising-edge triggered; the FB auto-clears the flag after consumption. *)
+   Rising-edge triggered; the FB auto-clears the flag after consumption.
+
+   Sensorless mode (stCfg.bNoSensors): the 4 movement states ignore sensor
+   feedback and advance when tStepTimeoutMs expires — the timeout doubles
+   as the fixed step duration. Error codes 1/3/4/5 cannot occur while
+   sensorless. *)
 VAR_INPUT
     (* Robot trigger (level flag from GVL_Robot.stRobot.bStartAssembly;
        driven by the robot's STAND_SEQ_DO through a PLC DI channel). *)
@@ -65,7 +73,7 @@ VAR_IN_OUT
 END_VAR
 
 VAR_OUTPUT
-    (* MAIN OR-merges these with the per-piston auto FBs. Indices > uiPairCount stay FALSE. *)
+    (* MAIN OR-merges these with the per-piston auto FBs. *)
     bSepCmdExtend         : ARRAY[1..3] OF BOOL;
     bSepCmdRetract        : ARRAY[1..3] OF BOOL;
     bPushCmdExtend        : ARRAY[1..3] OF BOOL;
@@ -100,9 +108,6 @@ VAR
     tonStep               : TON;
     ePrevStep             : E_MasterAutoStep;   (* transition detect for timer reset *)
 
-    (* Clamped effective pair count (1..3) *)
-    nPairs                : USINT;
-
     (* Loop index *)
     i                     : USINT;
 
@@ -119,7 +124,7 @@ END_VAR]]></Declaration>
 fbTrigStart        (CLK := stHmi.bStart);
 fbTrigStop         (CLK := stHmi.bStop);
 fbTrigReset        (CLK := stHmi.bReset);
-fbTrigStartAssembly(CLK := stRobot.bStartAssembly);
+fbTrigStartAssembly(CLK := stRobot.bStartAssembly OR stHmi.bSimStartAssembly);
 
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
 fbSim_SepExt      (CLK := stHmi.bSimStep_SepExt);
@@ -142,6 +147,10 @@ IF fbTrigStart.Q  THEN stHmi.bStart := FALSE; END_IF;
 IF fbTrigStop.Q   THEN stHmi.bStop  := FALSE; END_IF;
 IF fbTrigReset.Q  THEN stHmi.bReset := FALSE; END_IF;
 
+(* Bench sim of the robot start: clear only the sim flag after the edge is
+   consumed; the robot-owned level itself is never written. *)
+IF fbTrigStartAssembly.Q THEN stHmi.bSimStartAssembly := FALSE; END_IF;
+
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
 IF fbSim_SepExt.Q       THEN stHmi.bSimStep_SepExt       := FALSE; END_IF;
 IF fbSim_PushExt.Q      THEN stHmi.bSimStep_PushExt      := FALSE; END_IF;
@@ -152,29 +161,12 @@ IF fbSim_SepRet.Q       THEN stHmi.bSimStep_SepRet       := FALSE; END_IF;
 IF fbSim_SepRetDwell.Q  THEN stHmi.bSimStep_SepRetDwell  := FALSE; END_IF;
 
 (* ==========================================
-   1. CLAMP PAIR COUNT + AGGREGATE SENSOR STATE
+   1. AGGREGATE SENSOR STATE
    ========================================== *)
-nPairs := stCfg.uiPairCount;
-IF nPairs < 1 THEN
-    nPairs := 1;
-ELSIF nPairs > 3 THEN
-    nPairs := 3;
-END_IF;
-
-(* AND across the first nPairs indices. Reads: "for every enabled pair k,
-   its sensor is TRUE". Disabled pairs contribute TRUE (they don't gate). *)
-bAllSepExtended   := (nPairs < 1 OR bSepIsExtended[1])
-                 AND (nPairs < 2 OR bSepIsExtended[2])
-                 AND (nPairs < 3 OR bSepIsExtended[3]);
-bAllSepRetracted  := (nPairs < 1 OR bSepIsRetracted[1])
-                 AND (nPairs < 2 OR bSepIsRetracted[2])
-                 AND (nPairs < 3 OR bSepIsRetracted[3]);
-bAllPushExtended  := (nPairs < 1 OR bPushIsExtended[1])
-                 AND (nPairs < 2 OR bPushIsExtended[2])
-                 AND (nPairs < 3 OR bPushIsExtended[3]);
-bAllPushRetracted := (nPairs < 1 OR bPushIsRetracted[1])
-                 AND (nPairs < 2 OR bPushIsRetracted[2])
-                 AND (nPairs < 3 OR bPushIsRetracted[3]);
+bAllSepExtended   := bSepIsExtended[1]   AND bSepIsExtended[2]   AND bSepIsExtended[3];
+bAllSepRetracted  := bSepIsRetracted[1]  AND bSepIsRetracted[2]  AND bSepIsRetracted[3];
+bAllPushExtended  := bPushIsExtended[1]  AND bPushIsExtended[2]  AND bPushIsExtended[3];
+bAllPushRetracted := bPushIsRetracted[1] AND bPushIsRetracted[2] AND bPushIsRetracted[3];
 
 (* ==========================================
    2. GLOBAL OVERRIDES — STOP and RESET
@@ -187,6 +179,9 @@ IF fbTrigStop.Q AND stHmi.eStep <> E_MasterAutoStep.IDLE AND stHmi.eStep <> E_Ma
     stHmi.iErrorCode := 99;
     stHmi.sErrorText := 'Operator STOP while running';
     stHmi.eStep      := E_MasterAutoStep.ERR;
+    (* Drop Continuous on any ERR entry so RESET does not instantly
+       restart motion with the box still checked. *)
+    stCfg.bContinuous := FALSE;
 END_IF;
 
 IF fbTrigReset.Q AND stHmi.eStep = E_MasterAutoStep.ERR THEN
@@ -246,48 +241,52 @@ CASE stHmi.eStep OF
         stHmi.iErrorCode := 0;
         stHmi.sErrorText := '';
 
-        IF fbTrigStart.Q OR fbTrigStartAssembly.Q OR fbSim_Idle.Q THEN
+        IF fbTrigStart.Q OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous THEN
             (* Robot side (or operator, or bench sim) has requested a cycle.
+               While bContinuous is checked, IDLE starts the next cycle
+               immediately — no START / bStartAssembly edge needed.
                bAssemblyRunning goes TRUE immediately via Section 5 mirror. *)
             stHmi.eStep := E_MasterAutoStep.SEP_EXTENDING;
         END_IF;
 
     E_MasterAutoStep.SEP_EXTENDING:
         FOR i := 1 TO 3 DO
-            bSepCmdExtend[i]  := (i <= nPairs);
+            bSepCmdExtend[i]  := TRUE;
             bSepCmdRetract[i] := FALSE;
         END_FOR;
 
-        IF bAllSepExtended OR fbSim_SepExt.Q THEN
+        IF bAllSepExtended OR fbSim_SepExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             (* Skip the former WAIT_POS2 — the robot has already moved clear
                of the stand before raising bStartAssembly. *)
             stHmi.eStep := E_MasterAutoStep.PUSH_EXTENDING;
-        ELSIF tonStep.Q THEN
+        ELSIF tonStep.Q THEN   (* only reachable when NOT bNoSensors *)
             stHmi.iErrorCode := 1;
             stHmi.sErrorText := 'SEP_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.PUSH_EXTENDING:
         FOR i := 1 TO 3 DO
-            bSepCmdExtend[i]   := (i <= nPairs);   (* hold sep out *)
-            bPushCmdExtend[i]  := (i <= nPairs);
+            bSepCmdExtend[i]   := TRUE;   (* hold sep out *)
+            bPushCmdExtend[i]  := TRUE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
 
-        IF bAllPushExtended OR fbSim_PushExt.Q THEN
+        IF bAllPushExtended OR fbSim_PushExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.DWELL_PUSH;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 3;
             stHmi.sErrorText := 'PUSH_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.DWELL_PUSH:
         (* Hold everything out. *)
         FOR i := 1 TO 3 DO
-            bSepCmdExtend[i]  := (i <= nPairs);
-            bPushCmdExtend[i] := (i <= nPairs);
+            bSepCmdExtend[i]  := TRUE;
+            bPushCmdExtend[i] := TRUE;
         END_FOR;
 
         IF tonStep.Q OR fbSim_DwellPush.Q THEN
@@ -297,23 +296,24 @@ CASE stHmi.eStep OF
     E_MasterAutoStep.PUSH_RETRACTING:
         (* Sep still extended, push retract command asserted. *)
         FOR i := 1 TO 3 DO
-            bSepCmdExtend[i]   := (i <= nPairs);
+            bSepCmdExtend[i]   := TRUE;
             bPushCmdExtend[i]  := FALSE;
-            bPushCmdRetract[i] := (i <= nPairs);
+            bPushCmdRetract[i] := TRUE;
         END_FOR;
 
-        IF bAllPushRetracted OR fbSim_PushRet.Q THEN
+        IF bAllPushRetracted OR fbSim_PushRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.PUSH_RETRACTED_DWELL;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 4;
             stHmi.sErrorText := 'PUSH_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.PUSH_RETRACTED_DWELL:
         (* Sep still held extended, push commands cleared. *)
         FOR i := 1 TO 3 DO
-            bSepCmdExtend[i]   := (i <= nPairs);
+            bSepCmdExtend[i]   := TRUE;
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
@@ -325,15 +325,16 @@ CASE stHmi.eStep OF
     E_MasterAutoStep.SEP_RETRACTING:
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]  := FALSE;
-            bSepCmdRetract[i] := (i <= nPairs);
+            bSepCmdRetract[i] := TRUE;
         END_FOR;
 
-        IF bAllSepRetracted OR fbSim_SepRet.Q THEN
+        IF bAllSepRetracted OR fbSim_SepRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.SEP_RETRACTED_DWELL;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 5;
             stHmi.sErrorText := 'SEP_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.SEP_RETRACTED_DWELL:
@@ -347,13 +348,9 @@ CASE stHmi.eStep OF
 
         IF tonStep.Q OR fbSim_SepRetDwell.Q THEN
             stHmi.nCyclesCompleted := stHmi.nCyclesCompleted + 1;
+            (* Back to IDLE. If bContinuous is still checked, IDLE re-arms
+               the next cycle by itself on the next scan. *)
             stHmi.eStep := E_MasterAutoStep.IDLE;
-            (* If continuous, immediately re-arm by pulsing bStart on next
-               scan. We do NOT jump straight to SEP_EXTENDING — one cycle
-               of IDLE lets the operator STOP before the next auto-arm. *)
-            IF stCfg.bContinuous THEN
-                stHmi.bStart := TRUE;
-            END_IF;
         END_IF;
 
     E_MasterAutoStep.ERR:

@@ -19,6 +19,11 @@ STRUCT
     sErrorText       : STRING(80);
     nCyclesCompleted : UDINT;        // incremented at end of SEP_RETRACTED_DWELL
 
+    // HMI writes -- bench sim of the robot's start handshake. OR-ed with the
+    // real stRobot.bStartAssembly level; FB auto-clears it after the rising
+    // edge is consumed (never writes the robot-owned signal itself).
+    bSimStartAssembly      : BOOL;
+
     // HMI writes -- per-step Simulate flags. Rising edge shortcuts the current
     // step's wait condition (FB clears the flag on consumption via R_TRIG.Q).
     bSimStep_Idle          : BOOL;

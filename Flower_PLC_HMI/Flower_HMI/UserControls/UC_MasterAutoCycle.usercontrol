@@ -55,11 +55,7 @@
 </div>
 <div id="ForceAllAutoCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="252" data-tchmi-left-unit="px" data-tchmi-top="130" data-tchmi-top-unit="px" data-tchmi-width="240" data-tchmi-width-unit="px" data-tchmi-text="Put all pistons to Auto on Start" data-tchmi-state-symbol="%pp%cfg::bForceAllAuto|BindingMode=TwoWay%/pp%">
 </div>
-
-<!-- Pair count -->
-<div id="PairCountLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="160" data-tchmi-top-unit="px" data-tchmi-width="180" data-tchmi-width-unit="px" data-tchmi-text="Pair count (1..3):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px">
-</div>
-<div id="PairCountIn" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiNumericInput" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="200" data-tchmi-left-unit="px" data-tchmi-top="160" data-tchmi-top-unit="px" data-tchmi-width="100" data-tchmi-width-unit="px" data-tchmi-value="%pp%cfg::uiPairCount|BindingMode=TwoWay%/pp%" data-tchmi-min-value="1" data-tchmi-max-value="3" data-tchmi-decimal-digits="0">
+<div id="NoSensorsCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="12" data-tchmi-left-unit="px" data-tchmi-top="160" data-tchmi-top-unit="px" data-tchmi-width="220" data-tchmi-width-unit="px" data-tchmi-text="No sensors (timed steps)" data-tchmi-state-symbol="%pp%cfg::bNoSensors|BindingMode=TwoWay%/pp%">
 </div>
 
 <!-- Timer inputs -->
@@ -109,7 +105,7 @@
 <!-- Robot handshake (discrete-IO interface, 2026-07-10) -->
 <div id="RobotSimLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="207" data-tchmi-top-unit="px" data-tchmi-width="400" data-tchmi-width-unit="px" data-tchmi-text="Robot handshake (bench sim):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold">
 </div>
-<div id="SimStartAssemblyCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="229" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Sim bStartAssembly" data-tchmi-state-symbol="%pp%robot::bStartAssembly%/pp%">
+<div id="SimStartAssemblyCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="332" data-tchmi-left-unit="px" data-tchmi-top="229" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="Sim bStartAssembly" data-tchmi-state-symbol="%pp%auto::bSimStartAssembly|BindingMode=TwoWay%/pp%">
 </div>
 <div id="AssemblyRunningInd" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="540" data-tchmi-left-unit="px" data-tchmi-top="229" data-tchmi-top-unit="px" data-tchmi-width="220" data-tchmi-width-unit="px" data-tchmi-text="bAssemblyRunning (to robot)" data-tchmi-state-symbol="%pp%robot::bAssemblyRunning%/pp%" data-tchmi-enabled="False">
 </div>

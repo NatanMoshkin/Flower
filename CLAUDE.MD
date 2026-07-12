@@ -5,13 +5,12 @@
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
-- FB_MasterAutoCycle. add "No sensors" checkbox on the Masters Auto Cycle page (and PLC FB) like the Auto settings per pistons option
-
-- FB_MasterAutoCycle. Remove the "Pair count" parameter
-
-- FB_MasterAutoCycle. Check "Sim bStartAssemlby" code and validate  - did not work sometimes to me while testing. It should start the cycle from Idle state
-
-- FB_MasterAutoCycle. "Continues cycling" need to bypass the start or bStartAssemlby and go from Idle to the next state
+- check Logging from the PLC. If no logging - create.
+  _Finding (2026-07-12): logging infra already exists — `GVL_Log` ring
+  buffer + `F_LogEvent` + Python CSV pump (`RobotBridge/log_pump.py` →
+  `logs/YYYY-MM-DD.csv`). The only gap: `FB_MasterAutoCycle` never calls
+  `F_LogEvent`. Remaining work = add log calls for state transitions,
+  errors, and start/stop events._
 
 
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
@@ -40,8 +39,10 @@ regardless of which option wins. Only `RobotBridge/` is at stake.
 
 The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`
 (commit `9ba7a14`, with mode-forcing added in `8a39fae`, and simplified
-robot interface added 2026-07-10). It coordinates 1..3 pairs of (SepSolN,
-PushSolN) pistons in parallel with a single robot handshake signal.
+robot interface added 2026-07-10). It coordinates the 3 pairs of (SepSolN,
+PushSolN) pistons in parallel with a single robot handshake signal. The
+former "Pair count" runtime knob (`uiPairCount`) was removed 2026-07-12 —
+pair count is fixed at 3.
 
 **Robot interface (simplified 2026-07-10):** two discrete signals, both
 level (not pulsed), per the Option 1 decision in
@@ -62,18 +63,23 @@ declared in the enum but unused — safe to remove once the HMI is cleaned):
 
 ```
 IDLE                    Wait for operator START OR stRobot.bStartAssembly rising
-                        OR bSimStep_Idle. bAssemblyRunning drops LOW here.
-SEP_EXTENDING           Drive SepCmdExtend[1..N]; wait AND of enabled SepIsExtended.
-PUSH_EXTENDING          Drive PushCmdExtend[1..N]; wait AND of enabled PushIsExtended.
+                        OR bSimStep_Idle OR bContinuous checked (level — while
+                        checked, IDLE starts the next cycle immediately).
+                        bAssemblyRunning drops LOW here.
+SEP_EXTENDING           Drive SepCmdExtend[1..3]; wait AND of all 3 SepIsExtended
+                        (or tStepTimeoutMs expiry when bNoSensors).
+PUSH_EXTENDING          Drive PushCmdExtend[1..3]; wait AND of all 3 PushIsExtended.
 DWELL_PUSH              Hold both extended; wait tDwellPushMs (default 2000).
-PUSH_RETRACTING         Drive PushCmdRetract[1..N]; wait AND of enabled PushIsRetracted.
+PUSH_RETRACTING         Drive PushCmdRetract[1..3]; wait AND of all 3 PushIsRetracted.
 PUSH_RETRACTED_DWELL    Wait tPushRetractedDwellMs (default 500).
-SEP_RETRACTING          Drive SepCmdRetract[1..N]; wait AND of enabled SepIsRetracted.
+SEP_RETRACTING          Drive SepCmdRetract[1..3]; wait AND of all 3 SepIsRetracted.
 SEP_RETRACTED_DWELL     Wait tSepRetractedDwellMs (default 500). Increment nCyclesCompleted.
-                        → IDLE (or immediately re-arm bStart if Continuous).
-ERR                     Latched. iErrorCode = step's fault code. bAssemblyRunning
-                        stays HIGH so the robot's own polling times out and its
-                        error handler fires. Reset on HMI RESET rising edge only.
+                        → IDLE (which re-arms by itself while Continuous is checked).
+ERR                     Latched. iErrorCode = step's fault code. bContinuous is
+                        cleared on entry so RESET does not restart motion.
+                        bAssemblyRunning stays HIGH so the robot's own polling
+                        times out and its error handler fires. Reset on HMI
+                        RESET rising edge only.
 ```
 
 **Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
@@ -89,9 +95,17 @@ ERR                     Latched. iErrorCode = step's fault code. bAssemblyRunnin
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
+**Master sensorless mode** (`stMasterAutoCfg.bNoSensors`, default FALSE,
+added 2026-07-12) — mirrors the per-piston `bNoSensors`. When TRUE, the 4
+movement states (SEP_EXTENDING, PUSH_EXTENDING, PUSH_RETRACTING,
+SEP_RETRACTING) ignore sensor feedback and advance when `tStepTimeoutMs`
+expires — the timeout doubles as the fixed step duration, so error codes
+1/3/4/5 cannot occur while sensorless. HMI checkbox "No sensors (timed
+steps)" sits below Continuous on the AutoCycle page.
+
 **Piston mode force ("Put all to Auto")** — optional, off by default. When
-`stMasterAutoCfg.bForceAllAuto` is TRUE, MAIN forces any pair with index ≤
-uiPairCount into Automatic while the master cycle is running so `bAutoCmd*`
+`stMasterAutoCfg.bForceAllAuto` is TRUE, MAIN forces all six pistons
+into Automatic while the master cycle is running so `bAutoCmd*`
 reaches the coil. When FALSE (default), only pistons the operator already
 put into Automatic participate; pistons in Manual mode are skipped. The
 gate is `bAnyRunning AND bForceAllAuto`, so on IDLE/ERR the block never
@@ -109,8 +123,13 @@ triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
 renders them as a vertical 9-row table (`Row0_*` … `Row8_*` in
 `UC_MasterAutoCycle.usercontrol`) — one row per state, background
 highlights yellow when `auto::eStep` matches the row's enum value, red
-for the ERR row. The `Sim bStartAssembly` checkbox at the top drives the
-robot handshake input.
+for the ERR row. The `Sim bStartAssembly` checkbox binds
+`ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — an auto-clearing sim flag
+OR-ed with the real `stRobot.bStartAssembly` level before the R_TRIG; the
+FB clears it after the rising edge is consumed and never writes the
+robot-owned signal. (The old binding wrote `robot::bStartAssembly`
+directly without TwoWay, leaving a stale level that ate the next edge —
+fixed 2026-07-12.)
 
 ## DECISION: per-piston auto tiles + sensorless mode
 
@@ -277,9 +296,6 @@ finish the EtherCAT link in the System Manager.
 
 ## Out of scope (Future)
 
-- **Remove the "Pair count" parameter** from `FB_MasterAutoCycle` and its
-  HMI tile — the pair count is effectively fixed at 3 for this machine, so
-  the runtime knob mostly adds noise.
 - **Invert `bAssemblyRunning` polarity** → `bAssemblyNOTRunning`. Safer
   fail-open semantic: PLC writes TRUE when it is *safe* to move the robot,
   so a broken PLC / cable / loose wire reads as FALSE and the robot holds
