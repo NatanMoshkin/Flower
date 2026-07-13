@@ -5,12 +5,7 @@
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
-- check Logging from the PLC. If no logging - create.
-  _Finding (2026-07-12): logging infra already exists — `GVL_Log` ring
-  buffer + `F_LogEvent` + Python CSV pump (`RobotBridge/log_pump.py` →
-  `logs/YYYY-MM-DD.csv`). The only gap: `FB_MasterAutoCycle` never calls
-  `F_LogEvent`. Remaining work = add log calls for state transitions,
-  errors, and start/stop events._
+<!-- no active TODOs at the moment -->
 
 
 ## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
@@ -137,7 +132,15 @@ triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
 renders them as a vertical 11-row table (`Row0_*` … `Row10_*` in
 `UC_MasterAutoCycle.usercontrol`) — one row per state in chronological
 run order, background highlights yellow when `auto::eStep` matches the
-row's enum value, red for the ERR row. The `Sim bStartAssembly` checkbox binds
+row's enum value, red for the ERR row.
+
+**Logging** (calls `F_LogEvent` — mirrors the pattern from
+`FB_PistonAutoCycle`): every state transition emits one entry, INFO for
+normal advances (`"PREV -> NEW"` via `TO_STRING()`), ERR for entries into
+`ERR` (`sMsg = stHmi.sErrorText`). Operator button rising edges (`bStart`,
+`bStop`, `bReset`) and the robot / sim `bStartAssembly` rising edge each
+emit one INFO entry. `sSource` = `stHmi.Name`. Bench-only sim step
+advances are deliberately not logged (would spam production). The `Sim bStartAssembly` checkbox binds
 `ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — an auto-clearing sim flag
 OR-ed with the real `stRobot.bStartAssembly` level before the R_TRIG; the
 FB clears it after the rising edge is consumed and never writes the

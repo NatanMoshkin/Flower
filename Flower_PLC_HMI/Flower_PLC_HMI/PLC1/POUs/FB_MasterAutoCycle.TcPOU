@@ -157,13 +157,27 @@ fbSim_SepRetDwell (CLK := stHmi.bSimStep_SepRetDwell);
    robot's STAND_SEQ_DO through a physical DI channel; we only consume
    its rising edge and never clear it (the robot owns the level).
    ========================================== *)
-IF fbTrigStart.Q  THEN stHmi.bStart := FALSE; END_IF;
-IF fbTrigStop.Q   THEN stHmi.bStop  := FALSE; END_IF;
-IF fbTrigReset.Q  THEN stHmi.bReset := FALSE; END_IF;
+IF fbTrigStart.Q  THEN
+    stHmi.bStart := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'START pressed');
+END_IF;
+IF fbTrigStop.Q   THEN
+    stHmi.bStop  := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'STOP pressed');
+END_IF;
+IF fbTrigReset.Q  THEN
+    stHmi.bReset := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'RESET pressed');
+END_IF;
 
 (* Bench sim of the robot start: clear only the sim flag after the edge is
-   consumed; the robot-owned level itself is never written. *)
-IF fbTrigStartAssembly.Q THEN stHmi.bSimStartAssembly := FALSE; END_IF;
+   consumed; the robot-owned level itself is never written. Log fires for
+   both real robot rising edges and bench-sim ones — the source is unified
+   at the R_TRIG so the log entry does not distinguish. *)
+IF fbTrigStartAssembly.Q THEN
+    stHmi.bSimStartAssembly := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'bStartAssembly rising');
+END_IF;
 
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
 IF fbSim_InitPushRet.Q  THEN stHmi.bSimStep_InitPushRet  := FALSE; END_IF;
@@ -207,13 +221,29 @@ IF fbTrigReset.Q AND stHmi.eStep = E_MasterAutoStep.ERR THEN
 END_IF;
 
 (* ==========================================
-   3. STEP TIMER
+   3. STEP TIMER + TRANSITION LOG
    Reset tonStep on any state change. In DWELL states PT is the dwell
    duration and Q rising = "dwell complete, advance". In wait states PT
    is the timeout and Q rising = "timed out, error". Non-waiting states
    (IDLE, ERR) do not consult Q.
+
+   Also emit one log entry per transition — INFO with "PREV -> NEW" for
+   normal advances, ERR with sErrorText when the new state is ERR. The
+   check runs one scan AFTER Section 4 set eStep, so sErrorText and
+   iErrorCode are already populated. Order matters: log BEFORE updating
+   ePrevStep so both endpoints are still available.
    ========================================== *)
 IF stHmi.eStep <> ePrevStep THEN
+    IF stHmi.eStep = E_MasterAutoStep.ERR THEN
+        F_LogEvent(eSev := E_LogSev.ERR, sSource := stHmi.Name, sMsg := stHmi.sErrorText);
+    ELSE
+        F_LogEvent(
+            eSev    := E_LogSev.INFO,
+            sSource := stHmi.Name,
+            sMsg    := CONCAT(CONCAT(TO_STRING(ePrevStep), ' -> '), TO_STRING(stHmi.eStep))
+        );
+    END_IF
+
     tonStep(IN := FALSE, PT := T#0MS);   // pulse-off resets ET to 0
     ePrevStep := stHmi.eStep;
 END_IF;
