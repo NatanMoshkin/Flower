@@ -20,6 +20,14 @@
 
      IDLE                    START button OR bStartAssembly rising OR SimIdle
                              OR bContinuous checked (level - keeps re-arming)
+     INIT_PUSH_RETRACTING    drive PushCmdRetract[1..3]; wait AND of all
+                             PushIsRetracted. Guarantees pistons are home before
+                             a cycle starts, even if a prior manual move left
+                             them extended.
+     INIT_SEP_RETRACTING     drive SepCmdRetract[1..3]; wait AND of all
+                             SepIsRetracted. Push must retract first (see INIT
+                             above) because sep retract with push extended is
+                             the same collision case avoided end-of-cycle.
      SEP_EXTENDING           drive SepCmdExtend[1..3]; wait AND of all SepIsExtended
      PUSH_EXTENDING          drive PushCmdExtend[1..3]; wait AND of all PushIsExtended
      DWELL_PUSH              hold both extended; wait tDwellPushMs
@@ -37,6 +45,8 @@
      3  = PUSH_EXTENDING timed out
      4  = PUSH_RETRACTING timed out
      5  = SEP_RETRACTING timed out
+     6  = INIT_PUSH_RETRACTING timed out
+     7  = INIT_SEP_RETRACTING timed out
     99  = Operator STOP while running
 
    The former WAIT_POS2 state (error code 2) is retired: the robot code
@@ -95,6 +105,8 @@ VAR
 
     (* Rising-edge detectors for per-step Sim flags. *)
     fbSim_Idle            : R_TRIG;
+    fbSim_InitPushRet     : R_TRIG;
+    fbSim_InitSepRet      : R_TRIG;
     fbSim_SepExt          : R_TRIG;
     fbSim_PushExt         : R_TRIG;
     fbSim_DwellPush       : R_TRIG;
@@ -127,6 +139,8 @@ fbTrigReset        (CLK := stHmi.bReset);
 fbTrigStartAssembly(CLK := stRobot.bStartAssembly OR stHmi.bSimStartAssembly);
 
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
+fbSim_InitPushRet (CLK := stHmi.bSimStep_InitPushRet);
+fbSim_InitSepRet  (CLK := stHmi.bSimStep_InitSepRet);
 fbSim_SepExt      (CLK := stHmi.bSimStep_SepExt);
 fbSim_PushExt     (CLK := stHmi.bSimStep_PushExt);
 fbSim_DwellPush   (CLK := stHmi.bSimStep_DwellPush);
@@ -152,6 +166,8 @@ IF fbTrigReset.Q  THEN stHmi.bReset := FALSE; END_IF;
 IF fbTrigStartAssembly.Q THEN stHmi.bSimStartAssembly := FALSE; END_IF;
 
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
+IF fbSim_InitPushRet.Q  THEN stHmi.bSimStep_InitPushRet  := FALSE; END_IF;
+IF fbSim_InitSepRet.Q   THEN stHmi.bSimStep_InitSepRet   := FALSE; END_IF;
 IF fbSim_SepExt.Q       THEN stHmi.bSimStep_SepExt       := FALSE; END_IF;
 IF fbSim_PushExt.Q      THEN stHmi.bSimStep_PushExt      := FALSE; END_IF;
 IF fbSim_DwellPush.Q    THEN stHmi.bSimStep_DwellPush    := FALSE; END_IF;
@@ -213,7 +229,9 @@ CASE stHmi.eStep OF
     E_MasterAutoStep.SEP_EXTENDING,
     E_MasterAutoStep.PUSH_EXTENDING,
     E_MasterAutoStep.PUSH_RETRACTING,
-    E_MasterAutoStep.SEP_RETRACTING:
+    E_MasterAutoStep.SEP_RETRACTING,
+    E_MasterAutoStep.INIT_PUSH_RETRACTING,
+    E_MasterAutoStep.INIT_SEP_RETRACTING:
         tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tStepTimeoutMs));
 ELSE
     tonStep(IN := FALSE, PT := T#0MS);
@@ -245,8 +263,51 @@ CASE stHmi.eStep OF
             (* Robot side (or operator, or bench sim) has requested a cycle.
                While bContinuous is checked, IDLE starts the next cycle
                immediately — no START / bStartAssembly edge needed.
-               bAssemblyRunning goes TRUE immediately via Section 5 mirror. *)
+               bAssemblyRunning goes TRUE immediately via Section 5 mirror.
+
+               Enter INIT_PUSH_RETRACTING first (not SEP_EXTENDING directly)
+               so pistons left extended by a prior manual move are driven
+               home before the cycle proper starts. If everything is already
+               retracted, the two INIT states self-satisfy on the next scan. *)
+            stHmi.eStep := E_MasterAutoStep.INIT_PUSH_RETRACTING;
+        END_IF;
+
+    E_MasterAutoStep.INIT_PUSH_RETRACTING:
+        (* Mirror end-of-cycle PUSH_RETRACTING: assert push retract only. Sep
+           stays uncommanded (whatever position it was left in — its retract
+           follows in INIT_SEP_RETRACTING). *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := FALSE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := TRUE;
+        END_FOR;
+
+        IF bAllPushRetracted OR fbSim_InitPushRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
+            stHmi.eStep := E_MasterAutoStep.INIT_SEP_RETRACTING;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 6;
+            stHmi.sErrorText := 'INIT_PUSH_RETRACTING timed out';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
+        END_IF;
+
+    E_MasterAutoStep.INIT_SEP_RETRACTING:
+        (* Push is confirmed home; now retract sep. *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := TRUE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := FALSE;
+        END_FOR;
+
+        IF bAllSepRetracted OR fbSim_InitSepRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.SEP_EXTENDING;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 7;
+            stHmi.sErrorText := 'INIT_SEP_RETRACTING timed out';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.SEP_EXTENDING:

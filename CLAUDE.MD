@@ -58,14 +58,25 @@ protocol is retired. `WAIT_POS2` is retired too — the Dobot's
 `PerformStandSequence` moves the arm clear of the stand *before* raising
 `STAND_SEQ_DO`, so no intermediate "robot moved away" wait is needed.
 
-**Nine-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value still
+**Eleven-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value still
 declared in the enum but unused — safe to remove once the HMI is cleaned):
 
 ```
 IDLE                    Wait for operator START OR stRobot.bStartAssembly rising
                         OR bSimStep_Idle OR bContinuous checked (level — while
                         checked, IDLE starts the next cycle immediately).
+                        On start, transitions to INIT_PUSH_RETRACTING (not
+                        directly to SEP_EXTENDING) so pistons left extended
+                        by a prior manual move are driven home first.
                         bAssemblyRunning drops LOW here.
+INIT_PUSH_RETRACTING    Drive PushCmdRetract[1..3]; wait AND of all 3
+                        PushIsRetracted. Auto-satisfies on the next scan
+                        when push is already home. Guarantees push is home
+                        before sep retract (same collision constraint as
+                        the end-of-cycle PUSH_RETRACTING → SEP_RETRACTING
+                        ordering).
+INIT_SEP_RETRACTING     Drive SepCmdRetract[1..3]; wait AND of all 3
+                        SepIsRetracted. Push is now confirmed home.
 SEP_EXTENDING           Drive SepCmdExtend[1..3]; wait AND of all 3 SepIsExtended
                         (or tStepTimeoutMs expiry when bNoSensors).
 PUSH_EXTENDING          Drive PushCmdExtend[1..3]; wait AND of all 3 PushIsExtended.
@@ -91,17 +102,20 @@ ERR                     Latched. iErrorCode = step's fault code. bContinuous is
 | 3    | PUSH_EXTENDING timeout             |
 | 4    | PUSH_RETRACTING timeout            |
 | 5    | SEP_RETRACTING timeout             |
+| 6    | INIT_PUSH_RETRACTING timeout       |
+| 7    | INIT_SEP_RETRACTING timeout        |
 | 99   | Operator STOP while running        |
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
 **Master sensorless mode** (`stMasterAutoCfg.bNoSensors`, default FALSE,
-added 2026-07-12) — mirrors the per-piston `bNoSensors`. When TRUE, the 4
-movement states (SEP_EXTENDING, PUSH_EXTENDING, PUSH_RETRACTING,
-SEP_RETRACTING) ignore sensor feedback and advance when `tStepTimeoutMs`
-expires — the timeout doubles as the fixed step duration, so error codes
-1/3/4/5 cannot occur while sensorless. HMI checkbox "No sensors (timed
-steps)" sits below Continuous on the AutoCycle page.
+added 2026-07-12) — mirrors the per-piston `bNoSensors`. When TRUE, the 6
+movement states (INIT_PUSH_RETRACTING, INIT_SEP_RETRACTING, SEP_EXTENDING,
+PUSH_EXTENDING, PUSH_RETRACTING, SEP_RETRACTING) ignore sensor feedback and
+advance when `tStepTimeoutMs` expires — the timeout doubles as the fixed
+step duration, so error codes 1/3/4/5/6/7 cannot occur while sensorless.
+HMI checkbox "No sensors (timed steps)" sits below Continuous on the
+AutoCycle page.
 
 **Piston mode force ("Put all to Auto")** — optional, off by default. When
 `stMasterAutoCfg.bForceAllAuto` is TRUE, MAIN forces all six pistons
@@ -120,10 +134,10 @@ works — see `DECISION: per-piston auto tiles` below.
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
 triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
-renders them as a vertical 9-row table (`Row0_*` … `Row8_*` in
-`UC_MasterAutoCycle.usercontrol`) — one row per state, background
-highlights yellow when `auto::eStep` matches the row's enum value, red
-for the ERR row. The `Sim bStartAssembly` checkbox binds
+renders them as a vertical 11-row table (`Row0_*` … `Row10_*` in
+`UC_MasterAutoCycle.usercontrol`) — one row per state in chronological
+run order, background highlights yellow when `auto::eStep` matches the
+row's enum value, red for the ERR row. The `Sim bStartAssembly` checkbox binds
 `ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — an auto-clearing sim flag
 OR-ed with the real `stRobot.bStartAssembly` level before the R_TRIG; the
 FB clears it after the rising edge is consumed and never writes the

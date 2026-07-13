@@ -681,6 +681,8 @@
         6,
         7,
         8,
+        10,
+        11,
         99
       ],
       "options": [
@@ -719,6 +721,14 @@
         {
           "value": 8,
           "label": "SEP_RETRACTED_DWELL"
+        },
+        {
+          "value": 10,
+          "label": "INIT_PUSH_RETRACTING"
+        },
+        {
+          "value": 11,
+          "label": "INIT_SEP_RETRACTING"
         },
         {
           "value": 99,
@@ -1016,6 +1026,26 @@
               "propertyOrder": 20
             }
           ]
+        },
+        "bSimStep_InitPushRet": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 21
+            }
+          ]
+        },
+        "bSimStep_InitSepRet": {
+          "allOf": [
+            {
+              "$ref": "tchmi:general#/definitions/BOOL"
+            },
+            {
+              "propertyOrder": 22
+            }
+          ]
         }
       },
       "type": "object",
@@ -1039,7 +1069,9 @@
         "bSimStep_PushRetDwell",
         "bSimStep_SepRet",
         "bSimStep_SepRetDwell",
-        "bSimStartAssembly"
+        "bSimStartAssembly",
+        "bSimStep_InitPushRet",
+        "bSimStep_InitSepRet"
       ]
     }
   }

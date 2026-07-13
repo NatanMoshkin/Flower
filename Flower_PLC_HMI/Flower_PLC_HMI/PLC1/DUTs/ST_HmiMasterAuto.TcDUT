@@ -27,6 +27,8 @@ STRUCT
     // HMI writes -- per-step Simulate flags. Rising edge shortcuts the current
     // step's wait condition (FB clears the flag on consumption via R_TRIG.Q).
     bSimStep_Idle          : BOOL;
+    bSimStep_InitPushRet   : BOOL;
+    bSimStep_InitSepRet    : BOOL;
     bSimStep_SepExt        : BOOL;
     bSimStep_WaitPos2      : BOOL;
     bSimStep_PushExt       : BOOL;
