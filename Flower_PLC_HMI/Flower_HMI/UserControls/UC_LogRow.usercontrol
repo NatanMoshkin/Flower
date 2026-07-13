@@ -1,0 +1,32 @@
+<div id="LogRow" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControl" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1400" data-tchmi-height="22" data-tchmi-width-unit="px" data-tchmi-height-unit="px" data-tchmi-creator-viewport-width="800" data-tchmi-creator-viewport-height="800">
+
+<!-- Row background — severity-tinted rectangle. Trigger listens on eSev
+     and repaints on change. Colors:
+       ERR  (3) => red-tint
+       WARN (2) => amber-tint
+       else     => grey-tint -->
+<div id="RowRect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="0" data-tchmi-left-unit="px" data-tchmi-top="0" data-tchmi-top-unit="px" data-tchmi-width="1400" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+  <script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[
+    { "event": "%pp%entry::eSev%/pp%", "actions": [ { "objectType": "Condition", "active": true, "parts": [
+      { "if":   [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_LogSev", "symbolExpression": "%pp%entry::eSev%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_LogSev", "value": 3 }, "compareOperator": "==", "logic": null } ],
+        "then": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(221, 90, 90, 0.35)" } }, "asyncWait": true } ] },
+      { "elseif": [ { "compare1": { "objectType": "Symbol", "valueType": "tchmi:project#/definitions/PLC1.E_LogSev", "symbolExpression": "%pp%entry::eSev%/pp%" }, "compare2": { "objectType": "StaticValue", "valueType": "tchmi:project#/definitions/PLC1.E_LogSev", "value": 2 }, "compareOperator": "==", "logic": null } ],
+        "then":   [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(230, 200, 60, 0.30)" } }, "asyncWait": true } ] },
+      { "else": [ { "objectType": "WriteToSymbol", "active": true, "symbolExpression": "%ctx%owner::FillColor%/ctx%", "value": { "objectType": "StaticValue", "valueType": "tchmi:framework#/definitions/Color", "value": { "color": "rgba(60, 60, 60, 0.15)" } }, "asyncWait": true } ] }
+    ], "asyncWait": true } ] }
+  ]</script>
+</div>
+
+<!-- # column (row number, e.g. "1"..."20"). Bound to the rowNumber string parameter. -->
+<div id="RowIdx" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="4"   data-tchmi-left-unit="px" data-tchmi-top="0" data-tchmi-top-unit="px" data-tchmi-width="40"  data-tchmi-width-unit="px" data-tchmi-text="%pp%rowNumber%/pp%"       data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1"></div>
+
+<!-- Severity column (raw enum integer 0..3). -->
+<div id="RowSev" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="52"  data-tchmi-left-unit="px" data-tchmi-top="0" data-tchmi-top-unit="px" data-tchmi-width="60"  data-tchmi-width-unit="px" data-tchmi-text="%pp%entry::eSev%/pp%"     data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1"></div>
+
+<!-- Source column. -->
+<div id="RowSrc" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="120" data-tchmi-left-unit="px" data-tchmi-top="0" data-tchmi-top-unit="px" data-tchmi-width="180" data-tchmi-width-unit="px" data-tchmi-text="%pp%entry::sSource%/pp%"  data-tchmi-text-horizontal-alignment="Left"   data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1"></div>
+
+<!-- Message column. -->
+<div id="RowMsg" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="308" data-tchmi-left-unit="px" data-tchmi-top="0" data-tchmi-top-unit="px" data-tchmi-width="1080" data-tchmi-width-unit="px" data-tchmi-text="%pp%entry::sMsg%/pp%"     data-tchmi-text-horizontal-alignment="Left"   data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1"></div>
+
+</div>

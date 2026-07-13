@@ -59,6 +59,12 @@
   ],
   "userControls": [
     {
+      "url": "UserControls/UC_LogBridgeCfg.usercontrol"
+    },
+    {
+      "url": "UserControls/UC_LogRow.usercontrol"
+    },
+    {
       "url": "UserControls/UC_MasterAutoCycle.usercontrol"
     },
     {
@@ -82,6 +88,13 @@
     },
     {
       "url": "Pages/Events.content",
+      "preload": false,
+      "keepAlive": false,
+      "loadSync": false,
+      "preloadBindings": false
+    },
+    {
+      "url": "Pages/Logs.content",
       "preload": false,
       "keepAlive": false,
       "loadSync": false,

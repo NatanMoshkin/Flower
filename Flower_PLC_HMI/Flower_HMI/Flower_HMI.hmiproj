@@ -159,6 +159,9 @@
     <Content Include="Pages\Events.content">
       <SubType>Content</SubType>
     </Content>
+    <Content Include="Pages\Logs.content">
+      <SubType>Content</SubType>
+    </Content>
     <Content Include="Pages\Piston.content">
       <SubType>Content</SubType>
     </Content>
@@ -170,6 +173,20 @@
     </Content>
     <Content Include="Pages\StartPage.content">
       <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_LogBridgeCfg.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_LogBridgeCfg.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_LogBridgeCfg.usercontrol</DependentUpon>
+    </Content>
+    <Content Include="UserControls\UC_LogRow.usercontrol">
+      <SubType>Content</SubType>
+    </Content>
+    <Content Include="UserControls\UC_LogRow.usercontrol.json">
+      <SubType>Content</SubType>
+      <DependentUpon>UserControls\UC_LogRow.usercontrol</DependentUpon>
     </Content>
     <Content Include="UserControls\UC_MasterAutoCycle.usercontrol">
       <SubType>Content</SubType>

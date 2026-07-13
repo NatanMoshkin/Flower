@@ -187,6 +187,13 @@
  "iconActive": "%tr%TR_Icon_Events_active%/tr%",
  "iconPressed": "%tr%TR_Icon_Events_pressed%/tr%"},
 {
+ "id": "Logs",
+ "name": "%l%L_Logs%/l%",
+ "content": "Pages/Logs.content",
+ "icon": "%tr%TR_Icon_Events_normal%/tr%",
+ "iconActive": "%tr%TR_Icon_Events_active%/tr%",
+ "iconPressed": "%tr%TR_Icon_Events_pressed%/tr%"},
+{
  "id": "Settings",
  "name": "%l%L_Settings%/l%",
  "content": "Pages/Settings.content",

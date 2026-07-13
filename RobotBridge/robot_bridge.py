@@ -391,6 +391,25 @@ def main(argv: list[str] | None = None) -> int:
     plc.open()
     logging.info("ADS opened to %s:%d", cfg.ams_net_id, cfg.ams_port)
 
+    # ---- Mirror our logging config into GVL_Log.stBridgeCfg so the HMI
+    # Logs page can show it (read-only). Best-effort — if any of these
+    # writes fail (older PLC without the symbols), just log and continue.
+    try:
+        abs_log_dir = str(Path(cfg.log_dir).resolve())
+        plc.write_by_name("GVL_Log.stBridgeCfg.sLogDir",
+                          abs_log_dir[:80], pyads.PLCTYPE_STRING)
+        plc.write_by_name("GVL_Log.stBridgeCfg.sLogLevel",
+                          cfg.log_level[:10], pyads.PLCTYPE_STRING)
+        plc.write_by_name("GVL_Log.stBridgeCfg.uiRetentionDays",
+                          cfg.log_retention_days, pyads.PLCTYPE_UDINT)
+        plc.write_by_name("GVL_Log.stBridgeCfg.uiRetentionMB",
+                          cfg.log_retention_mb, pyads.PLCTYPE_UDINT)
+        plc.write_by_name("GVL_Log.stBridgeCfg.uiPollMs",
+                          cfg.log_plc_ring_poll_ms, pyads.PLCTYPE_UDINT)
+        logging.info("stBridgeCfg written to PLC")
+    except Exception as e:  # noqa: BLE001
+        logging.warning("stBridgeCfg write skipped: %s", e)
+
     # ---- Start pumping PLC ring buffer into our logging pipeline.
     log_pump = PlcLogPump(plc, poll_ms=cfg.log_plc_ring_poll_ms)
     log_pump.start()

@@ -9,7 +9,7 @@
     "CACHEMAXAGE": "P30D",
     "CACHEMAXENTRYSIZE": 1048576,
     "CACHEMAXSIZE": 2097152,
-    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQrRENDQXVDZ0F3SUJBZ0lKQUs1NUV1NE9pUFlSTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN4TXpFMk5UZzFObG9YRFRJNU1EY3hNekV3TlRnMU5sb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBbC9McAp4YXJHWFVnNXZjcmxvcjkweTBGeUFiTVhUUWJPc2VQSjJadUY3blpFNEhnaldvMkJPekZIdHpNbEJRNXdJaVBLCnlsM2hRMVBrS0JWU2JvYk13bDJPdDUzN2l0Njh1dmpHQkdQdnlNanJ3dUZXZzM0YTNvU3E2cUZEN3ZWT3NJaXYKS2NEVUF3a2QyNlZVUzdJTTN0NnpZdi94U2ZjeUc0aHplRWJwZHE0NFBaQ2Y4NzNTZXRzS1FIOTBFRmtDRkRLRQpMWmRIYzhXM2poeFdvQUxJeS9lMzVEODh2UFVHbm5tWWRlZVpmL2U5SktNUzFXV1daUEl0QXExTjhYdEN2VG1oCmZ5cFpObmtWMTFoRExXSHFJdFBEMmlEU2w2VkRMeHhnWUZvVWVRUWdnWG5NNDRQRkVhaGh1ZFFHMEhZOTk2dmUKS1FDME8ydUpkYnlZSkVsOGdRSURBUUFCbzRIek1JSHdNSUdQQmdOVkhSRUVnWWN3Z1lTQ0NXeHZZMkZzYUc5egpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmhiazB1CmEyRjFabTFoYmkxeVpDNWpiMjJIQk1Db0FXNkhFQ29OYjhBSEpKMEEzWWF5WVFueXVOaUhFQ29OYjhBSEpKMEEKOEhFa3ZhTUplZEdIRVA2QUFBQUFBQUFBOHV2OGJFcVdmazR3SFFZRFZSME9CQllFRk5oczMrYnVHTVlMN0R6TQpreEg3R2wyLzdsZEhNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1Bd0dBMVVkCkV3RUIvd1FDTUFBd0RnWURWUjBQQVFIL0JBUURBZ1dnTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFESGNNZTIKZDdLeVBjUVRPMFovRnpqZDVBRjVwNVQ1R1FtdGNFc2YvWW5laHJ5L3UvNTJ0ZlFyYlJOMmgwVTk4MTVrN21uSwp2dHJybTlid0U3RVFYTG1EeXhCVXpiWCtOLzkzNVJuaThqeFdIWGlLQ2oyaktwUXpVRDZZOG5kSWhQcUFiWHF2CjdYeFUzb2dSdEIzTWp4Sm9penpqZ010bGkwdWs3N016MXNBd2Q0Z2M4U1ljM0JCQ2M1QW03ejV4N1czWmgrV3kKT2trVFIwQ1hmQ2tKSyt0NmxOb2NnMlp4Z1p2SVRnV3krTnlieVUwdnhqbExiYVh3TXFrbG1Ud1YxRG9YVUtZVQp4ZkdCa2NHWFZzUWY5NFYyS1VuUVZOTXppRnlrd2x1bE1KZlRsRnlCRTZLRU53Z3lDUWxjWFhVRFRFRXBrWEF6CloyQ2hCVnZDMDRNcmgrL3UKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
+    "CERTIFICATE": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUQrRENDQXVDZ0F3SUJBZ0lKQVAyWFRMZlRUeWxaTUEwR0NTcUdTSWIzRFFFQkN3VUFNRU14Q3pBSkJnTlYKQkFZVEFrUkZNUnN3R1FZRFZRUUtEQkpVZDJsdVEwRlVJRWhOU1NCVFpYSjJaWEl4RnpBVkJnTlZCQU1NRGt4UQpMVTVoZEdGdVRWOXliMjkwTUI0WERUSTJNRGN4TXpFNU5EWXlNVm9YRFRJNU1EY3hNekV6TkRZeU1Wb3dQakVMCk1Ba0dBMVVFQmhNQ1JFVXhHekFaQmdOVkJBb01FbFIzYVc1RFFWUWdTRTFKSUZObGNuWmxjakVTTUJBR0ExVUUKQXd3SlRGQXRUbUYwWVc1Tk1JSUJJakFOQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBN0g5YQo1NWU4NzJCSERaenY5WVdPeTlUMmlmTURCUDNHNFhBbVZmWUZOaEZMOVNYSFk0RnllK1dLYjB4UTVVSHJDazd5CnRxMHRoaUFkUVNBK1pwMGV0WW9HWnk5bFNuRFFVSjV2QU9PTjFOSXNrajhoazJ6amxTcWkrMyswNUtrcmFqdG0KZmhoOTQ4dG1WTFhlNW5iTjdCUDBHWXlzT2tOakZjUk5GNU8xbEMwQTR5MXVSNVhoVFVXK3lqMm5hc1hlcC92ZgpSZFc3TmlxVHZ3ejl2eGtzYmN4cTdmWTQ1eCtWWVBGRFNKalZBdEdDWElYTHZORk5kQzZnVG9wRmVPd0hCbmV2CnFSemQ1Y09jOEw5V2dyeTF3bDZHVFlJQ3NzYk5IRDVxVGFmQmhXVG9OTUlLNTNUMG9senVGTUZ6NS9ONVNENVQKMXkzSlZIUnRyM0ZOUnR0cml3SURBUUFCbzRIek1JSHdNSUdQQmdOVkhSRUVnWWN3Z1lTQ0NXeHZZMkZzYUc5egpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmhiazB1CmEyRjFabTFoYmkxeVpDNWpiMjJIQk1Db0FXNkhFQ29OYjhBSEpKMEEzWWF5WVFueXVOaUhFQ29OYjhBSEpKMEEKOEhFa3ZhTUplZEdIRVA2QUFBQUFBQUFBOHV2OGJFcVdmazR3SFFZRFZSME9CQllFRk5vTnVUME91dTZrQlBwRwpoVVY2RzJOU0JOZkJNQjhHQTFVZEl3UVlNQmFBRk5XRjdFN2dXcHNJVUsvY3EyUUpJa3N6UWlBck1Bd0dBMVVkCkV3RUIvd1FDTUFBd0RnWURWUjBQQVFIL0JBUURBZ1dnTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFDUldFTmYKaWJoeDdRTC9zUXdFVU9GUlhJNktEZVhrVUw4bXdHRTMyVFlaL2VCVSs4aGMyWVJiZ2dtV01nNTh1c2dqY0lqbgpWVzBrOGtnWFdVdGVhbTFWTTlvZXNyKzJBd0pYYlVXaE9pdVFZdkduaDVLdTNlUkx0RzZHUGx5UGxhUGxXWVNGCitiYXp1RlR5US9FVzExSCtBV1dtWTQxYWhpYzFFUERwWUhEREd5dFNMSytZWmpWckwrRTRUOEFTVGZLK3M3cmsKbFY3T2xDa3Q5Y05RSVg5dVdsTmRDZnFGTEVqVkx6NFQyWGxNbE10THd2emVGMUhmSmkzb3R1aDFFemQ3RmlnOApyaEYybWFBM1liQndhNHU1QThjYSs0eVdYUkMyZE9OS3c5ckdXd3lQbmtUQStTeUNIVEFXMUVyeWJVVUdzQW5sClo0OGJiWW81T1ROUk1NQmwKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRDhqQ0NBdHFnQXdJQkFnSUpBTUdLblBMazA1T3NNQTBHQ1NxR1NJYjNEUUVCQ3dVQU1FTXhDekFKQmdOVgpCQVlUQWtSRk1Sc3dHUVlEVlFRS0RCSlVkMmx1UTBGVUlFaE5TU0JUWlhKMlpYSXhGekFWQmdOVkJBTU1Ea3hRCkxVNWhkR0Z1VFY5eWIyOTBNQjRYRFRJMk1EY3dOVEV6TkRZMU0xb1hEVEk1TURjd05UQTNORFkxTTFvd1F6RUwKTUFrR0ExVUVCaE1DUkVVeEd6QVpCZ05WQkFvTUVsUjNhVzVEUVZRZ1NFMUpJRk5sY25abGNqRVhNQlVHQTFVRQpBd3dPVEZBdFRtRjBZVzVOWDNKdmIzUXdnZ0VpTUEwR0NTcUdTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCCkFRRE1JRFVXdzhOQ2RGNGFFOG1xN2xpQ3U4V2xQNnIrUGNXdSsxVFIvUVdlVmRBWHN0YzFRQ2l5d3NGV2k2T0EKdWNSVzVhTHpVRndhSkxwYTJlWWdHTnpoTWV6VVBLblQreDNWdFlNYjQrL2p2VnJzOUdWcjlmdXozVGhVdTlHZwp1M1Y2bG01eC9INTJKbS9LVmlleTc0SEwrcExCbTBmVmxzSGI2aEpxQWE4QVlFVHBkengyQ0VqeTdKUVk3KzQwCm1MTmY3OHB3UHBLWVVjRVk1eWc4SUt2WmFpNURmaXdRTUIwMEVhczZ5akVIRG92UE5NMFBzZkZFQndkaEFrWjkKRm1hcU1LVjErWVV4dyt0aVk0Qzg1YVEvbW1ZVktub2JoOVdjYjdXT2xWTU9vYXp0c0Q3bnU5cWNlQ2RvWUEraApLNEYyaHJUUW14WG1wNkVKK2hsMVZCcS9BZ01CQUFHamdlZ3dnZVV3Z1lFR0ExVWRFUVI2TUhpQ0NXeHZZMkZzCmFHOXpkSWNFZndBQUFZY1FBQUFBQUFBQUFBQUFBQUFBQUFBQUFZSUpURkF0VG1GMFlXNU5naGhNVUMxT1lYUmgKYmswdWEyRjFabTFoYmkxeVpDNWpiMjJIQktuKzhGcUhCTUNvZUVhSEVQNkFBQUFBQUFBQUtLWkxjRmNhNXpXSApFUDZBQUFBQUFBQUFkY0FibXE1dHR3OHdIUVlEVlIwT0JCWUVGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyCk1COEdBMVVkSXdRWU1CYUFGTldGN0U3Z1dwc0lVSy9jcTJRSklrc3pRaUFyTUE4R0ExVWRFd0VCL3dRRk1BTUIKQWY4d0RnWURWUjBQQVFIL0JBUURBZ0VHTUEwR0NTcUdTSWIzRFFFQkN3VUFBNElCQVFCV1daN0RqN1RTWDRLTwpFMDlRMmdjY1U4Nkg2RHNzcWUwV2RTWkVpenRRSDlZQXJUZm8veEpHRWIrTlVFWDZ6NTd3QlB1NnhSaURLUGYzCktDSFg5SmxNVFVQYm9FNjRQU0Z6MUZWTGpaQXNoS1BmOVA1L1Bod3ZuR21ieEtmd09oU0hMaXdla1FmUmFwYTcKL2xBOUhCcVd1N2xSUjkzcWMrRC94MFBRcDJhZ0M0ekw3cjkrU1drem5DbHlod3pwNUI5bTBjVWhnVjhFQnk0YQpMdjdSRGdVSitJbFRDUnFlV2hhbll1c2I5RTcvV1FFdTNOM013d3R3NldQWDMwclpoeHFxU2p5R3k2K1FFeGlrCjlRcGxuOEdTbTNhd1BaYThQOFdnd2ViUDlCZStGOXFwb0Jya05VckN2T0pLclN4L2FJSVpmdmxXM2lyTjdEaGwKazJCK1I3TjEKLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=",
     "CERTIFICATEEXPIRATION": "P1095DT18H",
     "CHECKSUMENABLED": true,
     "CHUNKSIZE": 1048576,
@@ -31,6 +31,30 @@
     "DEFAULTTIMEZONE": "client",
     "DEFINITIONS": {
         "ADS": {
+            "ADS-PLC1.ARRAY-0-19-ST_LogEntry": {
+                "allOf": [
+                    {
+                        "items": {
+                            "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_LogEntry"
+                        }
+                    },
+                    {
+                        "$ref": "tchmi:general#/definitions/Array"
+                    },
+                    {
+                        "maxItems": 20,
+                        "minItems": 20
+                    }
+                ]
+            },
+            "ADS-PLC1.ARRAY_0..19_OF-ST_LogEntry": {
+                "items": {
+                    "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_LogEntry"
+                },
+                "maxItems": 20,
+                "minItems": 20,
+                "type": "array"
+            },
             "ADS-PLC1.E_AutoStep": {
                 "attributes": {
                     "generate_implicit_init_function": "",
@@ -93,6 +117,39 @@
                     {
                         "label": "Automatic",
                         "value": 1
+                    }
+                ],
+                "type": "integer"
+            },
+            "ADS-PLC1.E_LogSev": {
+                "attributes": {
+                    "generate_implicit_init_function": "",
+                    "qualified_only": "",
+                    "strict": "",
+                    "to_string": ""
+                },
+                "enum": [
+                    0,
+                    1,
+                    2,
+                    3
+                ],
+                "options": [
+                    {
+                        "label": "DBG",
+                        "value": 0
+                    },
+                    {
+                        "label": "INFO",
+                        "value": 1
+                    },
+                    {
+                        "label": "WARN",
+                        "value": 2
+                    },
+                    {
+                        "label": "ERR",
+                        "value": 3
                     }
                 ],
                 "type": "integer"
@@ -202,6 +259,16 @@
                     }
                 ],
                 "type": "integer"
+            },
+            "ADS-PLC1.STRING-10": {
+                "allOf": [
+                    {
+                        "maxLength": 10
+                    },
+                    {
+                        "$ref": "tchmi:general#/definitions/String"
+                    }
+                ]
             },
             "ADS-PLC1.STRING-20": {
                 "allOf": [
@@ -1165,6 +1232,118 @@
                     "sLastTxMessage"
                 ],
                 "type": "object"
+            },
+            "ADS-PLC1.ST_LogBridgeCfg": {
+                "additionalProperties": false,
+                "properties": {
+                    "sLogDir": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/STRING%2880%29"
+                            },
+                            {
+                                "comment": "e.g. './logs' resolved to absolute",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    },
+                    "sLogLevel": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-10"
+                            },
+                            {
+                                "comment": "'DBG' / 'INFO' / 'WARN' / 'ERR'",
+                                "propertyOrder": 2
+                            }
+                        ]
+                    },
+                    "uiPollMs": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "logger.plc_ring_poll_ms",
+                                "propertyOrder": 5
+                            }
+                        ]
+                    },
+                    "uiRetentionDays": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "logger.retention_days",
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "uiRetentionMB": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/UDINT"
+                            },
+                            {
+                                "comment": "logger.retention_mb",
+                                "propertyOrder": 4
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "sLogDir",
+                    "sLogLevel",
+                    "uiRetentionDays",
+                    "uiRetentionMB",
+                    "uiPollMs"
+                ],
+                "type": "object"
+            },
+            "ADS-PLC1.ST_LogEntry": {
+                "additionalProperties": false,
+                "properties": {
+                    "eSev": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.E_LogSev"
+                            },
+                            {
+                                "comment": "Deliberately no timestamp field — Python assigns wall-clock time when it\r\n drains the ring. Trade-off: entries arrive up to plc_ring_poll_ms late in\r\n the CSV. Acceptable for state-transition / error logs; if sub-millisecond\r\n precision matters for a future event type, add nTick : UDINT.",
+                                "propertyOrder": 1
+                            }
+                        ]
+                    },
+                    "sMsg": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:general#/definitions/STRING%2880%29"
+                            },
+                            {
+                                "comment": "human-readable message",
+                                "propertyOrder": 3
+                            }
+                        ]
+                    },
+                    "sSource": {
+                        "allOf": [
+                            {
+                                "$ref": "tchmi:server#/definitions/ADS-PLC1.STRING-20"
+                            },
+                            {
+                                "comment": "short instance name, e.g. 'SepSol1Auto'",
+                                "propertyOrder": 2
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "eSev",
+                    "sSource",
+                    "sMsg"
+                ],
+                "type": "object"
             }
         }
     },
@@ -1389,7 +1568,7 @@
     "HTTP_FLOODPROTECTION": 100,
     "INITTIMEOUT": "PT10S",
     "KEEP_ALIVE": "PT40S",
-    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRQ1g4dW5GcXNaZFNEbTkKeXVXaXYzVExRWElCc3hkTkJzNng0OG5abTRYdWRrVGdlQ05hallFN01VZTNNeVVGRG5BaUk4cktYZUZEVStRbwpGVkp1aHN6Q1hZNjNuZnVLM3J5NitNWUVZKy9JeU92QzRWYURmaHJlaEtycW9VUHU5VTZ3aUs4cHdOUURDUjNiCnBWUkxzZ3plM3JOaS8vRko5ekliaUhONFJ1bDJyamc5a0ovenZkSjYyd3BBZjNRUVdRSVVNb1F0bDBkenhiZU8KSEZhZ0Fzakw5N2ZrUHp5ODlRYWVlWmgxNTVsLzk3MGtveExWWlpaazhpMENyVTN4ZTBLOU9hRi9LbGsyZVJYWApXRU10WWVvaTA4UGFJTktYcFVNdkhHQmdXaFI1QkNDQmVjempnOFVScUdHNTFBYlFkajMzcTk0cEFMUTdhNGwxCnZKZ2tTWHlCQWdNQkFBRUNnZ0VBQTFNUVlBK2wxaWZrd29Vb1M4eWtUNmVqaU11OExtWmdHcGFGSmE2UVNqaTYKZGs1T21MWTRuZnpNcU1LVTFHVGQyWE5leGhseWVxU0EzUXNsWWU5dlZxL1JGZTJlRWFwZ3B2Y1hMd1NvUEFTQQpXd1BPM3FMaFQ5M0hkd2wyK09rVFV3dTBpR1YwaGduNnBpSDZnNHIyV3VCMHZJMWt3RFZwT2w2OGh3VEhLaDVxClVXZjcrQ013RVNocG40dGhIV2ZpS2JqZm5lTXBZdkwxTlY4cTcyTTlmd3p3UzFhZHdkLzI5NTZISmE5QTJGZlIKQk9Sa21jM09hWnFXSm85N2IySHpiMUQ4ZmlyQ09YVXRYREliODREMittNEdrTjUydmZ6VEZMbWcxZWJDcVhlaAptMlY3ckhBTEJtamlVdXBoeGZUSWdSbm9SbDloeVVZWHRXR2Nua1RVQ1FLQmdRREdwL084L3hXRkw2eVNjZlVoCnZ0SzlVZmJDT3g0K2VaMEpQWlREYmhGaElRTkdNNXZsNlVDbm14OG1BZHM3MURBZVNWOEN3eDBJYzVScGxhV2oKTk9GbTk0STFPeU5zTVhodXFlM0FJSm16Zno4aU1Eb0FGdCt4a2JFSUMvZDd2NmErUzdTcE5QS0p6OVZIQkRTOApxOVo5OU45NTlmVHJnczZjVTREcGc3YkkyUUtCZ1FERHozTVdJU2J3QTJRUmQ5Qy9rN0gwQ29NY3FoZmNxR3FxCnVzZ0VTZHVrNWhXb1M1UmtWSmRSOFV5eVlGWjBHdGgrblpqVEZwQUZIREZySE82c0tyWTczZXdnSFZRdlZHeXQKb0o5bVRyNkg3OVpzV0RGNXdhTERubWlXMWF4dXhaWThCVHlMd3NybjJCUnpyZGRuNWYzMU1PWXE0alVuYmZ2WQpJMUJxTTZ6SDZRS0JnQVUvUEdYYWl2UDRuV05FMVVldDVaMFFoQ2IvTHI1UnNmOGpmRUZwTDlaVDYrVTN5YjlaCjJOWlVkNDhtYjJiMkpNczMvdVZ3eDl5SVNQdzg4cUlMN0lRdXQyYTJpQ244YUlUcndoYllCWmRESGlUR0IxSW4KU0lORktOcmdqZ25idHdqQnNTVGkvQ0Q5dDFGbjRBaTN0VE9nZXlLYWgzeU0rTzRTR282UVp3eUpBb0dCQUlDMgp0U2d1MHJHakNQeVNqaDNnc0hHREYzeVlNdWRScmd4Y2kyNkdQbU8rK3kyTndSWFNwVVd3SUlLQTRWT2c4ZjhKCkNaUjRtR05EalJpa0JDQVlVNEkyOXlpRkh2bWR2WExFeXdNdGNBRmJucy9KaVh4SDFQNVIrdDVyeHRWcC9MK24Ka1kwdGxzT2dQcEZzRE5TM1VxRUNhOHAwdUF3Yk9CbHozVUJ5aDNsQkFvR0FIUkZnZFN1ZFhaWWZuR2svZ2dHNQpGbGVENHhudGp1aS9OYWRoaUQrVVprWXRMNFNFY2s2MUYxMUtSVGo5U1JEbWtCNWFQNEtRUlg5ajliQ09uTmFUCkJKWXozVVpXM3kwTEEvYmVOd0J1bnN3M0lmcWJoTE5CM2h0WG41RUVLWnF3MzFzVmpOc0lGODdKcVFIWVdNYXcKN1J4RE1XcTVlQ2ZVSTMxd0hFVGlQcWs9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+    "KEY": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2d0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktrd2dnU2xBZ0VBQW9JQkFRRHNmMXJubDd6dllFY04Kbk8vMWhZN0wxUGFKOHdNRS9jYmhjQ1pWOWdVMkVVdjFKY2RqZ1hKNzVZcHZURkRsUWVzS1R2SzJyUzJHSUIxQgpJRDVtblI2MWlnWm5MMlZLY05CUW5tOEE0NDNVMGl5U1B5R1RiT09WS3FMN2Y3VGtxU3RxTzJaK0dIM2p5MlpVCnRkN21kczNzRS9RWmpLdzZRMk1WeEUwWGs3V1VMUURqTFc1SGxlRk5SYjdLUGFkcXhkNm4rOTlGMWJzMktwTy8KRFAyL0dTeHR6R3J0OWpqbkg1Vmc4VU5JbU5VQzBZSmNoY3U4MFUxMExxQk9pa1Y0N0FjR2Q2K3BITjNsdzV6dwp2MWFDdkxYQ1hvWk5nZ0t5eHMwY1BtcE5wOEdGWk9nMHdncm5kUFNpWE80VXdYUG44M2xJUGxQWExjbFVkRzJ2CmNVMUcyMnVMQWdNQkFBRUNnZ0VBUXlSTS9KOFpwcVFneC82Y0tZcEhaaHNKKzFRZ3NWUVRHSUdzZ0k4ZUg2RjkKZlJYQ3E3OWViMHBWcVE5emtBTE01ZHBRRWdqTWVkMjRNSHNrL0NEelRQcm9vbmJVUFBRV1VDMEt1cWZmNW1IZApBWkFteWlJSjRwbCtPQVNqcUo5V2tneFhKc2x4UkRERTFwdmpzbTVjTy8vV04wSzJ5cnZDNzdVUlpmWXJnT3RTCklkcUp4T3IrRkx2SEUrOUFvVGQ0RzZuN2h4bTdubUxGTkxRdkFVZ3VwRkhCUWJCODhwRTUyWDRETkpBcHU5SGoKRlRyTFBTZWNaV3RhaUhMN1ZtNmhSZURpcWpzUXRlUEduM1dvMVJSR1VlU3JIeGdudDhHQTNMTWRObWo0WXo5QQpqYnRlSjBnNzFURmtiK3NkZndiVy82VGhzN056QlNzejAzbkhjSmJSMFFLQmdRRCtLK3RnMkRSTkhaNWhIcmtqCjB1c05UdkFjSUEzTXhTRG5STkhTODdJNDFXVVBPbjdzamtWUGxzSkRkUkRaOGphTHhrQms2bnZGMUJOSWNHZ04KQTJLVmE1ZFNCc3BBUHpUb1Zjd0xRMVFmMHEyQThhclJUQmlOMEpNWWREbDhRMzFJVnJwMmV4OXdFblo5aEJrTwpncmlJUTJWanZSbTJqZHJjaHEvRnlKVVNud0tCZ1FEdU11TWUzSWpjWHFFREI1YWM5VlVCeXB5THJ4UVhZditOCmY5cHErVkE1QkMreDh6cU9wcVRGbWQwbXM0bFROSXlQRTQveEJJcnl5enNnanlubXAvcFRvWUdQQ29KMDZTdjkKeVVKZ2JTZmZJY0s2ZzFiQldWaGE1TEo1d2NwT3FtVkdRVkRPaUVKdXVILzN2alRORGNYOVZ5Qzl5bnNDSG04cwo5UEhydkgxTGxRS0JnUURjNlUxV1NmUURSb2YrZjVhSXhXeFlqOUJ2a1lpTS9wVGZqVmdWVW93SGk2bWZkOGNUClVZQjZjVno5Qm9XVCtFcGlaL2hWL2R1QUVSaUZjSFZ2UWc3d01hZyt1Zm9WcHhvVUNXWWtMK3V4RVFxT05QMnoKbGNFTm1VZ1FEQXhlcmNYNUZyQlFCQ2xKM2pJd1c1enZtTHhNYXM5M3hjYlFmVERKVlNMMjg2Umxud0tCZ1FESgpZSUFmSVRjYmgyejhVTGdHYm1xMW53T0dIRGdTSllJRHNLbUpjc2xkeXFvLytXL3lGZlNMa2k4amZ2bUVQSkx3Cml3dFFLaFVHZXNhOEdnekVraExTRFdLbythdWRCMXhIckpUUFRMaytyUjRoN05PMWxzRlo1cXIwd044MmJsdzgKYncvUDYrYXVFSkV2YzhEVDh1Y0Y3VmtpMjBIdllxZC9ESDVTWEFKWm1RS0JnUUNreTU1d203eHc0Z28wWkRUaQpZWWJCTjVpN0ZNYU9XS0FGbWMyRVBDUmJWYmZBYTFIMW10SEs1UFJzaGJnMGVCU2cvaDFJTFFJSkIzYUJTYlNpCk9mb1ByWStFNkVMZFdRUFZmNE5qN1pRMDRTbHU2ZncwdHNVREZtVEQ0akkrTFNNcFg0UTdtejVVYnhDNDJFR3oKZkhFNEZKRVR5Y2I5dW45OGtGaE56L0ozT1E9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==",
     "KEYPASSWORD": "",
     "MAXCONNECTIONSPERCLIENT": 32,
     "MAXHTTPHEADERSIZE": 32768,
@@ -2167,6 +2346,23 @@
             },
             "USEMAPPING": true
         },
+        "ADS.PLC1.GVL_Log.aRecent": {
+            "ACCESS": 1,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_Log::aRecent",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "comment": "Newest-first mirror of the last 20 entries. F_LogEvent shifts the\r\n slots down and writes aRecent[0] on every accepted call, so the HMI\r\n Logs page can bind aRecent[0..19] directly in display order.\r\n aRecent[0] is the newest entry."
+                    },
+                    {
+                        "$ref": "tchmi:server#/definitions/ADS-PLC1.ARRAY_0..19_OF-ST_LogEntry"
+                    }
+                ]
+            },
+            "USEMAPPING": true
+        },
         "ADS.PLC1.GVL_Log.bDebugMode": {
             "ACCESS": 3,
             "DOMAIN": "ADS",
@@ -2179,6 +2375,57 @@
                     },
                     {
                         "comment": "Runtime toggle for DEBUG severity. F_LogEvent drops DBG entries\r\n when this is FALSE. Operator can flip it from the HMI without a\r\n rebuild. HMI ToggleSwitch on the Robot page binds here."
+                    }
+                ]
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_Log.bLogEnabled": {
+            "ACCESS": 3,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_Log::bLogEnabled",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "$ref": "tchmi:general#/definitions/BOOL"
+                    },
+                    {
+                        "comment": "Global mute for PLC-side logging. When FALSE, F_LogEvent early-returns\r\n without writing to aLog or aRecent. HMI Logs page binds this."
+                    }
+                ]
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_Log.nWriteIdx": {
+            "ACCESS": 1,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_Log::nWriteIdx",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "$ref": "tchmi:general#/definitions/UDINT"
+                    },
+                    {
+                        "comment": "Monotonic write counter (never wraps in practice — UDINT overflows\r\n after 2^32 writes ≈ 4.3 billion, decades even at 1 kHz logging)."
+                    }
+                ]
+            },
+            "USEMAPPING": true
+        },
+        "ADS.PLC1.GVL_Log.stBridgeCfg": {
+            "ACCESS": 1,
+            "DOMAIN": "ADS",
+            "DYNAMIC": true,
+            "MAPPING": "PLC1::GVL_Log::stBridgeCfg",
+            "SCHEMA": {
+                "allOf": [
+                    {
+                        "comment": "RobotBridge writes this once on startup so the HMI can show the\r\n Python-side logger configuration (log dir, level, retention, poll\r\n rate). Read-only from HMI perspective — to change, edit config.yaml\r\n and restart the bridge."
+                    },
+                    {
+                        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_LogBridgeCfg"
                     }
                 ]
             },
@@ -5218,7 +5465,11 @@
                 "ADS.PLC1.GVL_HmiPersistent.stSepSol1AutoCfg": 3,
                 "ADS.PLC1.GVL_HmiPersistent.stSepSol2AutoCfg": 3,
                 "ADS.PLC1.GVL_HmiPersistent.stSepSol3AutoCfg": 3,
+                "ADS.PLC1.GVL_Log.aRecent": 1,
                 "ADS.PLC1.GVL_Log.bDebugMode": 3,
+                "ADS.PLC1.GVL_Log.bLogEnabled": 3,
+                "ADS.PLC1.GVL_Log.nWriteIdx": 1,
+                "ADS.PLC1.GVL_Log.stBridgeCfg": 1,
                 "ADS.PLC1.GVL_Robot.stRobot": 3,
                 "ChangeUserSettings": 3,
                 "ConfirmAlarm": 3,

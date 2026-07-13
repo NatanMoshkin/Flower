@@ -1,0 +1,24 @@
+{
+  "parameters": [
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setCfg",
+      "propertyGetterName": "getCfg",
+      "refTo": "",
+      "name": "data-tchmi-cfg",
+      "displayName": "cfg",
+      "visible": true,
+      "type": "tchmi:project#/definitions/PLC1.ST_LogBridgeCfg",
+      "category": "",
+      "description": "RobotBridge logging config (log dir, level, retention, poll ms). Bind to GVL_Log.stBridgeCfg.",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "cfg"
+    }
+  ],
+  "virtualRights": [],
+  "$schema": "./../../Packages/Beckhoff.TwinCAT.HMI.Framework.14.4.5/runtimes/native1.12-tchmi/Schema/UserControlConfig.Schema.json",
+  "description": ""
+}

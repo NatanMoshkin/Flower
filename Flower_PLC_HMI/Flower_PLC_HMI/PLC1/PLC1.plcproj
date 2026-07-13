@@ -53,6 +53,9 @@
     <Compile Include="DUTs\ST_HmiRobot.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\ST_LogBridgeCfg.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\ST_LogEntry.TcDUT">
       <SubType>Code</SubType>
     </Compile>

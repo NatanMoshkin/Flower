@@ -1,0 +1,41 @@
+{
+  "parameters": [
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": true,
+      "propertySetterName": "setEntry",
+      "propertyGetterName": "getEntry",
+      "refTo": "",
+      "name": "data-tchmi-entry",
+      "displayName": "entry",
+      "visible": true,
+      "type": "tchmi:project#/definitions/PLC1.ST_LogEntry",
+      "category": "",
+      "description": "One log entry (severity + source + message). Bind to a slot of GVL_Log.aRecent[N].",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "entry"
+    },
+    {
+      "allowSymbolExpressionsInObject": false,
+      "requiredOnCompile": false,
+      "bindable": false,
+      "propertySetterName": "setRowNumber",
+      "propertyGetterName": "getRowNumber",
+      "refTo": "",
+      "name": "data-tchmi-rownumber",
+      "displayName": "rowNumber",
+      "visible": true,
+      "type": "tchmi:general#/definitions/String",
+      "category": "",
+      "description": "Row number displayed in the # column (static, e.g. '1' through '20').",
+      "readOnly": false,
+      "heritable": true,
+      "propertyName": "rowNumber"
+    }
+  ],
+  "virtualRights": [],
+  "$schema": "./../../Packages/Beckhoff.TwinCAT.HMI.Framework.14.4.5/runtimes/native1.12-tchmi/Schema/UserControlConfig.Schema.json",
+  "description": ""
+}
