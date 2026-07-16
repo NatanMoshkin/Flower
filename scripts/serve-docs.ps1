@@ -111,14 +111,21 @@ try {
     Write-Host "  Could not fetch $Url  ($_)" -ForegroundColor Yellow
 }
 
+# Cache-buster: the browser caches http://127.0.0.1:8765/docs/index.html by URL.
+# Two different repos both serve at exactly that URL, so without a busted URL the
+# browser happily reuses a sibling repo's cached page. Appending ?v=<ticks>
+# forces a fresh fetch even when Ctrl+F5 hasn't been pressed since last time.
+$BrowseUrl = "$Url" + "?v=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+
 Write-Host ""
-Write-Host "  Opening $Url" -ForegroundColor Cyan
-Start-Process $Url
+Write-Host "  Opening $BrowseUrl" -ForegroundColor Cyan
+Start-Process $BrowseUrl
 
 Write-Host ""
 Write-Host "  Docs are being served. Ctrl+C in this window to stop." -ForegroundColor Green
 Write-Host "  Server root: $RepoRoot"
 Write-Host "  Index URL:   $Url"
+Write-Host "  (opened as $BrowseUrl to bypass a stale sibling-repo cache)" -ForegroundColor DarkGray
 Write-Host ""
 
 # Keep the parent shell alive so Ctrl+C stops the job (jobs die with the shell).
