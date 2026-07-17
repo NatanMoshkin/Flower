@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_Robot" Id="{2f2957ad-9ce7-4061-8c32-dda5963bc0f5}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'TcHmiSymbol.AddSymbol'}
+VAR_GLOBAL
+    stRobot : ST_HmiRobot := (Name := 'Robot');
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_LogBridgeCfg" Id="{7c9f4f92-6a3a-4d21-9c9c-2b1a1e8f0011}">
+    <Declaration><![CDATA[TYPE ST_LogBridgeCfg :
+STRUCT
+    // Mirror of the RobotBridge / log_pump configuration loaded from
+    // config.yaml. RobotBridge writes these on startup via ADS so the
+    // HMI Logs page can display them as read-only. To change any of
+    // these values, edit config.yaml and restart the bridge.
+
+    sLogDir            : STRING(80);    // e.g. './logs' resolved to absolute
+    sLogLevel          : STRING(10);    // 'DBG' / 'INFO' / 'WARN' / 'ERR'
+    uiRetentionDays    : UDINT;         // logger.retention_days
+    uiRetentionMB      : UDINT;         // logger.retention_mb
+    uiPollMs           : UDINT;         // logger.plc_ring_poll_ms
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

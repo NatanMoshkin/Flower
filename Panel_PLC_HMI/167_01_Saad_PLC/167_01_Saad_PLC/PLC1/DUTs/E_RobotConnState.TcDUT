@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_RobotConnState" Id="{e9c6ad09-80e9-480d-8980-71effb9fe89c}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_RobotConnState :
+(
+    Disconnected := 0,
+    Connecting   := 1,
+    Connected    := 2,
+    Error        := 3
+) ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

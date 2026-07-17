@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_LogEntry" Id="{b5d2e891-cba4-4d5a-ae24-4a96cbe70dde}">
+    <Declaration><![CDATA[TYPE ST_LogEntry :
+STRUCT
+    // Deliberately no timestamp field — Python assigns wall-clock time when it
+    // drains the ring. Trade-off: entries arrive up to plc_ring_poll_ms late in
+    // the CSV. Acceptable for state-transition / error logs; if sub-millisecond
+    // precision matters for a future event type, add nTick : UDINT.
+
+    eSev    : E_LogSev;
+    sSource : STRING(20);    // short instance name, e.g. 'SepSol1Auto'
+    sMsg    : STRING(80);    // human-readable message
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

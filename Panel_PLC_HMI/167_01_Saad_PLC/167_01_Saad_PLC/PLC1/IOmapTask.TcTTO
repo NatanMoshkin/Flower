@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <Task Name="IOmapTask" Id="{d6f96f78-5212-4659-a5f8-62cde4fb59ed}">
+    <!--CycleTime in micro seconds.-->
+    <CycleTime>5000</CycleTime>
+    <Priority>15</Priority>
+    <PouCall>
+      <Name>PRG_IoMap</Name>
+    </PouCall>
+    <TaskFBGuid>{bcb2af0d-bc28-466f-a08a-0c47d88f05d8}</TaskFBGuid>
+    <Fb_init>{e163e0df-57fb-4a0d-a268-d19fa2b35628}</Fb_init>
+    <Fb_exit>{1ae9c028-f0a0-4449-b8c7-5cad1878bf3c}</Fb_exit>
+    <CycleUpdate>{cc14ccf4-5eab-4aed-9db7-86aad03bf260}</CycleUpdate>
+    <PostCycleUpdate>{258aa789-b36d-4373-bd45-8fccf39b723a}</PostCycleUpdate>
+  </Task>
+</TcPlcObject>

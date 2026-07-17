@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="PRG_IoMap" Id="{d3ccb63a-105a-48ed-83cb-e0b3577518bb}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_IoMap
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ReadInputs();
+WriteOutputs();
+
+]]></ST>
+    </Implementation>
+    <Action Name="ReadInputs" Id="{f82895bb-0ca3-4c7d-b548-b9f92e196159}">
+      <Implementation>
+        <ST><![CDATA[(* ==========================================
+   READ INPUTS — copy raw GVL_IO.dIn[] channels into named GVL_App aliases.
+   Each SOL-Spring actuator has both a Retracted and an Extended proximity
+   switch (spring retracts, coil extends; both end positions get sensors).
+   DI layout:
+     dIn[1..2]   = SepSol1 (Retract, Extend)
+     dIn[3..4]   = SepSol2 (Retract, Extend)
+     dIn[5..6]   = SepSol3 (Retract, Extend)
+     dIn[7..8]   = PushSol1 (Retract, Extend)
+     dIn[9..10]  = PushSol2 (Retract, Extend)
+     dIn[11..12] = PushSol3 (Retract, Extend)
+     dIn[13]     = Robot STAND_SEQ_DO (robot DO 2) -> bStartAssembly
+     dIn[14..16] = free
+   ========================================== *)
+GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
+GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
+GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[3];
+GVL_App.bSensorSepExtended2   := GVL_IO.dIn[4];
+GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[5];
+GVL_App.bSensorSepExtended3   := GVL_IO.dIn[6];
+GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[7];
+GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
+GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[9];
+GVL_App.bSensorPushExtended2  := GVL_IO.dIn[10];
+GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[11];
+GVL_App.bSensorPushExtended3  := GVL_IO.dIn[12];
+
+(* Robot handshake — FROM robot: STAND_SEQ_DO (robot DO 2) -> PLC DI 13.
+   Level signal; rising edge in IDLE triggers a cycle in FB_MasterAutoCycle. *)
+GVL_Robot.stRobot.bStartAssembly := GVL_IO.dIn[13];]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="WriteOutputs" Id="{d4911134-0871-485c-a76f-89221ed9b4ed}">
+      <Implementation>
+        <ST><![CDATA[(* ==========================================
+   WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels.
+   Single Extend coil per actuator (SOL-Spring, spring retracts).
+   DO layout:
+     dOut[1..3]  = SepSol1..3 Extend coils
+     dOut[4..6]  = PushSol1..3 Extend coils
+     dOut[7]     = PLC -> Robot STAND_SEQ_DI (robot DI 1) = bAssemblyRunning
+     dOut[8..16] = free
+   ========================================== *)
+GVL_IO.dOut[1] := GVL_App.bValveSepExtend1;
+GVL_IO.dOut[2] := GVL_App.bValveSepExtend2;
+GVL_IO.dOut[3] := GVL_App.bValveSepExtend3;
+GVL_IO.dOut[4] := GVL_App.bValvePushExtend1;
+GVL_IO.dOut[5] := GVL_App.bValvePushExtend2;
+GVL_IO.dOut[6] := GVL_App.bValvePushExtend3;
+
+(* Robot handshake — TO robot: PLC DO 7 -> STAND_SEQ_DI (robot DI 1).
+   Level; TRUE in every non-IDLE FB_MasterAutoCycle state (including ERR).
+   The Dobot polls this line for FALSE ("assembler finished"). *)
+GVL_IO.dOut[7] := GVL_Robot.stRobot.bAssemblyRunning;
+]]></ST>
+      </Implementation>
+    </Action>
+  </POU>
+</TcPlcObject>

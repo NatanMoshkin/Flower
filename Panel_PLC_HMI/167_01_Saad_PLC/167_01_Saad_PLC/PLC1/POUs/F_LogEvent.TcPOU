@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="F_LogEvent" Id="{1b768838-9216-4ff9-ba10-882311e2c1d0}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+    Push one entry into the GVL_Log ring buffer.
+
+    Callable from any scan without side effects on control logic. DEBUG entries
+    are dropped when GVL_Log.bDebugMode = FALSE, so leaving DBG calls in
+    production code costs nothing.
+
+    Returns TRUE if the entry was recorded, FALSE if dropped by the debug filter.
+*)
+FUNCTION F_LogEvent : BOOL
+VAR_INPUT
+    eSev    : E_LogSev;
+    sSource : STRING(20);
+    sMsg    : STRING(80);
+END_VAR
+VAR
+    idx : UDINT;
+    k   : INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Global mute — operator can disable ALL PLC logging from the HMI. When
+// FALSE, we drop the event silently; the ring buffer and aRecent mirror
+// are not touched so the last-known state stays visible.
+IF NOT GVL_Log.bLogEnabled THEN
+    F_LogEvent := FALSE;
+    RETURN;
+END_IF
+
+// Debug filter — drop DBG severity when debug mode is off
+IF (eSev = E_LogSev.DBG) AND NOT GVL_Log.bDebugMode THEN
+    F_LogEvent := FALSE;
+    RETURN;
+END_IF
+
+// Write into the ring at slot = nWriteIdx MOD 256
+idx := GVL_Log.nWriteIdx MOD 256;
+GVL_Log.aLog[idx].eSev    := eSev;
+GVL_Log.aLog[idx].sSource := sSource;
+GVL_Log.aLog[idx].sMsg    := sMsg;
+
+// Shift the newest-first mirror down by one and write the new entry at
+// [0]. HMI Logs page binds aRecent[0..19] directly in display order.
+FOR k := 19 TO 1 BY -1 DO
+    GVL_Log.aRecent[k] := GVL_Log.aRecent[k-1];
+END_FOR
+GVL_Log.aRecent[0].eSev    := eSev;
+GVL_Log.aRecent[0].sSource := sSource;
+GVL_Log.aRecent[0].sMsg    := sMsg;
+
+// Increment the monotonic write counter — Python bridge polls this and
+// drains any slots between its lastReadIdx and this value.
+GVL_Log.nWriteIdx := GVL_Log.nWriteIdx + 1;
+
+F_LogEvent := TRUE;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

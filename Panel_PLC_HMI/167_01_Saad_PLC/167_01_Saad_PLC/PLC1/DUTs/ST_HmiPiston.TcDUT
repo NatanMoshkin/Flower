@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiPiston" Id="{47a87a82-30d0-44de-a259-78f845b13844}">
+    <Declaration><![CDATA[TYPE ST_HmiPiston :
+STRUCT
+    // Display label ("Piston 1", "Ejector", ...). Set from GVL_HMI, never written by FB.
+    Name               : STRING(30);
+
+    // HMI writes — mode
+    eMode              : E_ControlMode;
+	bMode				: BOOL; // to be able to control from the VISU old HMI
+
+    // HMI writes — latched command targets (momentary press, rising edge selects)
+    bManCmdExtend      : BOOL;
+    bManCmdRetract     : BOOL;
+
+    // HMI writes — jog while held (TRUE while operator holds the JOG button)
+    bManJogExtend      : BOOL;
+    bManJogRetract     : BOOL;
+
+    // HMI writes — simulate sensor inputs (OR-merged with real). Future Sim checkbox hook.
+    bSimulateExtended  : BOOL;
+    bSimulateRetracted : BOOL;
+
+    // HMI reads (FB writes) — latched-target highlight
+    bSelectedExtend    : BOOL;
+    bSelectedRetract   : BOOL;
+
+    // HMI reads (FB writes) — effective sensor = real OR simulate
+    bIsExtended        : BOOL;
+    bIsRetracted       : BOOL;
+    bIsMoving          : BOOL;
+
+    // HMI reads — physical solenoid coil states (FB mirrors them every cycle)
+    bOutSolenoidExtend  : BOOL;
+    bOutSolenoidRetract : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

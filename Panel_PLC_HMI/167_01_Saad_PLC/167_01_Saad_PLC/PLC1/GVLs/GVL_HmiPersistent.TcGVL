@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_HmiPersistent" Id="{b07a24e8-6d3b-41c2-8231-18ba1665c737}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'TcHmiSymbol.AddSymbol'}
+VAR_GLOBAL PERSISTENT
+    // Auto-cycle configuration. PERSISTENT so operator-tuned dwell / timeout
+    // values survive an Activate Configuration + PLC restart. Values reset
+    // to the struct defaults only on a full cold-boot reset.
+    stSepSol1AutoCfg  : ST_HmiPistonAutoCfg;
+    stSepSol2AutoCfg  : ST_HmiPistonAutoCfg;
+    stSepSol3AutoCfg  : ST_HmiPistonAutoCfg;
+    stPushSol1AutoCfg : ST_HmiPistonAutoCfg;
+    stPushSol2AutoCfg : ST_HmiPistonAutoCfg;
+    stPushSol3AutoCfg : ST_HmiPistonAutoCfg;
+
+    // Config for the master (multi-piston + robot-coordinated) auto sequence.
+    // See ST_HmiMasterAutoCfg for the tunable list; defaults land on cold-boot.
+    stMasterAutoCfg   : ST_HmiMasterAutoCfg;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

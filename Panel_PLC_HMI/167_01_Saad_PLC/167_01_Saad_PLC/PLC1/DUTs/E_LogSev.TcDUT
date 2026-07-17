@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_LogSev" Id="{06c26114-c0db-4bdf-9b2c-1c5d7487b400}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_LogSev :
+(
+    DBG   := 0,   // dropped by F_LogEvent when GVL_Log.bDebugMode = FALSE
+    INFO  := 1,
+    WARN  := 2,
+    ERR   := 3
+) ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

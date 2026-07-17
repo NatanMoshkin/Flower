@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiPistonAuto" Id="{5d819c62-3cf6-4a70-a41f-716a92f450b6}">
+    <Declaration><![CDATA[TYPE ST_HmiPistonAuto :
+STRUCT
+    // HMI writes — momentary commands (R_TRIG inside FB latches the rising edge)
+    bStart : BOOL;
+    bStop  : BOOL;
+    bReset : BOOL;
+    bAck   : BOOL;
+
+    // FB writes — status (never touched by HMI)
+    eStep            : E_AutoStep;
+    sStepText        : STRING(20);   // human-readable mirror of eStep
+    tElapsedS        : LREAL;        // seconds spent in the current step (0.0 on transition)
+    bError           : BOOL;
+    sErrorText       : STRING(80);
+    nCyclesCompleted : UDINT;        // incremented at end of each DWELL_RET
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

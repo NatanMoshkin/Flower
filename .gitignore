@@ -375,3 +375,13 @@ RobotBridge/.venv/
 RobotBridge/logs/
 *.pyc
 /temp
+
+### Runtime output ###
+# CSV files written by RobotBridge's DailyCsvHandler at the repo root
+# when the bridge is launched from the repo root instead of RobotBridge/.
+/logs/
+
+### TwinCAT solution-level scratch ###
+# Per-machine PLC image cache — a solution-adjacent blob that TwinCAT
+# rebuilds from the .tsproj + .plcproj on demand. Contains no source.
+*.imgcache

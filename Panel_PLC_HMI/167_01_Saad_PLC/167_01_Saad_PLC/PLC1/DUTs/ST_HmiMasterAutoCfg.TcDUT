@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiMasterAutoCfg" Id="{82e16909-a8ed-4355-8491-bced6b308e5c}">
+    <Declaration><![CDATA[TYPE ST_HmiMasterAutoCfg :
+STRUCT
+    // Timers, milliseconds. UDINT so HMI NumericInput binds directly.
+    tDwellPushMs            : UDINT := 2000;   // DWELL_PUSH -- hold at push-extended
+    tPushRetractedDwellMs   : UDINT := 500;    // PUSH_RETRACTED_DWELL -- hold after push retract
+    tSepRetractedDwellMs    : UDINT := 500;    // SEP_RETRACTED_DWELL -- hold after sep retract before IDLE
+
+    // Timeout guards every non-DWELL waiting state. On expiry, iErrorCode is
+    // set to the step's numeric code and the cycle enters ERR.
+    tStepTimeoutMs          : UDINT := 10000;
+
+    // If TRUE, the 4 movement states ignore sensor feedback and advance when
+    // tStepTimeoutMs expires — the timeout doubles as the fixed step duration.
+    // No timeout-error path while sensorless. Mirrors ST_HmiPistonAutoCfg.bNoSensors.
+    bNoSensors              : BOOL  := FALSE;
+
+    // While TRUE, IDLE immediately starts the next cycle (no START /
+    // bStartAssembly edge needed). Uncheck to stop after the cycle returns
+    // to IDLE. Cleared by the FB on entry to ERR so a RESET does not
+    // instantly restart motion.
+    bContinuous             : BOOL  := FALSE;
+
+    // If TRUE, MAIN forces all six pistons into Automatic mode while the
+    // master cycle is running, so bAutoCmd* reach the coil. If FALSE
+    // (default), pistons already in Manual are skipped — only pistons the
+    // operator explicitly put into Automatic participate.
+    bForceAllAuto           : BOOL  := FALSE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

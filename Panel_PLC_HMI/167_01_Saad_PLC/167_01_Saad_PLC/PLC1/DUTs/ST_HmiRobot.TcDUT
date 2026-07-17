@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiRobot" Id="{527dd88d-da12-40b1-8b68-95016637935a}">
+    <Declaration><![CDATA[TYPE ST_HmiRobot :
+STRUCT
+    // Display label ('Robot'). Set from GVL_Robot, never written by bridge.
+    Name           : STRING(30);
+
+    // ------------------------------------------------------------------
+    // Active interface — discrete-IO handshake (2026-07-10)
+    // See docs/robot-integration-options.md (Option 1). Replaces the former
+    // TCP protocol (POS1/POS2/POS3 + AUTO_STARTED/PUSH_DONE/PISTONS_ERROR).
+    // The Dobot side uses STAND_SEQ_DO (robot -> PLC) and STAND_SEQ_DI
+    // (PLC -> robot); see global.lua in ..\167-01-Saad.
+    // ------------------------------------------------------------------
+
+    // FROM robot: level driven by robot's STAND_SEQ_DO (robot DO 2).
+    // FB_MasterAutoCycle triggers on rising edge in IDLE.
+    bStartAssembly    : BOOL;
+
+    // TO robot: level driving robot's STAND_SEQ_DI (robot DI 1).
+    // FB_MasterAutoCycle sets TRUE in every non-IDLE state (including ERR
+    // so the robot times out on PLC error) and FALSE in IDLE. The robot's
+    // src0.lua polls for OFF as "assembler finished".
+    bAssemblyRunning  : BOOL;
+
+    // ------------------------------------------------------------------
+    // Deprecated — kept for HMI-page binding compat until the Robot page
+    // is migrated to the discrete-IO interface. Not read/written by
+    // FB_MasterAutoCycle anymore. Can be deleted once the HMI is updated.
+    // ------------------------------------------------------------------
+    eConnState     : E_RobotConnState;
+    sConnStateText : STRING(20);
+    bAtPos1        : BOOL;
+    bAtPos2        : BOOL;
+    bAtPos3        : BOOL;
+    nPacketsRx     : UDINT;
+    sLastMessage   : STRING(80);
+    bTxAutoStarted  : BOOL;
+    bTxPushDone     : BOOL;
+    bTxPistonsError : BOOL;
+    bRxResetError   : BOOL;
+    nPacketsTx      : UDINT;
+    sLastTxMessage  : STRING(80);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

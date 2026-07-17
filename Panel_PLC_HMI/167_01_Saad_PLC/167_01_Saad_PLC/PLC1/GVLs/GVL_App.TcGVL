@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_App" Id="{f7ee3213-c403-4290-aff3-682ca99b3920}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+// Cooked IO aliases. Bound to the raw GVL_IO.dIn[i]/dOut[i] hardware arrays
+// in MAIN's read-inputs / write-outputs bookends. No AT %*: these are plain
+// BOOLs the FBs consume — the actual hardware wiring lives in GVL_IO.
+//
+// Tag convention: <Device>Sol<N>  = single EXTEND coil (SOL-Spring).
+// The mechanical spring returns the actuator when the coil is de-energised,
+// so no per-actuator Retract alias exists. DI still has a Retracted sensor.
+//
+//   SepSolN : Pin separator N   (DI 1..2 assigned for N=1; DI TBD for N=2,3)
+//   PushSolN: Pin push N        (DI 7..8 assigned for N=1; DI TBD for N=2,3)
+//
+// DO layout (fully assigned):
+//   dOut[1..3] = SepSolN Extend
+//   dOut[4..6] = PushSolN Extend
+//   dOut[7..8] = free (available for reuse after SOL-Spring migration)
+VAR_GLOBAL
+    // SepSol1 (Pin separator 1) — DI 1..2, DO 1
+    bSensorSepRetracted1  : BOOL;
+    bSensorSepExtended1   : BOOL;
+    bValveSepExtend1      : BOOL;
+
+    // SepSol2 (Pin separator 2) — DI TBD, DO 2
+    bSensorSepRetracted2  : BOOL;
+    bSensorSepExtended2   : BOOL;
+    bValveSepExtend2      : BOOL;
+
+    // SepSol3 (Pin separator 3) — DI TBD, DO 3
+    bSensorSepRetracted3  : BOOL;
+    bSensorSepExtended3   : BOOL;
+    bValveSepExtend3      : BOOL;
+
+    // PushSol1 (Pin push 1) — DI 7..8, DO 4
+    bSensorPushRetracted1 : BOOL;
+    bSensorPushExtended1  : BOOL;
+    bValvePushExtend1     : BOOL;
+
+    // PushSol2 (Pin push 2) — DI TBD, DO 5
+    bSensorPushRetracted2 : BOOL;
+    bSensorPushExtended2  : BOOL;
+    bValvePushExtend2     : BOOL;
+
+    // PushSol3 (Pin push 3) — DI TBD, DO 6
+    bSensorPushRetracted3 : BOOL;
+    bSensorPushExtended3  : BOOL;
+    bValvePushExtend3     : BOOL;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

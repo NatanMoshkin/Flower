@@ -1,0 +1,184 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+    fbSepSol1  : FB_SolSpringPiston_2Pos;
+    fbSepSol2  : FB_SolSpringPiston_2Pos;
+    fbSepSol3  : FB_SolSpringPiston_2Pos;
+    fbPushSol1 : FB_SolSpringPiston_2Pos;
+    fbPushSol2 : FB_SolSpringPiston_2Pos;
+    fbPushSol3 : FB_SolSpringPiston_2Pos;
+
+    // Per-piston auto-cycle sequencers. Each drives one piston's
+    // bAutoCmdExtend / bAutoCmdRetract via its bCmdExtend / bCmdRetract,
+    // OR-merged with fbMasterAutoCycle's output at each piston call site.
+    fbSepSol1Auto  : FB_PistonAutoCycle;
+    fbSepSol2Auto  : FB_PistonAutoCycle;
+    fbSepSol3Auto  : FB_PistonAutoCycle;
+    fbPushSol1Auto : FB_PistonAutoCycle;
+    fbPushSol2Auto : FB_PistonAutoCycle;
+    fbPushSol3Auto : FB_PistonAutoCycle;
+
+    // Full-machine sequencer coordinating the 3 pairs of (SepSolN,
+    // PushSolN) plus the robot handshake. Its command outputs
+    // OR-merge with the per-piston auto FBs at each piston call site.
+    fbMasterAutoCycle : FB_MasterAutoCycle;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* ==========================================
+   Master auto-cycle — coordinates the 3 pairs of (Sep,Push) pistons
+   with the robot handshake. Called BEFORE the per-piston
+   auto FBs and BEFORE the piston FBs so its bSepCmd* / bPushCmd*
+   outputs feed forward this scan.
+   Master reads bIs* from the piston stHmi structs — those carry the
+   previous scan's values (100 µs lag, negligible for a physical
+   machine).
+   ========================================== *)
+fbMasterAutoCycle.bSepIsExtended[1]   := GVL_HMI.stSepSol1.bIsExtended;
+fbMasterAutoCycle.bSepIsExtended[2]   := GVL_HMI.stSepSol2.bIsExtended;
+fbMasterAutoCycle.bSepIsExtended[3]   := GVL_HMI.stSepSol3.bIsExtended;
+fbMasterAutoCycle.bSepIsRetracted[1]  := GVL_HMI.stSepSol1.bIsRetracted;
+fbMasterAutoCycle.bSepIsRetracted[2]  := GVL_HMI.stSepSol2.bIsRetracted;
+fbMasterAutoCycle.bSepIsRetracted[3]  := GVL_HMI.stSepSol3.bIsRetracted;
+fbMasterAutoCycle.bPushIsExtended[1]  := GVL_HMI.stPushSol1.bIsExtended;
+fbMasterAutoCycle.bPushIsExtended[2]  := GVL_HMI.stPushSol2.bIsExtended;
+fbMasterAutoCycle.bPushIsExtended[3]  := GVL_HMI.stPushSol3.bIsExtended;
+fbMasterAutoCycle.bPushIsRetracted[1] := GVL_HMI.stPushSol1.bIsRetracted;
+fbMasterAutoCycle.bPushIsRetracted[2] := GVL_HMI.stPushSol2.bIsRetracted;
+fbMasterAutoCycle.bPushIsRetracted[3] := GVL_HMI.stPushSol3.bIsRetracted;
+fbMasterAutoCycle(
+    bStartAssembly := GVL_Robot.stRobot.bStartAssembly,
+    stHmi          := GVL_HMI.stMasterAuto,
+    stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
+    stRobot        := GVL_Robot.stRobot
+);
+
+(* Optional "Put all to Auto" mode: while the master cycle is running,
+   force all six pistons into Automatic so bAutoCmd* reaches the coil.
+   Gated by stMasterAutoCfg.bForceAllAuto — when FALSE (default), only
+   pistons the operator explicitly put into Automatic participate in the
+   master cycle. On IDLE / ERR this block does nothing, regardless of
+   the flag. *)
+IF fbMasterAutoCycle.bAnyRunning AND GVL_HmiPersistent.stMasterAutoCfg.bForceAllAuto THEN
+    GVL_HMI.stSepSol1.eMode  := E_ControlMode.Automatic;
+    GVL_HMI.stPushSol1.eMode := E_ControlMode.Automatic;
+    GVL_HMI.stSepSol2.eMode  := E_ControlMode.Automatic;
+    GVL_HMI.stPushSol2.eMode := E_ControlMode.Automatic;
+    GVL_HMI.stSepSol3.eMode  := E_ControlMode.Automatic;
+    GVL_HMI.stPushSol3.eMode := E_ControlMode.Automatic;
+END_IF;
+
+(* ==========================================
+   Pin separators (SOL-Spring, 2 limit switches, single Extend coil).
+   SepSol1 and PushSol1 are driven by their own FB_PistonAutoCycle
+   instances (called first so their outputs feed the piston FB this
+   cycle). All six pistons OR-merge with fbMasterAutoCycle's outputs
+   so the master sequence can command any/all of them in parallel.
+   ========================================== *)
+fbSepSol1Auto(
+    sName        := 'SepSol1Auto',
+    stHmi        := GVL_HMI.stSepSol1,
+    stAuto       := GVL_HMI.stSepSol1Auto,
+    stCfg        := GVL_HmiPersistent.stSepSol1AutoCfg
+    // bCmdExtend / bCmdRetract wired inline in the fbSepSol1 call below
+);
+
+fbSepSol1(
+    bAutoCmdExtend   := fbSepSol1Auto.bCmdExtend  OR fbMasterAutoCycle.bSepCmdExtend[1],
+    bAutoCmdRetract  := fbSepSol1Auto.bCmdRetract OR fbMasterAutoCycle.bSepCmdRetract[1],
+    bSwitchExtended  := GVL_App.bSensorSepExtended1,
+    bSwitchRetracted := GVL_App.bSensorSepRetracted1,
+    stHmi            := GVL_HMI.stSepSol1,
+    bOutSolenoid     => GVL_App.bValveSepExtend1
+);
+
+fbSepSol2Auto(
+    sName        := 'SepSol2Auto',
+    stHmi        := GVL_HMI.stSepSol2,
+    stAuto       := GVL_HMI.stSepSol2Auto,
+    stCfg        := GVL_HmiPersistent.stSepSol2AutoCfg
+);
+
+fbSepSol2(
+    bAutoCmdExtend   := fbSepSol2Auto.bCmdExtend  OR fbMasterAutoCycle.bSepCmdExtend[2],
+    bAutoCmdRetract  := fbSepSol2Auto.bCmdRetract OR fbMasterAutoCycle.bSepCmdRetract[2],
+    bSwitchExtended  := GVL_App.bSensorSepExtended2,
+    bSwitchRetracted := GVL_App.bSensorSepRetracted2,
+    stHmi            := GVL_HMI.stSepSol2,
+    bOutSolenoid     => GVL_App.bValveSepExtend2
+);
+
+fbSepSol3Auto(
+    sName        := 'SepSol3Auto',
+    stHmi        := GVL_HMI.stSepSol3,
+    stAuto       := GVL_HMI.stSepSol3Auto,
+    stCfg        := GVL_HmiPersistent.stSepSol3AutoCfg
+);
+
+fbSepSol3(
+    bAutoCmdExtend   := fbSepSol3Auto.bCmdExtend  OR fbMasterAutoCycle.bSepCmdExtend[3],
+    bAutoCmdRetract  := fbSepSol3Auto.bCmdRetract OR fbMasterAutoCycle.bSepCmdRetract[3],
+    bSwitchExtended  := GVL_App.bSensorSepExtended3,
+    bSwitchRetracted := GVL_App.bSensorSepRetracted3,
+    stHmi            := GVL_HMI.stSepSol3,
+    bOutSolenoid     => GVL_App.bValveSepExtend3
+);
+
+(* ==========================================
+   Pin pushers
+   ========================================== *)
+fbPushSol1Auto(
+    sName        := 'PushSol1Auto',
+    stHmi        := GVL_HMI.stPushSol1,
+    stAuto       := GVL_HMI.stPushSol1Auto,
+    stCfg        := GVL_HmiPersistent.stPushSol1AutoCfg
+    // bCmdExtend / bCmdRetract wired inline in the fbPushSol1 call below
+);
+
+fbPushSol1(
+    bAutoCmdExtend   := fbPushSol1Auto.bCmdExtend  OR fbMasterAutoCycle.bPushCmdExtend[1],
+    bAutoCmdRetract  := fbPushSol1Auto.bCmdRetract OR fbMasterAutoCycle.bPushCmdRetract[1],
+    bSwitchExtended  := GVL_App.bSensorPushExtended1,
+    bSwitchRetracted := GVL_App.bSensorPushRetracted1,
+    stHmi            := GVL_HMI.stPushSol1,
+    bOutSolenoid     => GVL_App.bValvePushExtend1
+);
+
+fbPushSol2Auto(
+    sName        := 'PushSol2Auto',
+    stHmi        := GVL_HMI.stPushSol2,
+    stAuto       := GVL_HMI.stPushSol2Auto,
+    stCfg        := GVL_HmiPersistent.stPushSol2AutoCfg
+);
+
+fbPushSol2(
+    bAutoCmdExtend   := fbPushSol2Auto.bCmdExtend  OR fbMasterAutoCycle.bPushCmdExtend[2],
+    bAutoCmdRetract  := fbPushSol2Auto.bCmdRetract OR fbMasterAutoCycle.bPushCmdRetract[2],
+    bSwitchExtended  := GVL_App.bSensorPushExtended2,
+    bSwitchRetracted := GVL_App.bSensorPushRetracted2,
+    stHmi            := GVL_HMI.stPushSol2,
+    bOutSolenoid     => GVL_App.bValvePushExtend2
+);
+
+fbPushSol3Auto(
+    sName        := 'PushSol3Auto',
+    stHmi        := GVL_HMI.stPushSol3,
+    stAuto       := GVL_HMI.stPushSol3Auto,
+    stCfg        := GVL_HmiPersistent.stPushSol3AutoCfg
+);
+
+fbPushSol3(
+    bAutoCmdExtend   := fbPushSol3Auto.bCmdExtend  OR fbMasterAutoCycle.bPushCmdExtend[3],
+    bAutoCmdRetract  := fbPushSol3Auto.bCmdRetract OR fbMasterAutoCycle.bPushCmdRetract[3],
+    bSwitchExtended  := GVL_App.bSensorPushExtended3,
+    bSwitchRetracted := GVL_App.bSensorPushRetracted3,
+    stHmi            := GVL_HMI.stPushSol3,
+    bOutSolenoid     => GVL_App.bValvePushExtend3
+);
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

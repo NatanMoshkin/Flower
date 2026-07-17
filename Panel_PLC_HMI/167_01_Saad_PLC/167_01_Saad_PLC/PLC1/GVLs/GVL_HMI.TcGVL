@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <GVL Name="GVL_HMI" Id="{84707bcf-3378-4833-8d7b-1dd8328a77ca}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'TcHmiSymbol.AddSymbol'}
+VAR_GLOBAL
+    stSepSol1  : ST_HmiPiston := (Name := 'SepSol1');
+    stSepSol2  : ST_HmiPiston := (Name := 'SepSol2');
+    stSepSol3  : ST_HmiPiston := (Name := 'SepSol3');
+    stPushSol1 : ST_HmiPiston := (Name := 'PushSol1');
+    stPushSol2 : ST_HmiPiston := (Name := 'PushSol2');
+    stPushSol3 : ST_HmiPiston := (Name := 'PushSol3');
+
+    // Runtime state for the per-piston auto sequencers. Config for each
+    // lives in the matching stXxxAutoCfg in GVL_HmiPersistent (PERSISTENT).
+    stSepSol1Auto  : ST_HmiPistonAuto;
+    stSepSol2Auto  : ST_HmiPistonAuto;
+    stSepSol3Auto  : ST_HmiPistonAuto;
+    stPushSol1Auto : ST_HmiPistonAuto;
+    stPushSol2Auto : ST_HmiPistonAuto;
+    stPushSol3Auto : ST_HmiPistonAuto;
+
+    // Runtime state for the master (multi-piston + robot-coordinated) auto
+    // sequence. Config for it lives in GVL_HmiPersistent.stMasterAutoCfg.
+    stMasterAuto   : ST_HmiMasterAuto := (Name := 'MasterAuto');
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,172 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_SolSolPiston_2Pos" Id="{1cc505ad-12b3-4ad6-b3e6-2111bf6da3c3}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_SolSolPiston_2Pos
+VAR_INPUT
+    (* Automatic Commands from PLC sequence logic. Wired to FALSE in MAIN until FB_Auto exists. *)
+    bAutoCmdExtend    : BOOL;
+    bAutoCmdRetract   : BOOL;
+
+    (* Physical Feedback (Proximity Switches) *)
+    bSwitchExtended   : BOOL;
+    bSwitchRetracted  : BOOL;
+END_VAR
+
+VAR_IN_OUT
+    (* HMI contract — mode, manual + simulate inputs, latched + sensor status *)
+    stHmi             : ST_HmiPiston;
+END_VAR
+
+VAR_OUTPUT
+    (* Physical Outputs to Solenoids *)
+    bOutSolenoidExtend  : BOOL;
+    bOutSolenoidRetract : BOOL;
+END_VAR
+
+VAR
+    (* Internal Target States *)
+    bTargetExtend     : BOOL;
+    bTargetRetract    : BOOL;
+
+    (* HMI Manual-Button Edge Detection *)
+    fbTrigManExtend   : R_TRIG;
+    fbTrigManRetract  : R_TRIG;
+
+    (* Effective sensor states = real OR HMI simulate. Recomputed every cycle in Section 0a. *)
+    bSwitchExtended_eff  : BOOL;
+    bSwitchRetracted_eff : BOOL;
+
+    (* Previous-cycle snapshots for the mode-field bridge in Section 0b.
+       Classic PLC HMI writes stHmi.bMode (Rotary Switch is boolean-only);
+       web HMI writes stHmi.eMode (enum via ToggleSwitch). This FB is the
+       authoritative reader of eMode, so we sync in whichever direction
+       changed since last cycle. *)
+    bPrevMode : BOOL;
+    ePrevMode : E_ControlMode;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* ==========================================
+   0b. MODE-FIELD BRIDGE — sync bMode <-> eMode
+   The classic PLC HMI (VISUs) writes stHmi.bMode because its Rotary Switch
+   element is boolean-only. The web HMI (Flower_HMI) writes stHmi.eMode via
+   a ToggleSwitch. Rest of this FB reads eMode as the authoritative field,
+   so we mirror bMode into eMode when the classic HMI toggled the switch,
+   and mirror eMode back into bMode when the web HMI (or anyone else) wrote
+   eMode. Edge-triggered — whichever side changed since last cycle wins.
+   Runs BEFORE Section 0 so downstream logic sees a coherent eMode.
+   ========================================== *)
+IF stHmi.bMode <> bPrevMode THEN
+    // Classic VISU changed bMode → propagate to eMode
+    IF stHmi.bMode THEN
+        stHmi.eMode := E_ControlMode.Automatic;
+    ELSE
+        stHmi.eMode := E_ControlMode.Manual;
+    END_IF;
+ELSIF stHmi.eMode <> ePrevMode THEN
+    // Web HMI (or any other writer) changed eMode → propagate to bMode
+    stHmi.bMode := (stHmi.eMode = E_ControlMode.Automatic);
+END_IF;
+
+bPrevMode := stHmi.bMode;
+ePrevMode := stHmi.eMode;
+
+(* ==========================================
+   0a. EFFECTIVE SENSOR INPUTS (real OR HMI simulate)
+   ========================================== *)
+bSwitchExtended_eff  := bSwitchExtended  OR stHmi.bSimulateExtended;
+bSwitchRetracted_eff := bSwitchRetracted OR stHmi.bSimulateRetracted;
+
+(* ==========================================
+   0. HMI MANUAL BUTTON LATCHING (Radio-Button Behavior)
+   ========================================== *)
+fbTrigManExtend(CLK := stHmi.bManCmdExtend);
+fbTrigManRetract(CLK := stHmi.bManCmdRetract);
+
+// Independent IFs (not ELSIF): if multiple edges fire in the same cycle, the last one wins (Retract > Extend).
+IF fbTrigManExtend.Q  THEN stHmi.bSelectedExtend := TRUE;  stHmi.bSelectedRetract := FALSE; END_IF;
+IF fbTrigManRetract.Q THEN stHmi.bSelectedExtend := FALSE; stHmi.bSelectedRetract := TRUE;  END_IF;
+
+IF stHmi.eMode = E_ControlMode.Automatic THEN
+    stHmi.bSelectedExtend := FALSE; stHmi.bSelectedRetract := FALSE;
+END_IF;
+
+(* ==========================================
+   1. MODE SELECTION & COMMAND MAPPING
+   ========================================== *)
+IF stHmi.eMode = E_ControlMode.Automatic THEN
+    bTargetExtend  := bAutoCmdExtend;
+    bTargetRetract := bAutoCmdRetract;
+
+ELSIF stHmi.eMode = E_ControlMode.Manual THEN
+    bTargetExtend  := stHmi.bSelectedExtend;
+    bTargetRetract := stHmi.bSelectedRetract;
+
+ELSE
+    // Safe default: undefined mode → no targets
+    bTargetExtend  := FALSE;
+    bTargetRetract := FALSE;
+END_IF;
+
+(* ==========================================
+   1a. JOG OVERRIDE — clear latched selection while either jog is held
+   ========================================== *)
+// Section 1 above already copied stHmi.bSelected* into bTarget*. The stale
+// bTarget* is harmless because Section 2's jog branches sit ahead of the
+// bTarget* branches in the IF/ELSIF ladder and preempt them.
+IF stHmi.bManJogExtend OR stHmi.bManJogRetract THEN
+    stHmi.bSelectedExtend := FALSE; stHmi.bSelectedRetract := FALSE;
+END_IF;
+
+(* ==========================================
+   1b. TARGET-REACHED RESET — clear bSelected* once the piston arrives
+   ========================================== *)
+IF stHmi.bSelectedExtend  AND bSwitchExtended_eff  THEN stHmi.bSelectedExtend  := FALSE; END_IF;
+IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract := FALSE; END_IF;
+
+(* ==========================================
+   2. SOLENOID CONTROL — Jog takes priority over latched target
+   ========================================== *)
+// Jog branches first, gated by Manual mode. If both jogs are held
+// simultaneously, Retract wins (matching the same-cycle collision rule
+// in Section 0). Each branch still respects the corresponding effective
+// sensor. In Automatic mode the jog branches are skipped entirely so
+// bAutoCmd* controls the piston.
+
+// JOG EXTEND: while held in Manual, drive Extend coil until end sensor
+IF stHmi.bManJogExtend AND NOT bSwitchExtended_eff AND stHmi.eMode = E_ControlMode.Manual THEN
+    bOutSolenoidExtend  := TRUE;
+    bOutSolenoidRetract := FALSE;
+
+// JOG RETRACT: while held in Manual, drive Retract coil until end sensor
+ELSIF stHmi.bManJogRetract AND NOT bSwitchRetracted_eff AND stHmi.eMode = E_ControlMode.Manual THEN
+    bOutSolenoidRetract := TRUE;
+    bOutSolenoidExtend  := FALSE;
+
+// CASE 1: Move to EXTENDED position (latched target)
+ELSIF bTargetExtend AND NOT bSwitchExtended_eff THEN
+    bOutSolenoidExtend  := TRUE;
+    bOutSolenoidRetract := FALSE;
+
+// CASE 2: Move to RETRACTED position (latched target)
+ELSIF bTargetRetract AND NOT bSwitchRetracted_eff THEN
+    bOutSolenoidRetract := TRUE;
+    bOutSolenoidExtend  := FALSE;
+
+// CASE 3: Target reached or no active target → stop both coils
+ELSE
+    bOutSolenoidExtend  := FALSE;
+    bOutSolenoidRetract := FALSE;
+END_IF;
+
+(* ==========================================
+   3. HMI STATUS FEEDBACK
+   ========================================== *)
+stHmi.bIsExtended        := bSwitchExtended_eff;
+stHmi.bIsRetracted       := bSwitchRetracted_eff;
+stHmi.bIsMoving          := bOutSolenoidExtend OR bOutSolenoidRetract;
+stHmi.bOutSolenoidExtend  := bOutSolenoidExtend;
+stHmi.bOutSolenoidRetract := bOutSolenoidRetract;
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
