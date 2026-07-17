@@ -25,7 +25,7 @@
     <HmiCommunicationServerAuthPort>13001</HmiCommunicationServerAuthPort>
     <HmiCommunicationServerPublicPort>3443</HmiCommunicationServerPublicPort>
     <HmiInitial>14.3.870.1</HmiInitial>
-    <HmiRecent>14.3.870.1</HmiRecent>
+    <HmiRecent>14.3.927.1</HmiRecent>
     <HmiServerNodeAdvancedView>False</HmiServerNodeAdvancedView>
   </PropertyGroup>
   <PropertyGroup>
