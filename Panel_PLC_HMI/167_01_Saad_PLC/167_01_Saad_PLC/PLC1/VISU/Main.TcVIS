@@ -265,19 +265,19 @@
                     </o>
                     <o>
                       <v n="Id">1649127785L</v>
-                      <v n="Value">9</v>
+                      <v n="Value">-4</v>
                     </o>
                     <o>
                       <v n="Id">357335551L</v>
-                      <v n="Value">5</v>
+                      <v n="Value">3</v>
                     </o>
                     <o>
                       <v n="Id">2422045748L</v>
-                      <v n="Value">696</v>
+                      <v n="Value">688</v>
                     </o>
                     <o>
                       <v n="Id">2134141914L</v>
-                      <v n="Value">400</v>
+                      <v n="Value">404</v>
                     </o>
                     <o>
                       <v n="Id">394923068L</v>
@@ -379,17 +379,46 @@
                                     <l n="TypeNodeChildren" t="ArrayList" />
                                     <o n="TypeNodeType" t="TypeNodeType">
                                       <v n="TypeClass" t="TypeClass">Reference</v>
-                                      <v n="QualifiedName">"FB_MasterAutoCycle"</v>
-                                      <v n="Name">"FB_MasterAutoCycle"</v>
+                                      <v n="QualifiedName">"ST_HmiMasterAuto"</v>
+                                      <v n="Name">"ST_HmiMasterAuto"</v>
                                     </o>
-                                    <v n="TypeNodeName">"fbMasterAutoCycle"</v>
+                                    <v n="TypeNodeName">"stMasterAutoCycle"</v>
                                     <o n="TypeNodeAttributes" t="TypeNodeAttributes2">
                                       <v n="AttrFlags">0UL</v>
                                       <d n="TypeNodeAttributesData" t="CaseInsensitiveHashtable" />
                                       <v n="ConvDone">true</v>
                                     </o>
                                     <v n="TypeNodeId" t="Int16">255</v>
-                                    <v n="TypeNodeIdLong">753635942L</v>
+                                    <v n="TypeNodeIdLong">2057482477L</v>
+                                    <n n="LibraryId" />
+                                    <n n="DisplayTextId" />
+                                    <n n="DescriptionTextID" />
+                                    <v n="DescriptionUseParent">false</v>
+                                  </o>
+                                  <o>
+                                    <v n="Flags">2L</v>
+                                    <n n="BasicTypeNodeValue" />
+                                    <v n="BasicTypeNodeAcceptsExpression">true</v>
+                                    <n n="BasicTypeNodeFastAccess" />
+                                    <a n="BasicTypeNodeEnumValues" et="String" />
+                                    <n n="EnumValueDisplayTextIds" />
+                                    <n n="EnumValueVisibilityAttributeValues" />
+                                    <n n="EnumValueLibraryId" />
+                                    <n n="DynamicEnumMemberVisibilityCheckerTypeGuid" />
+                                    <l n="TypeNodeChildren" t="ArrayList" />
+                                    <o n="TypeNodeType" t="TypeNodeType">
+                                      <v n="TypeClass" t="TypeClass">Reference</v>
+                                      <v n="QualifiedName">"ST_HmiMasterAutoCfg"</v>
+                                      <v n="Name">"ST_HmiMasterAutoCfg"</v>
+                                    </o>
+                                    <v n="TypeNodeName">"stCfg"</v>
+                                    <o n="TypeNodeAttributes" t="TypeNodeAttributes2">
+                                      <v n="AttrFlags">0UL</v>
+                                      <d n="TypeNodeAttributesData" t="CaseInsensitiveHashtable" />
+                                      <v n="ConvDone">true</v>
+                                    </o>
+                                    <v n="TypeNodeId" t="Int16">256</v>
+                                    <v n="TypeNodeIdLong">1664189041L</v>
                                     <n n="LibraryId" />
                                     <n n="DisplayTextId" />
                                     <n n="DescriptionTextID" />
@@ -546,11 +575,11 @@
                     </o>
                     <o>
                       <v n="Id">550940142L</v>
-                      <v n="Value">356</v>
+                      <v n="Value">340</v>
                     </o>
                     <o>
                       <v n="Id">1473355128L</v>
-                      <v n="Value">205</v>
+                      <v n="Value">204</v>
                     </o>
                     <o>
                       <v n="Id">493260384L</v>
@@ -573,7 +602,7 @@
                         <l n="TypeNodeChildren" t="ArrayList" cet="BasicTypeNode">
                           <o>
                             <v n="Flags">2L</v>
-                            <v n="BasicTypeNodeValue">"MAIN.fbMasterAutoCycle"</v>
+                            <v n="BasicTypeNodeValue">"GVL_HMI.stMasterAuto"</v>
                             <v n="BasicTypeNodeAcceptsExpression">true</v>
                             <n n="BasicTypeNodeFastAccess" />
                             <a n="BasicTypeNodeEnumValues" et="String" />
@@ -584,17 +613,46 @@
                             <l n="TypeNodeChildren" t="ArrayList" />
                             <o n="TypeNodeType" t="TypeNodeType">
                               <v n="TypeClass" t="TypeClass">Reference</v>
-                              <v n="QualifiedName">"FB_MasterAutoCycle"</v>
-                              <v n="Name">"FB_MasterAutoCycle"</v>
+                              <v n="QualifiedName">"ST_HmiMasterAuto"</v>
+                              <v n="Name">"ST_HmiMasterAuto"</v>
                             </o>
-                            <v n="TypeNodeName">"fbMasterAutoCycle"</v>
+                            <v n="TypeNodeName">"stMasterAutoCycle"</v>
                             <o n="TypeNodeAttributes" t="TypeNodeAttributes2">
                               <v n="AttrFlags">0UL</v>
                               <d n="TypeNodeAttributesData" t="CaseInsensitiveHashtable" />
                               <v n="ConvDone">true</v>
                             </o>
                             <v n="TypeNodeId" t="Int16">255</v>
-                            <v n="TypeNodeIdLong">753635942L</v>
+                            <v n="TypeNodeIdLong">2057482477L</v>
+                            <n n="LibraryId" />
+                            <n n="DisplayTextId" />
+                            <n n="DescriptionTextID" />
+                            <v n="DescriptionUseParent">false</v>
+                          </o>
+                          <o>
+                            <v n="Flags">2L</v>
+                            <v n="BasicTypeNodeValue">"GVL_HmiPersistent.stMasterAutoCfg"</v>
+                            <v n="BasicTypeNodeAcceptsExpression">true</v>
+                            <n n="BasicTypeNodeFastAccess" />
+                            <a n="BasicTypeNodeEnumValues" et="String" />
+                            <n n="EnumValueDisplayTextIds" />
+                            <n n="EnumValueVisibilityAttributeValues" />
+                            <n n="EnumValueLibraryId" />
+                            <n n="DynamicEnumMemberVisibilityCheckerTypeGuid" />
+                            <l n="TypeNodeChildren" t="ArrayList" />
+                            <o n="TypeNodeType" t="TypeNodeType">
+                              <v n="TypeClass" t="TypeClass">Reference</v>
+                              <v n="QualifiedName">"ST_HmiMasterAutoCfg"</v>
+                              <v n="Name">"ST_HmiMasterAutoCfg"</v>
+                            </o>
+                            <v n="TypeNodeName">"stCfg"</v>
+                            <o n="TypeNodeAttributes" t="TypeNodeAttributes2">
+                              <v n="AttrFlags">0UL</v>
+                              <d n="TypeNodeAttributesData" t="CaseInsensitiveHashtable" />
+                              <v n="ConvDone">true</v>
+                            </o>
+                            <v n="TypeNodeId" t="Int16">256</v>
+                            <v n="TypeNodeIdLong">1664189041L</v>
                             <n n="LibraryId" />
                             <n n="DisplayTextId" />
                             <n n="DescriptionTextID" />
@@ -632,15 +690,23 @@
                       <v n="Value">true</v>
                     </o>
                     <o>
-                      <v n="Id">753635942L</v>
-                      <v n="Value">"MAIN.fbMasterAutoCycle"</v>
+                      <v n="Id">2057482477L</v>
+                      <v n="Value">"GVL_HMI.stMasterAuto"</v>
+                    </o>
+                    <o>
+                      <v n="Id">1664189041L</v>
+                      <v n="Value">"GVL_HmiPersistent.stMasterAutoCfg"</v>
+                    </o>
+                    <o>
+                      <v n="Id">1013868361L</v>
+                      <v n="Value">false</v>
                     </o>
                   </l>
                 </o>
                 <v n="VisualElementName">"Frame"</v>
                 <v n="VisualElementTypeName">"VisuFbFrame"</v>
                 <v n="VisualElementIsRectangle">true</v>
-                <v n="VisualElementIdentifier">"GenElemInst_3"</v>
+                <v n="VisualElementIdentifier">"GenElemInst_4"</v>
                 <n n="VisualElementOfflinePaintCommands" />
                 <o n="VisualElementFrameInformation" t="VisualFrameInfo">
                   <l n="ContainedGuids" t="ArrayList" />
@@ -650,11 +716,11 @@
                   </a>
                 </o>
                 <d n="VisualElementInputActions" t="Hashtable" />
-                <v n="VisualElementIdentification">{77eb3d4b-4ceb-4d0a-8c1c-518c2aeb51df}</v>
+                <v n="VisualElementIdentification">{090b3a88-c0c1-4a87-8546-bc6773e0eeb2}</v>
                 <v n="VisualElementOwningObjectGuid">{7fac2d1c-350f-4a9f-ac48-46c0699392e3}</v>
                 <a n="LMGuids" et="Guid" />
                 <d n="SubElements" t="Hashtable" />
-                <v n="VisualElementId">0</v>
+                <v n="VisualElementId">4</v>
                 <l n="UserManagementAccessRights" t="ArrayList" />
               </o>
             </l>
@@ -806,7 +872,7 @@
             </o>
             <v n="DialogDut">{a45614f4-2d26-48e1-9bcd-ec8e57c1bf42}</v>
           </o>
-          <v n="LastUsedIdForIdentifier">3</v>
+          <v n="LastUsedIdForIdentifier">4</v>
           <o n="TextDocument" t="TextDocument">
             <a n="TextLines" cet="TextLine">
               <o>

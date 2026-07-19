@@ -23,11 +23,13 @@ STRUCT
     // instantly restart motion.
     bContinuous             : BOOL  := FALSE;
 
-    // If TRUE, MAIN forces all six pistons into Automatic mode while the
-    // master cycle is running, so bAutoCmd* reach the coil. If FALSE
-    // (default), pistons already in Manual are skipped — only pistons the
-    // operator explicitly put into Automatic participate.
-    bForceAllAuto           : BOOL  := FALSE;
+    // Global machine mode — single source of truth for every piston's mode.
+    // BOOL so the classic VISU HMI (boolean-only) binds a checkbox directly,
+    // matching the per-piston bMode convention. FALSE = Manual (operator jogs
+    // each piston; master cycle held in IDLE). TRUE = Automatic (MasterAutoCycle
+    // owns all six pistons). Enforced every scan in MAIN onto each piston's
+    // eMode AND bMode, so there is no per-piston double-control.
+    bAutoMode               : BOOL := FALSE;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

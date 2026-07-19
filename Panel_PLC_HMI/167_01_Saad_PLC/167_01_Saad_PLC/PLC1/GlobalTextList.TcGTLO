@@ -16,6 +16,16 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"1020"</v>
+              <v n="TextDefault">"Auto Main"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1107"</v>
+              <v n="TextDefault">"Auto Mode"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"593"</v>
               <v n="TextDefault">"Auto/Man"</v>
               <l n="LanguageTexts" t="ArrayList" />
@@ -23,6 +33,11 @@
             <o>
               <v n="TextID">"658"</v>
               <v n="TextDefault">"Auto/Manual"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1021"</v>
+              <v n="TextDefault">"Back"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
@@ -46,6 +61,11 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"1106"</v>
+              <v n="TextDefault">"Continuous"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"923"</v>
               <v n="TextDefault">"Main"</v>
               <l n="LanguageTexts" t="ArrayList" />
@@ -66,6 +86,11 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"1105"</v>
+              <v n="TextDefault">"RESET"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"429"</v>
               <v n="TextDefault">"SimEXT"</v>
               <l n="LanguageTexts" t="ArrayList" />
@@ -73,6 +98,16 @@
             <o>
               <v n="TextID">"52"</v>
               <v n="TextDefault">"SimRET"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1103"</v>
+              <v n="TextDefault">"START"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1104"</v>
+              <v n="TextDefault">"STOP"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
           </l>
