@@ -5,6 +5,19 @@
 {attribute 'TcHmiSymbol.AddSymbol'}
 VAR_GLOBAL
     stRobot : ST_HmiRobot := (Name := 'Robot');
+
+    // Robot tuning parameters + request flags, exchanged over TCP:6001 by
+    // FB_RobotTcpClient (parameter/trigger protocol, added alongside the
+    // discrete-I/O start/done handshake in stRobot).
+    stParams : ST_RobotParams;
+
+    // TCP client target. PLC dials the robot's server. Host is set by the
+    // commissioner (robot IP, e.g. '192.168.201.1'); port matches global.lua.
+    sRobotHost : STRING := '192.168.201.1';
+    nRobotPort : UINT := 6001;
+
+    // Master enable for the TCP client. FALSE holds it disconnected.
+    bTcpEnable : BOOL := TRUE;
 END_VAR
 ]]></Declaration>
   </GVL>

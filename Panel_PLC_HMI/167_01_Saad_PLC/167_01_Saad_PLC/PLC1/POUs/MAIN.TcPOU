@@ -16,6 +16,12 @@ VAR
     // (bench-only feature) are removed, so no OR-merge at the call sites.
     fbMasterAutoCycle : FB_MasterAutoCycle;
 
+    // Robot TCP/IP client — parameter/trigger protocol on :6001 (tuning
+    // params + New_Bulb). ADDED ALONGSIDE the discrete-I/O start/done
+    // handshake (GVL_Robot.stRobot.bStartAssembly / bAssemblyRunning),
+    // which stays the safety-critical path. Free Tc2_TcpIp over TF6310.
+    fbRobotTcp : FB_RobotTcpClient;
+
     // Scratch copies of the global machine mode, computed once per scan and
     // fanned out to all six pistons (both eMode and bMode) just below.
     bMachineAuto : BOOL;
@@ -128,6 +134,19 @@ fbPushSol3(
     bSwitchRetracted := GVL_App.bSensorPushRetracted3,
     stHmi            := GVL_HMI.stPushSol3,
     bOutSolenoid     => GVL_App.bValvePushExtend3
+);
+
+(* ==========================================
+   Robot TCP/IP client (parameter/trigger protocol, port 6001). Runs every
+   scan; its internal state machine dials the robot server and auto-reconnects
+   on drop. The safety-critical start/done handshake is discrete I/O elsewhere.
+   ========================================== *)
+fbRobotTcp(
+    bEnable     := GVL_Robot.bTcpEnable,
+    sRemoteHost := GVL_Robot.sRobotHost,
+    nRemotePort := GVL_Robot.nRobotPort,
+    stRobot     := GVL_Robot.stRobot,
+    stParams    := GVL_Robot.stParams
 );
 
 ]]></ST>

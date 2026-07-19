@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_RobotTcpClient" Id="{9a819722-65ef-4bb0-a58a-040059e1d2fe}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+   TCP/IP client for the Dobot parameter/trigger protocol on port 6001.
+   PLC dials the robot's server (the robot is the TCP server). This carries
+   ONLY the tuning parameters and one-shot triggers -- the safety-critical
+   start/done handshake stays on discrete I/O (STAND_SEQ_DO / STAND_SEQ_DI,
+   see ST_HmiRobot). Uses the free-with-TF6310 Tc2_TcpIp socket FBs; empty
+   sSrvNetId targets the local TwinCAT TCP/IP Connection Server.
+
+   Protocol (raw ASCII, no newline framing; one send -> one reply, matching
+   RobotBridge\Client_working_example\tcp client.py / dummy_server.py):
+     PLC -> robot        robot -> PLC
+     "GET_SYNC"          "SYNC:J_SPEED=10,L_SPEED=10,..."
+     "NAME:VALUE"        "OK: SET NAME"
+     "New_Bulb:1"        "OK: SET New_Bulb"
+     "HEARTBEAT"         "1"
+
+   State machine mirrors the Python supervisor: Disconnected -> Connecting
+   -> Connected; any socket error closes and re-dials after RECONNECT_MS.
+*)
+FUNCTION_BLOCK FB_RobotTcpClient
+VAR_INPUT
+    // Master enable. FALSE tears down any connection and holds Disconnected.
+    bEnable     : BOOL;
+    // Robot server target (from GVL_Robot.sRobotHost / nRobotPort).
+    sRemoteHost : STRING;
+    nRemotePort : UINT;
+END_VAR
+VAR_IN_OUT
+    // Status mirror for the HMI (eConnState, packet counts, last messages).
+    stRobot  : ST_HmiRobot;
+    // Tuning params + request flags; SYNC replies parse back into this.
+    stParams : ST_RobotParams;
+END_VAR
+VAR
+    fbConnect : FB_SocketConnect;
+    fbClose   : FB_SocketClose;
+    fbSend    : FB_SocketSend;
+    fbReceive : FB_SocketReceive;
+    hSocket   : T_HSOCKET;
+
+    // Empty => local TwinCAT TCP/IP Connection Server (TF6310).
+    sSrvNetId : T_AmsNetId := '';
+
+    eState : E_RobotConnState := E_RobotConnState.Disconnected;
+    iIo    : INT;            // request/reply sub-state while Connected
+    iPend  : INT;            // which message we last sent (drives reply parse)
+
+    tonReconnect : TON;      // delay before re-dial after a drop
+    tonIdle      : TON;      // idle -> HEARTBEAT keep-alive
+    tonReply     : TON;      // reply timeout guard
+
+    sTxMsg    : STRING(255);
+    sRxMsg    : STRING(255);
+    aRxBuffer : ARRAY[0..255] OF BYTE;
+
+    bAutoSyncQueued : BOOL;  // one-shot GET_SYNC right after each (re)connect
+END_VAR
+VAR CONSTANT
+    IO_IDLE      : INT := 0;
+    IO_WAIT_SEND : INT := 1;
+    IO_WAIT_RECV : INT := 2;
+
+    TX_NONE      : INT := 0;
+    TX_GETSYNC   : INT := 1;
+    TX_SETPARAM  : INT := 2;
+    TX_NEWBULB   : INT := 3;
+    TX_HEARTBEAT : INT := 4;
+
+    RECONNECT_MS  : TIME := T#3S;
+    IDLE_HB_MS    : TIME := T#2S;
+    REPLY_TO_MS   : TIME := T#2S;
+    CONNECT_TO_MS : TIME := T#2S;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Disable request routes an active session through the Error/close path.
+IF NOT bEnable AND (eState = E_RobotConnState.Connecting OR eState = E_RobotConnState.Connected) THEN
+    eState := E_RobotConnState.Error;
+END_IF
+
+CASE eState OF
+
+E_RobotConnState.Disconnected:
+    tonReconnect(IN := TRUE, PT := RECONNECT_MS);
+    IF bEnable AND tonReconnect.Q THEN
+        tonReconnect(IN := FALSE);
+        fbConnect(bExecute := FALSE);
+        eState := E_RobotConnState.Connecting;
+    END_IF
+
+E_RobotConnState.Connecting:
+    fbConnect(
+        sSrvNetId   := sSrvNetId,
+        sRemoteHost := sRemoteHost,
+        nRemotePort := nRemotePort,
+        bExecute    := TRUE,
+        tTimeout    := CONNECT_TO_MS);
+    IF NOT fbConnect.bBusy THEN
+        fbConnect(bExecute := FALSE);
+        IF fbConnect.bError THEN
+            eState := E_RobotConnState.Error;
+        ELSE
+            hSocket         := fbConnect.hSocket;
+            iIo             := IO_IDLE;
+            iPend           := TX_NONE;
+            bAutoSyncQueued := TRUE;   // pull current params right after connect
+            tonIdle(IN := FALSE);
+            eState := E_RobotConnState.Connected;
+        END_IF
+    END_IF
+
+E_RobotConnState.Connected:
+    ConnectedIo();
+
+E_RobotConnState.Error:
+    fbClose(
+        sSrvNetId := sSrvNetId,
+        hSocket   := hSocket,
+        bExecute  := TRUE,
+        tTimeout  := CONNECT_TO_MS);
+    IF NOT fbClose.bBusy THEN
+        fbClose(bExecute := FALSE);
+        MEMSET(ADR(hSocket), 0, SIZEOF(hSocket));
+        iIo   := IO_IDLE;
+        iPend := TX_NONE;
+        tonReconnect(IN := FALSE);
+        eState := E_RobotConnState.Disconnected;
+    END_IF
+
+END_CASE
+
+// Mirror connection state to the HMI status struct.
+stRobot.eConnState     := eState;
+stRobot.sConnStateText := TO_STRING(eState);
+]]></ST>
+    </Implementation>
+    <Method Name="ConnectedIo" Id="{47746f7b-ae67-4576-93f9-16e10d7f2768}">
+      <Declaration><![CDATA[// Request/reply sequencer, run while eState = Connected.
+METHOD ConnectedIo : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE iIo OF
+
+IO_IDLE:
+    // Priority: explicit sets, then new-bulb trigger, then sync, then idle keep-alive.
+    IF stParams.bSetParam THEN
+        sTxMsg := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
+        iPend  := TX_SETPARAM;
+        StartSend();
+    ELSIF stParams.bTriggerNewBulb THEN
+        sTxMsg := 'New_Bulb:1';
+        iPend  := TX_NEWBULB;
+        StartSend();
+    ELSIF stParams.bGetSync OR bAutoSyncQueued THEN
+        bAutoSyncQueued := FALSE;
+        sTxMsg := 'GET_SYNC';
+        iPend  := TX_GETSYNC;
+        StartSend();
+    ELSE
+        tonIdle(IN := TRUE, PT := IDLE_HB_MS);
+        IF tonIdle.Q THEN
+            sTxMsg := 'HEARTBEAT';
+            iPend  := TX_HEARTBEAT;
+            StartSend();
+        END_IF
+    END_IF
+
+IO_WAIT_SEND:
+    fbSend(
+        sSrvNetId := sSrvNetId,
+        hSocket   := hSocket,
+        cbLen     := TO_UDINT(LEN(sTxMsg)),
+        pSrc      := ADR(sTxMsg),
+        bExecute  := TRUE,
+        tTimeout  := REPLY_TO_MS);
+    IF NOT fbSend.bBusy THEN
+        fbSend(bExecute := FALSE);
+        IF fbSend.bError THEN
+            eState := E_RobotConnState.Error;
+        ELSE
+            stRobot.nPacketsTx     := stRobot.nPacketsTx + 1;
+            stRobot.sLastTxMessage := sTxMsg;
+            tonReply(IN := FALSE);
+            iIo := IO_WAIT_RECV;
+        END_IF
+    END_IF
+
+IO_WAIT_RECV:
+    tonReply(IN := TRUE, PT := REPLY_TO_MS);
+    fbReceive(
+        sSrvNetId := sSrvNetId,
+        hSocket   := hSocket,
+        cbLen     := SIZEOF(aRxBuffer) - 1,
+        pDest     := ADR(aRxBuffer),
+        bExecute  := TRUE,
+        tTimeout  := REPLY_TO_MS);
+    IF NOT fbReceive.bBusy THEN
+        fbReceive(bExecute := FALSE);
+        IF fbReceive.bError THEN
+            eState := E_RobotConnState.Error;
+        ELSIF fbReceive.nRecBytes > 0 THEN
+            aRxBuffer[fbReceive.nRecBytes] := 0;   // null-terminate
+            MEMCPY(ADR(sRxMsg), ADR(aRxBuffer), fbReceive.nRecBytes + 1);
+            tonReply(IN := FALSE);
+            HandleReply();
+            iIo := IO_IDLE;
+        ELSIF tonReply.Q THEN
+            // No reply in time. HEARTBEAT may go unanswered -- tolerate it;
+            // anything else is a real fault -> drop and reconnect.
+            tonReply(IN := FALSE);
+            IF iPend = TX_HEARTBEAT THEN
+                iPend := TX_NONE;
+                iIo   := IO_IDLE;
+            ELSE
+                eState := E_RobotConnState.Error;
+            END_IF
+        END_IF
+    END_IF
+
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="StartSend" Id="{aaa8f8f6-1eec-428e-a921-2ce64744b1fb}">
+      <Declaration><![CDATA[// Arm a send: reset edges/timers and enter the send wait state.
+METHOD StartSend : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[tonIdle(IN := FALSE);
+fbSend(bExecute := FALSE);
+iIo := IO_WAIT_SEND;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleReply" Id="{57d85451-0daa-42a3-9e5e-dc41761a4754}">
+      <Declaration><![CDATA[// Dispatch on what we last sent; clear the consumed request flag.
+METHOD HandleReply : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[stRobot.nPacketsRx   := stRobot.nPacketsRx + 1;
+stRobot.sLastMessage := sRxMsg;
+
+CASE iPend OF
+    TX_GETSYNC:
+        IF FIND(sRxMsg, 'SYNC:') = 1 THEN
+            ParseSync();
+        END_IF
+        stParams.bGetSync := FALSE;
+    TX_SETPARAM:
+        stParams.bSetParam := FALSE;
+    TX_NEWBULB:
+        stParams.bTriggerNewBulb := FALSE;
+END_CASE
+
+iPend := TX_NONE;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParseSync" Id="{4f452784-bcac-458f-94dd-1896402f6324}">
+      <Declaration><![CDATA[// Parse "SYNC:NAME=VALUE,NAME=VALUE,..." into stParams.
+METHOD ParseSync : BOOL
+VAR
+    sRest  : STRING(255);
+    sToken : STRING(60);
+    sName  : STRING(30);
+    sVal   : STRING(20);
+    nComma : INT;
+    nEq    : INT;
+    nLen   : INT;
+    nGuard : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[nLen := LEN(sRxMsg);
+IF nLen <= 5 THEN
+    RETURN;
+END_IF
+
+// Strip the leading "SYNC:" (5 chars).
+sRest := MID(sRxMsg, nLen - 5, 6);
+
+nGuard := 0;
+WHILE LEN(sRest) > 0 AND nGuard < 32 DO
+    nGuard := nGuard + 1;
+
+    nComma := FIND(sRest, ',');
+    IF nComma > 0 THEN
+        sToken := LEFT(sRest, nComma - 1);
+        sRest  := MID(sRest, LEN(sRest) - nComma, nComma + 1);
+    ELSE
+        sToken := sRest;
+        sRest  := '';
+    END_IF
+
+    nEq := FIND(sToken, '=');
+    IF nEq > 0 THEN
+        sName := LEFT(sToken, nEq - 1);
+        sVal  := MID(sToken, LEN(sToken) - nEq, nEq + 1);
+        ApplyParam(sName := sName, nVal := STRING_TO_INT(sVal));
+    END_IF
+END_WHILE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ApplyParam" Id="{540317ec-41e2-47bc-b64b-681858e2c1d4}">
+      <Declaration><![CDATA[// Assign one parsed NAME=VALUE pair into stParams.
+METHOD ApplyParam : BOOL
+VAR_INPUT
+    sName : STRING(30);
+    nVal  : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF    sName = 'J_SPEED'           THEN stParams.J_SPEED           := nVal;
+ELSIF sName = 'L_SPEED'           THEN stParams.L_SPEED           := nVal;
+ELSIF sName = 'REPEATS'           THEN stParams.REPEATS           := nVal;
+ELSIF sName = 'START_WAIT'        THEN stParams.START_WAIT        := nVal;
+ELSIF sName = 'WATER_WAIT'        THEN stParams.WATER_WAIT        := nVal;
+ELSIF sName = 'STAND_WAIT'        THEN stParams.STAND_WAIT        := nVal;
+ELSIF sName = 'END_WAIT'          THEN stParams.END_WAIT          := nVal;
+ELSIF sName = 'WATER_SPEED'       THEN stParams.WATER_SPEED       := nVal;
+ELSIF sName = 'WAX_WAIT_TIME_IN'  THEN stParams.WAX_WAIT_TIME_IN  := nVal;
+ELSIF sName = 'WAX_WAIT_TIME_OUT' THEN stParams.WAX_WAIT_TIME_OUT := nVal;
+ELSIF sName = 'WAX_SPEED'         THEN stParams.WAX_SPEED         := nVal;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

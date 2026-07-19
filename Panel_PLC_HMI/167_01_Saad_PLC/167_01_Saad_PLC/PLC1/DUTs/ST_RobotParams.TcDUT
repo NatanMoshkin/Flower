@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_RobotParams" Id="{48e0cfb9-5ce6-4b32-9c93-d402e6dcbe42}">
+    <Declaration><![CDATA[TYPE ST_RobotParams :
+STRUCT
+    // ------------------------------------------------------------------
+    // Dobot tuning parameters exchanged over TCP:6001 (parameter/trigger
+    // protocol; the safety-critical start/done handshake stays on discrete
+    // I/O -- STAND_SEQ_DO / STAND_SEQ_DI). Field names and order match the
+    // robot's SYNC string (see global.lua / dummy_server.py in
+    // RobotBridge\Client_working_example). All INT so the classic VISU HMI
+    // binds NumericInput directly. Defaults mirror the dummy server.
+    // ------------------------------------------------------------------
+    J_SPEED            : INT := 10;
+    L_SPEED            : INT := 10;
+    REPEATS            : INT := 2;
+    START_WAIT         : INT := 500;
+    WATER_WAIT         : INT := 500;
+    STAND_WAIT         : INT := 2000;
+    END_WAIT           : INT := 500;
+    WATER_SPEED        : INT := 10;
+    WAX_WAIT_TIME_IN   : INT := 500;
+    WAX_WAIT_TIME_OUT  : INT := 500;
+    WAX_SPEED          : INT := 10;
+
+    // ------------------------------------------------------------------
+    // Request flags -- FB_RobotTcpClient consumes each on the next idle
+    // scan while Connected, sends the matching message, then auto-clears
+    // the flag once the reply is received. Rising-level, not edge: setting
+    // TRUE from the HMI is enough.
+    // ------------------------------------------------------------------
+
+    // Send GET_SYNC; the SYNC reply is parsed back into the 11 fields above.
+    // The FB also raises this itself once, right after each (re)connect.
+    bGetSync           : BOOL;
+
+    // Send "sSetName:nSetVal" (e.g. "J_SPEED:15"); robot replies "OK: SET NAME".
+    bSetParam          : BOOL;
+    sSetName           : STRING(30);
+    nSetVal            : INT;
+
+    // Send "New_Bulb:1"; robot replies "OK: SET New_Bulb" and starts a fresh bulb.
+    bTriggerNewBulb    : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

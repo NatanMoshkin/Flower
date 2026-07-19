@@ -30,6 +30,49 @@ it is **not** part of this decision and stays on the engineering PC
 regardless of which option wins. Only `RobotBridge/` is at stake.
 
 
+## DECISION: 167_01 panel solution — native Tc2_TcpIp param comms + global Auto/Manual interlock
+
+Scope: `Panel_PLC_HMI/167_01_Saad_PLC/` ONLY (the real CP6606 target). The
+dev solution `Flower_PLC_HMI/` is unchanged.
+
+**Global Auto/Manual hard interlock (2026-07-19).** A single machine-wide
+BOOL `GVL_HmiPersistent.stMasterAutoCfg.bAutoMode` is the sole source of
+truth for every piston's mode — "no option to double control". `MAIN` drives
+it unconditionally each scan onto BOTH `eMode` and `bMode` of all six pistons
+(`FB_SolSpringPiston_2Pos` edge-syncs the two, so forcing only one would let a
+stray toggle propagate for a scan; forcing both closes that gap). In Auto the
+MasterAutoCycle owns all six pistons — the per-piston auto tiles/FBs and their
+OR-merge are removed in this solution. In Manual the master cycle is held IDLE
+and the operator jogs. `E_ControlMode`: Manual=0, Automatic=1.
+
+**Robot TCP/IP param/trigger comms (2026-07-19), ADDED ALONGSIDE the
+discrete-I/O handshake.** The safety-critical start/done path stays on
+`STAND_SEQ_DO`/`STAND_SEQ_DI` (see the FB_MasterAutoCycle robot-interface
+table above). Layered on top: `FB_RobotTcpClient` (native ST, uses free-with-
+TF6310 `Tc2_TcpIp`) is a TCP **client** dialing the robot server `:6001` for
+the Dobot tuning protocol. TF6310 is installed+running on the CP6606 (verified
+2026-07-19) — this is the documented exception to the avoid-paid-libs rule.
+This supersedes the "Reconcile RobotBridge protocol" out-of-scope item and the
+Python `RobotBridge/` for this solution (the bridge can't run on WinCE-ARM).
+
+- Protocol (raw ASCII, NO newline framing; one send → one reply — matches
+  `RobotBridge/Client_working_example/tcp client.py` + `dummy_server.py`):
+  `GET_SYNC`→`SYNC:NAME=VALUE,...`; `NAME:VALUE`→`OK: SET NAME`;
+  `New_Bulb:1`→`OK: SET New_Bulb`; `HEARTBEAT`→`1`.
+- New `DUTs/ST_RobotParams.TcDUT`: 11 INT tuning params (J_SPEED, L_SPEED,
+  REPEATS, START_WAIT, WATER_WAIT, STAND_WAIT, END_WAIT, WATER_SPEED,
+  WAX_WAIT_TIME_IN, WAX_WAIT_TIME_OUT, WAX_SPEED) + request flags (bGetSync,
+  bSetParam/sSetName/nSetVal, bTriggerNewBulb, FB auto-clears each after ACK).
+- `GVL_Robot` adds `stParams`, `sRobotHost` (default '192.168.201.1'),
+  `nRobotPort` (6001), `bTcpEnable`. Status reuses the deprecated `stRobot`
+  fields (`eConnState`/`sConnStateText`/`nPacketsRx`/`nPacketsTx`/
+  `sLastMessage`/`sLastTxMessage`). `MAIN` calls `fbRobotTcp` each scan.
+- State machine (mirrors the Python supervisor): Disconnected → Connecting →
+  Connected → (any socket error) close + reconnect after 3 s. Empty
+  `sSrvNetId` targets the local TF6310 server. **Build/online not yet verified
+  in XAE** as of authoring (CP6606 = WinCE-ARM, no local XAE here).
+
+
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
 
 The machine's operator-facing cycle is implemented as `FB_MasterAutoCycle`

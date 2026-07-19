@@ -16,4 +16,44 @@ First stage to check and test with temporary IO.
 * Future additions:
 	- 3 Push buttons (with leds) to give the operator additional option to main controls without the GUI HMI.
 	- extend TCP/IP communication to Robot to set main parameters, like speed, acc, dcc, timers.
+	----
+	Panel to robot via TCP/IP :
+(from Python 167-01-Saad /tcp client.py)
+	PARAMS = [
+	    ("J_SPEED", 1, 100), ("L_SPEED", 1, 100),
+	    ("WAX_SPEED", 0, 100), ("WATER_SPEED", 0, 100),
+	    ("REPEATS", 1, 10),
+	    ("START_WAIT", 10, 10000), ("WATER_WAIT", 10, 10000),
+	    ("WAX_WAIT_TIME_IN", 0, 10000), ("WAX_WAIT_TIME_OUT", 10, 10000),
+	    ("STAND_WAIT", 10, 10000), ("END_WAIT", 10, 10000)
+	] 
+	
+Panel to Robot:
+State machine status: INT.
+TYPE E_MasterAutoStep :
+(
+    IDLE                 := 0,
+    SEP_EXTENDING        := 1,
+    WAIT_POS2            := 2,
+    PUSH_EXTENDING       := 3,
+    DWELL_PUSH           := 4,
+    PUSH_RETRACTING      := 5,
+    PUSH_RETRACTED_DWELL := 6,
+    SEP_RETRACTING       := 7,
+    SEP_RETRACTED_DWELL  := 8,
+    INIT_PUSH_RETRACTING := 10,
+    INIT_SEP_RETRACTING  := 11,
+    ERR                  := 99
+) ;
+END_TYPE
+
+
+Robot to Panel:
+Robot_Command : INT.
+0 : idle
+1: Start
+2: Reset error
+-----
+
+Update the C:\Users\Natan.Moshkin\source\repos\FlowerPyHmi.
 
