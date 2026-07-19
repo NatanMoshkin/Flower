@@ -69,8 +69,9 @@ Python `RobotBridge/` for this solution (the bridge can't run on WinCE-ARM).
   `sLastMessage`/`sLastTxMessage`). `MAIN` calls `fbRobotTcp` each scan.
 - State machine (mirrors the Python supervisor): Disconnected → Connecting →
   Connected → (any socket error) close + reconnect after 3 s. Empty
-  `sSrvNetId` targets the local TF6310 server. **Build/online not yet verified
-  in XAE** as of authoring (CP6606 = WinCE-ARM, no local XAE here).
+  `sSrvNetId` targets the local TF6310 server. **Build verified on the local
+  PC (XAE, 2026-07-19); online test against the robot / sim server still
+  pending** (CP6606 not on hand at authoring time).
 
 
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
