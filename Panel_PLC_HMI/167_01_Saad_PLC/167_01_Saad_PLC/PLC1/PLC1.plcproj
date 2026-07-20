@@ -119,24 +119,24 @@
     <Compile Include="POUs\PRG_IoMap.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Visualization Manager.TcVMO">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="VISU\Main.TcVIS">
       <SubType>Code</SubType>
-      <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
     <Compile Include="VISU\PistonsManual.TcVIS">
       <SubType>Code</SubType>
-      <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
     <Compile Include="VISU\Piston.TcVIS">
       <SubType>Code</SubType>
-      <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
     <Compile Include="VISU\AutoMain.TcVIS">
       <SubType>Code</SubType>
-      <DependentUpon>Visualization Manager.TcVMO</DependentUpon>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
+    </Compile>
+    <Compile Include="VISU\VisualizationManager.TcVMO">
+      <SubType>Code</SubType>
     </Compile>
     <Compile Include="VISU_TASK.TcTTO">
       <SubType>Code</SubType>
