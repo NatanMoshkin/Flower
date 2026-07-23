@@ -15,12 +15,18 @@ VAR_GLOBAL
 
     // Runtime state for the per-piston auto sequencers. Config for each
     // lives in the matching stXxxAutoCfg in GVL_HmiPersistent (PERSISTENT).
+    // In this panel solution the master cycle is the sole auto driver;
+    // these per-piston Auto structs exist so the HMI's UC_PistonAuto tiles
+    // have something to bind to. Their bStart/bStop/bReset are effectively
+    // no-ops in the 167_01 solution.
     stSepSol1Auto  : ST_HmiPistonAuto;
     stSepSol2Auto  : ST_HmiPistonAuto;
     stSepSol3Auto  : ST_HmiPistonAuto;
     stPushSol1Auto : ST_HmiPistonAuto;
     stPushSol2Auto : ST_HmiPistonAuto;
     stPushSol3Auto : ST_HmiPistonAuto;
+    stGripSolLAuto : ST_HmiPistonAuto;
+    stGripSolRAuto : ST_HmiPistonAuto;
 
     // Plate-presence sensors exposed to the HMI (indicator lamps on the
     // AutoCycle page). Mirror of GVL_App.bPlateSen* driven in MAIN.

@@ -1,4 +1,4 @@
-<div id="MasterAutoCycle" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControl" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1442" data-tchmi-height="469" data-tchmi-width-unit="px" data-tchmi-height-unit="px" data-tchmi-creator-viewport-width="800" data-tchmi-creator-viewport-height="800">
+<div id="MasterAutoCycle" data-tchmi-type="TcHmi.Controls.System.TcHmiUserControl" data-tchmi-top="0" data-tchmi-left="0" data-tchmi-width="1442" data-tchmi-height="540" data-tchmi-width-unit="px" data-tchmi-height-unit="px" data-tchmi-creator-viewport-width="800" data-tchmi-creator-viewport-height="800">
 
 <!-- Title -->
 <div id="Title" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="0" data-tchmi-left-unit="px" data-tchmi-top="4" data-tchmi-top-unit="px" data-tchmi-width="505" data-tchmi-width-unit="px" data-tchmi-text="%pp%title%/pp%" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="14" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold" data-tchmi-zindex="0">
@@ -204,22 +204,37 @@
 <div id="AssemblyRunningInd" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="540" data-tchmi-left-unit="px" data-tchmi-top="229" data-tchmi-top-unit="px" data-tchmi-width="220" data-tchmi-width-unit="px" data-tchmi-text="bAssemblyRunning (to robot)" data-tchmi-state-symbol="%pp%robot::bAssemblyRunning%/pp%" data-tchmi-enabled="False">
 </div>
 
-<!-- Step table: vertical list of the 11 states in chronological run order. Row
-     rectangle highlights yellow (red for ERR) when auto::eStep matches. The
-     rightmost checkbox is the sim "advance now" one-shot (rising edge; FB
-     auto-clears after consumption). WAIT_POS2=2 is retired — omitted. -->
+<!-- Step table: rectangles highlight yellow (red for ERR) when auto::eStep
+     matches; rightmost checkbox is the sim "advance now" one-shot.
+     WAIT_POS2=2 is retired — omitted.
 
-<!-- Row 0: IDLE                 (eStep=0)  -->
-<!-- Row 1: INIT_PUSH_RETRACTING (eStep=10) -->
-<!-- Row 2: INIT_SEP_RETRACTING  (eStep=11) -->
-<!-- Row 3: SEP_EXTENDING        (eStep=1)  -->
-<!-- Row 4: PUSH_EXTENDING       (eStep=3)  -->
-<!-- Row 5: DWELL_PUSH           (eStep=4)  -->
-<!-- Row 6: PUSH_RETRACTING      (eStep=5)  -->
-<!-- Row 7: PUSH_RETRACTED_DWELL (eStep=6)  -->
-<!-- Row 8: SEP_RETRACTING       (eStep=7)  -->
-<!-- Row 9: SEP_RETRACTED_DWELL  (eStep=8)  -->
-<!-- Row 10: ERR                 (eStep=99) — red highlight, no sim advance -->
+     Layout order in this file — NOT strictly chronological. Rows 0-10 are
+     the original Sep/Push cycle. Rows 11-14 were appended when grip pistons
+     + plate sensors were added (2026-07-23) and sit visually below ERR to
+     avoid renumbering. The actual chronological run order is:
+
+       IDLE(0) → INIT_PUSH_RETRACTING(10) → INIT_SEP_RETRACTING(11)
+              → INIT_GRIP_RETRACTING(12) → WAIT_PLATE(20)
+              → GRIP_EXTENDING(21) → SEP_EXTENDING(1) → PUSH_EXTENDING(3)
+              → DWELL_PUSH(4) → PUSH_RETRACTING(5) → PUSH_RETRACTED_DWELL(6)
+              → SEP_RETRACTING(7) → SEP_RETRACTED_DWELL(8)
+              → GRIP_RETRACTING(22) → IDLE
+
+     Row 0:  IDLE                 (eStep=0)
+     Row 1:  INIT_PUSH_RETRACTING (eStep=10)
+     Row 2:  INIT_SEP_RETRACTING  (eStep=11)
+     Row 3:  SEP_EXTENDING        (eStep=1)
+     Row 4:  PUSH_EXTENDING       (eStep=3)
+     Row 5:  DWELL_PUSH           (eStep=4)
+     Row 6:  PUSH_RETRACTING      (eStep=5)
+     Row 7:  PUSH_RETRACTED_DWELL (eStep=6)
+     Row 8:  SEP_RETRACTING       (eStep=7)
+     Row 9:  SEP_RETRACTED_DWELL  (eStep=8)
+     Row 10: ERR                  (eStep=99)  — red highlight, no sim advance
+     Row 11: INIT_GRIP_RETRACTING (eStep=12)  — appended 2026-07-23
+     Row 12: WAIT_PLATE           (eStep=20)  — appended 2026-07-23
+     Row 13: GRIP_EXTENDING       (eStep=21)  — appended 2026-07-23
+     Row 14: GRIP_RETRACTING      (eStep=22)  — appended 2026-07-23 -->
 
 <div id="StepSimLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="38" data-tchmi-top-unit="px" data-tchmi-width="400" data-tchmi-width-unit="px" data-tchmi-text="Sim step advance (one shot):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold">
 </div>
@@ -1012,5 +1027,59 @@
 <div id="Row10_Num" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="892" data-tchmi-left-unit="px" data-tchmi-top="342" data-tchmi-top-unit="px" data-tchmi-width="24" data-tchmi-width-unit="px" data-tchmi-text="99" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
 </div>
 <div id="Row10_Name" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="924" data-tchmi-left-unit="px" data-tchmi-top="342" data-tchmi-top-unit="px" data-tchmi-width="280" data-tchmi-width-unit="px" data-tchmi-text="ERR" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-text-font-weight="Bold" data-tchmi-zindex="1">
+</div>
+
+<!-- Row 11: INIT_GRIP_RETRACTING (eStep=12) -->
+<div id="Row11_Rect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-width="481" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[{"event":"%pp%auto::eStep%/pp%","actions":[{"objectType":"Condition","active":true,"parts":[{"if":[{"compare1":{"objectType":"Symbol","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","symbolExpression":"%pp%auto::eStep%/pp%"},"compare2":{"objectType":"StaticValue","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","value":12},"compareOperator":"==","logic":null}],"then":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(255, 220, 80, 1)"}},"asyncWait":true}]},{"else":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(60, 60, 60, 1)"}},"asyncWait":true}]}],"asyncWait":true}]}]</script>
+</div>
+<div id="Row11_Num" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="892" data-tchmi-left-unit="px" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-width="24" data-tchmi-width-unit="px" data-tchmi-text="12" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row11_Name" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="924" data-tchmi-left-unit="px" data-tchmi-top="370" data-tchmi-top-unit="px" data-tchmi-width="280" data-tchmi-width-unit="px" data-tchmi-text="INIT_GRIP_RETRACTING" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row11_SimCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="1216" data-tchmi-left-unit="px" data-tchmi-top="372" data-tchmi-top-unit="px" data-tchmi-width="140" data-tchmi-width-unit="px" data-tchmi-text="Sim advance" data-tchmi-state-symbol="%pp%auto::bSimStep_InitGripRet|BindingMode=TwoWay%/pp%" data-tchmi-zindex="2">
+</div>
+
+<!-- Row 12: WAIT_PLATE (eStep=20) -->
+<div id="Row12_Rect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="398" data-tchmi-top-unit="px" data-tchmi-width="481" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[{"event":"%pp%auto::eStep%/pp%","actions":[{"objectType":"Condition","active":true,"parts":[{"if":[{"compare1":{"objectType":"Symbol","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","symbolExpression":"%pp%auto::eStep%/pp%"},"compare2":{"objectType":"StaticValue","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","value":20},"compareOperator":"==","logic":null}],"then":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(255, 220, 80, 1)"}},"asyncWait":true}]},{"else":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(60, 60, 60, 1)"}},"asyncWait":true}]}],"asyncWait":true}]}]</script>
+</div>
+<div id="Row12_Num" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="892" data-tchmi-left-unit="px" data-tchmi-top="398" data-tchmi-top-unit="px" data-tchmi-width="24" data-tchmi-width-unit="px" data-tchmi-text="20" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row12_Name" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="924" data-tchmi-left-unit="px" data-tchmi-top="398" data-tchmi-top-unit="px" data-tchmi-width="280" data-tchmi-width-unit="px" data-tchmi-text="WAIT_PLATE" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row12_SimCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="1216" data-tchmi-left-unit="px" data-tchmi-top="400" data-tchmi-top-unit="px" data-tchmi-width="140" data-tchmi-width-unit="px" data-tchmi-text="Sim advance" data-tchmi-state-symbol="%pp%auto::bSimStep_WaitPlate|BindingMode=TwoWay%/pp%" data-tchmi-zindex="2">
+</div>
+
+<!-- Row 13: GRIP_EXTENDING (eStep=21) -->
+<div id="Row13_Rect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="426" data-tchmi-top-unit="px" data-tchmi-width="481" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[{"event":"%pp%auto::eStep%/pp%","actions":[{"objectType":"Condition","active":true,"parts":[{"if":[{"compare1":{"objectType":"Symbol","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","symbolExpression":"%pp%auto::eStep%/pp%"},"compare2":{"objectType":"StaticValue","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","value":21},"compareOperator":"==","logic":null}],"then":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(255, 220, 80, 1)"}},"asyncWait":true}]},{"else":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(60, 60, 60, 1)"}},"asyncWait":true}]}],"asyncWait":true}]}]</script>
+</div>
+<div id="Row13_Num" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="892" data-tchmi-left-unit="px" data-tchmi-top="426" data-tchmi-top-unit="px" data-tchmi-width="24" data-tchmi-width-unit="px" data-tchmi-text="21" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row13_Name" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="924" data-tchmi-left-unit="px" data-tchmi-top="426" data-tchmi-top-unit="px" data-tchmi-width="280" data-tchmi-width-unit="px" data-tchmi-text="GRIP_EXTENDING" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row13_SimCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="1216" data-tchmi-left-unit="px" data-tchmi-top="428" data-tchmi-top-unit="px" data-tchmi-width="140" data-tchmi-width-unit="px" data-tchmi-text="Sim advance" data-tchmi-state-symbol="%pp%auto::bSimStep_GripExt|BindingMode=TwoWay%/pp%" data-tchmi-zindex="2">
+</div>
+
+<!-- Row 14: GRIP_RETRACTING (eStep=22) -->
+<div id="Row14_Rect" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiRectangle" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="454" data-tchmi-top-unit="px" data-tchmi-width="481" data-tchmi-width-unit="px" data-tchmi-zindex="0">
+<script data-tchmi-target-attribute="data-tchmi-trigger" type="application/json">[{"event":"%pp%auto::eStep%/pp%","actions":[{"objectType":"Condition","active":true,"parts":[{"if":[{"compare1":{"objectType":"Symbol","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","symbolExpression":"%pp%auto::eStep%/pp%"},"compare2":{"objectType":"StaticValue","valueType":"tchmi:project#/definitions/PLC1.E_MasterAutoStep","value":22},"compareOperator":"==","logic":null}],"then":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(255, 220, 80, 1)"}},"asyncWait":true}]},{"else":[{"objectType":"WriteToSymbol","active":true,"symbolExpression":"%ctx%owner::FillColor%/ctx%","value":{"objectType":"StaticValue","valueType":"tchmi:framework#/definitions/Color","value":{"color":"rgba(60, 60, 60, 1)"}},"asyncWait":true}]}],"asyncWait":true}]}]</script>
+</div>
+<div id="Row14_Num" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="892" data-tchmi-left-unit="px" data-tchmi-top="454" data-tchmi-top-unit="px" data-tchmi-width="24" data-tchmi-width-unit="px" data-tchmi-text="22" data-tchmi-text-horizontal-alignment="Center" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="11" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row14_Name" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="26" data-tchmi-height-unit="px" data-tchmi-left="924" data-tchmi-left-unit="px" data-tchmi-top="454" data-tchmi-top-unit="px" data-tchmi-width="280" data-tchmi-width-unit="px" data-tchmi-text="GRIP_RETRACTING" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-family="Consolas, monospace" data-tchmi-zindex="1">
+</div>
+<div id="Row14_SimCB" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="1216" data-tchmi-left-unit="px" data-tchmi-top="456" data-tchmi-top-unit="px" data-tchmi-width="140" data-tchmi-width-unit="px" data-tchmi-text="Sim advance" data-tchmi-state-symbol="%pp%auto::bSimStep_GripRet|BindingMode=TwoWay%/pp%" data-tchmi-zindex="2">
+</div>
+
+<!-- Plate-presence indicator lamps (below the sequence table). Read-only.
+     Bind directly to the global GVL_HMI symbols (not UC parameters) so no
+     .usercontrol.json parameter addition is needed. -->
+<div id="PlateLbl" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiTextblock" data-tchmi-height="20" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="486" data-tchmi-top-unit="px" data-tchmi-width="481" data-tchmi-width-unit="px" data-tchmi-text="Plate-presence sensors (gate WAIT_PLATE):" data-tchmi-text-horizontal-alignment="Left" data-tchmi-text-vertical-alignment="Center" data-tchmi-text-font-size="12" data-tchmi-text-font-size-unit="px" data-tchmi-text-font-weight="Bold">
+</div>
+<div id="PlateSenL_Ind" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="884" data-tchmi-left-unit="px" data-tchmi-top="510" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="PlateSenL" data-tchmi-state-symbol="%s%ADS.PLC1.GVL_HMI.bPlateSenL%/s%" data-tchmi-enabled="False" data-tchmi-zindex="2">
+</div>
+<div id="PlateSenR_Ind" data-tchmi-type="TcHmi.Controls.Beckhoff.TcHmiCheckbox" data-tchmi-height="22" data-tchmi-height-unit="px" data-tchmi-left="1100" data-tchmi-left-unit="px" data-tchmi-top="510" data-tchmi-top-unit="px" data-tchmi-width="200" data-tchmi-width-unit="px" data-tchmi-text="PlateSenR" data-tchmi-state-symbol="%s%ADS.PLC1.GVL_HMI.bPlateSenR%/s%" data-tchmi-enabled="False" data-tchmi-zindex="2">
 </div>
 </div>

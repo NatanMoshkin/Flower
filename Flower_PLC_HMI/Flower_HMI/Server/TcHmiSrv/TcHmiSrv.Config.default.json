@@ -2463,6 +2463,16 @@
       },
       "USEMAPPING": true
     },
+    "ADS.PLC1.GVL_HMI.stGripSolLAuto": {
+      "ACCESS": 3,
+      "DOMAIN": "ADS",
+      "DYNAMIC": true,
+      "MAPPING": "PLC1::GVL_HMI::stGripSolLAuto",
+      "SCHEMA": {
+        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
+      },
+      "USEMAPPING": true
+    },
     "ADS.PLC1.GVL_HMI.stGripSolR": {
       "ACCESS": 3,
       "DOMAIN": "ADS",
@@ -2470,6 +2480,16 @@
       "MAPPING": "PLC1::GVL_HMI::stGripSolR",
       "SCHEMA": {
         "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPiston"
+      },
+      "USEMAPPING": true
+    },
+    "ADS.PLC1.GVL_HMI.stGripSolRAuto": {
+      "ACCESS": 3,
+      "DOMAIN": "ADS",
+      "DYNAMIC": true,
+      "MAPPING": "PLC1::GVL_HMI::stGripSolRAuto",
+      "SCHEMA": {
+        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
       },
       "USEMAPPING": true
     },
@@ -2614,6 +2634,26 @@
       "MAPPING": "PLC1::GVL_HMI::stSepSol3Auto",
       "SCHEMA": {
         "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAuto"
+      },
+      "USEMAPPING": true
+    },
+    "ADS.PLC1.GVL_HmiPersistent.stGripSolLAutoCfg": {
+      "ACCESS": 3,
+      "DOMAIN": "ADS",
+      "DYNAMIC": true,
+      "MAPPING": "PLC1::GVL_HmiPersistent::stGripSolLAutoCfg",
+      "SCHEMA": {
+        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
+      },
+      "USEMAPPING": true
+    },
+    "ADS.PLC1.GVL_HmiPersistent.stGripSolRAutoCfg": {
+      "ACCESS": 3,
+      "DOMAIN": "ADS",
+      "DYNAMIC": true,
+      "MAPPING": "PLC1::GVL_HmiPersistent::stGripSolRAutoCfg",
+      "SCHEMA": {
+        "$ref": "tchmi:server#/definitions/ADS-PLC1.ST_HmiPistonAutoCfg"
       },
       "USEMAPPING": true
     },
@@ -5488,7 +5528,9 @@
         "ADS.PLC1.GVL_HMI.bPlateSenL": 3,
         "ADS.PLC1.GVL_HMI.bPlateSenR": 3,
         "ADS.PLC1.GVL_HMI.stGripSolL": 3,
+        "ADS.PLC1.GVL_HMI.stGripSolLAuto": 3,
         "ADS.PLC1.GVL_HMI.stGripSolR": 3,
+        "ADS.PLC1.GVL_HMI.stGripSolRAuto": 3,
         "ADS.PLC1.GVL_HMI.stMasterAuto": 3,
         "ADS.PLC1.GVL_HMI.stPushSol1": 3,
         "ADS.PLC1.GVL_HMI.stPushSol1Auto": 3,
@@ -5502,6 +5544,8 @@
         "ADS.PLC1.GVL_HMI.stSepSol2Auto": 3,
         "ADS.PLC1.GVL_HMI.stSepSol3": 3,
         "ADS.PLC1.GVL_HMI.stSepSol3Auto": 3,
+        "ADS.PLC1.GVL_HmiPersistent.stGripSolLAutoCfg": 3,
+        "ADS.PLC1.GVL_HmiPersistent.stGripSolRAutoCfg": 3,
         "ADS.PLC1.GVL_HmiPersistent.stMasterAutoCfg": 3,
         "ADS.PLC1.GVL_HmiPersistent.stPushSol1AutoCfg": 3,
         "ADS.PLC1.GVL_HmiPersistent.stPushSol2AutoCfg": 3,
