@@ -70,8 +70,10 @@ Python `RobotBridge/` for this solution (the bridge can't run on WinCE-ARM).
 - State machine (mirrors the Python supervisor): Disconnected → Connecting →
   Connected → (any socket error) close + reconnect after 3 s. Empty
   `sSrvNetId` targets the local TF6310 server. **Build verified on the local
-  PC (XAE, 2026-07-19); online test against the robot / sim server still
-  pending** (CP6606 not on hand at authoring time).
+  PC (XAE, 2026-07-19). Local loopback test against `dummy_server.py` on
+  127.0.0.1:6001 passed 2026-07-23 (connect, auto-GET_SYNC, HEARTBEAT idle,
+  NAME:VALUE set-param, ParseSync into stParams, reconnect after drop).
+  Real robot test on CP6606 still pending.**
 
 
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
