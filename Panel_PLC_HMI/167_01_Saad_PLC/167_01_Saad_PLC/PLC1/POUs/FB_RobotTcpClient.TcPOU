@@ -72,7 +72,11 @@ VAR CONSTANT
     RECONNECT_MS  : TIME := T#3S;
     IDLE_HB_MS    : TIME := T#2S;
     REPLY_TO_MS   : TIME := T#2S;
-    CONNECT_TO_MS : TIME := T#2S;
+    // Generous: the TF6310 ADS wrapper around a LAN connect can take
+    // longer than the actual TCP handshake to report back. Tight timeouts
+    // here mean the FB abandons a socket TF6310 already opened, leaking
+    // orphan Established connections until the TCP peer times out.
+    CONNECT_TO_MS : TIME := T#10S;
 END_VAR
 ]]></Declaration>
     <Implementation>
