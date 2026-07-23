@@ -10,25 +10,31 @@
 // The mechanical spring returns the actuator when the coil is de-energised,
 // so no per-actuator Retract alias exists. DI still has a Retracted sensor.
 //
-//   SepSolN : Pin separator N   (DI 1..2 assigned for N=1; DI TBD for N=2,3)
-//   PushSolN: Pin push N        (DI 7..8 assigned for N=1; DI TBD for N=2,3)
+//   SepSolN : Pin separator N   (DI 1..6, DO 1..3)
+//   PushSolN: Pin push N        (DI 7..12, DO 4..6)
+//   GripSolL / GripSolR: side grip pistons that clamp the robot-placed plate
+//                       (DI 14..17, DO 8..9)
+//   PlateSenL / PlateSenR: plate-presence sensors gating cycle start
+//                         (DI 18..19)
 //
-// DO layout (fully assigned):
+// DO layout:
 //   dOut[1..3] = SepSolN Extend
 //   dOut[4..6] = PushSolN Extend
-//   dOut[7..8] = free (available for reuse after SOL-Spring migration)
+//   dOut[7]    = Robot bAssemblyRunning
+//   dOut[8..9] = GripSolL/R Extend
+//   dOut[10..16] = free
 VAR_GLOBAL
     // SepSol1 (Pin separator 1) — DI 1..2, DO 1
     bSensorSepRetracted1  : BOOL;
     bSensorSepExtended1   : BOOL;
     bValveSepExtend1      : BOOL;
 
-    // SepSol2 (Pin separator 2) — DI TBD, DO 2
+    // SepSol2 (Pin separator 2) — DI 3..4, DO 2
     bSensorSepRetracted2  : BOOL;
     bSensorSepExtended2   : BOOL;
     bValveSepExtend2      : BOOL;
 
-    // SepSol3 (Pin separator 3) — DI TBD, DO 3
+    // SepSol3 (Pin separator 3) — DI 5..6, DO 3
     bSensorSepRetracted3  : BOOL;
     bSensorSepExtended3   : BOOL;
     bValveSepExtend3      : BOOL;
@@ -38,15 +44,29 @@ VAR_GLOBAL
     bSensorPushExtended1  : BOOL;
     bValvePushExtend1     : BOOL;
 
-    // PushSol2 (Pin push 2) — DI TBD, DO 5
+    // PushSol2 (Pin push 2) — DI 9..10, DO 5
     bSensorPushRetracted2 : BOOL;
     bSensorPushExtended2  : BOOL;
     bValvePushExtend2     : BOOL;
 
-    // PushSol3 (Pin push 3) — DI TBD, DO 6
+    // PushSol3 (Pin push 3) — DI 11..12, DO 6
     bSensorPushRetracted3 : BOOL;
     bSensorPushExtended3  : BOOL;
     bValvePushExtend3     : BOOL;
+
+    // GripSolL (side grip, left) — DI 14..15, DO 8
+    bSensorGripRetractedL : BOOL;
+    bSensorGripExtendedL  : BOOL;
+    bValveGripExtendL     : BOOL;
+
+    // GripSolR (side grip, right) — DI 16..17, DO 9
+    bSensorGripRetractedR : BOOL;
+    bSensorGripExtendedR  : BOOL;
+    bValveGripExtendR     : BOOL;
+
+    // Plate-presence sensors — DI 18..19 (input only; no coil)
+    bPlateSenL : BOOL;
+    bPlateSenR : BOOL;
 END_VAR
 ]]></Declaration>
   </GVL>

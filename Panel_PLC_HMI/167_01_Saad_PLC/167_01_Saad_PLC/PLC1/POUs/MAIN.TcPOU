@@ -9,6 +9,8 @@ VAR
     fbPushSol1 : FB_SolSpringPiston_2Pos;
     fbPushSol2 : FB_SolSpringPiston_2Pos;
     fbPushSol3 : FB_SolSpringPiston_2Pos;
+    fbGripSolL : FB_SolSpringPiston_2Pos;
+    fbGripSolR : FB_SolSpringPiston_2Pos;
 
     // Full-machine sequencer coordinating the 3 pairs of (SepSolN,
     // PushSolN) plus the robot handshake. In this panel solution the
@@ -50,6 +52,21 @@ fbMasterAutoCycle.bPushIsExtended[3]  := GVL_HMI.stPushSol3.bIsExtended;
 fbMasterAutoCycle.bPushIsRetracted[1] := GVL_HMI.stPushSol1.bIsRetracted;
 fbMasterAutoCycle.bPushIsRetracted[2] := GVL_HMI.stPushSol2.bIsRetracted;
 fbMasterAutoCycle.bPushIsRetracted[3] := GVL_HMI.stPushSol3.bIsRetracted;
+
+(* Grip pistons — L=[1], R=[2]. *)
+fbMasterAutoCycle.bGripIsExtended[1]  := GVL_HMI.stGripSolL.bIsExtended;
+fbMasterAutoCycle.bGripIsExtended[2]  := GVL_HMI.stGripSolR.bIsExtended;
+fbMasterAutoCycle.bGripIsRetracted[1] := GVL_HMI.stGripSolL.bIsRetracted;
+fbMasterAutoCycle.bGripIsRetracted[2] := GVL_HMI.stGripSolR.bIsRetracted;
+
+(* Plate-presence sensors gate the cycle at WAIT_PLATE. Wire the raw
+   GVL_App copies straight into the master cycle. Also mirror them onto
+   GVL_HMI so the classic VISU / web HMI indicator lamps can bind. *)
+fbMasterAutoCycle.bPlateSenL := GVL_App.bPlateSenL;
+fbMasterAutoCycle.bPlateSenR := GVL_App.bPlateSenR;
+GVL_HMI.bPlateSenL := GVL_App.bPlateSenL;
+GVL_HMI.bPlateSenR := GVL_App.bPlateSenR;
+
 fbMasterAutoCycle(
     bStartAssembly := GVL_Robot.stRobot.bStartAssembly,
     bMachineAuto   := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode,
@@ -73,6 +90,8 @@ GVL_HMI.stSepSol2.eMode  := eMachineMode;  GVL_HMI.stSepSol2.bMode  := bMachineA
 GVL_HMI.stPushSol2.eMode := eMachineMode;  GVL_HMI.stPushSol2.bMode := bMachineAuto;
 GVL_HMI.stSepSol3.eMode  := eMachineMode;  GVL_HMI.stSepSol3.bMode  := bMachineAuto;
 GVL_HMI.stPushSol3.eMode := eMachineMode;  GVL_HMI.stPushSol3.bMode := bMachineAuto;
+GVL_HMI.stGripSolL.eMode := eMachineMode;  GVL_HMI.stGripSolL.bMode := bMachineAuto;
+GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineAuto;
 
 (* ==========================================
    Pin separators (SOL-Spring, 2 limit switches, single Extend coil).
@@ -134,6 +153,28 @@ fbPushSol3(
     bSwitchRetracted := GVL_App.bSensorPushRetracted3,
     stHmi            := GVL_HMI.stPushSol3,
     bOutSolenoid     => GVL_App.bValvePushExtend3
+);
+
+(* ==========================================
+   Grip pistons — side clamps (L=[1], R=[2]) that hold the plate placed
+   by the robot for the duration of the Sep/Push cycle.
+   ========================================== *)
+fbGripSolL(
+    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[1],
+    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[1],
+    bSwitchExtended  := GVL_App.bSensorGripExtendedL,
+    bSwitchRetracted := GVL_App.bSensorGripRetractedL,
+    stHmi            := GVL_HMI.stGripSolL,
+    bOutSolenoid     => GVL_App.bValveGripExtendL
+);
+
+fbGripSolR(
+    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
+    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
+    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
+    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
+    stHmi            := GVL_HMI.stGripSolR,
+    bOutSolenoid     => GVL_App.bValveGripExtendR
 );
 
 (* ==========================================

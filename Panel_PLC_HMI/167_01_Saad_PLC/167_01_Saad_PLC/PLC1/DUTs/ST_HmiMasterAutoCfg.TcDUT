@@ -12,6 +12,10 @@ STRUCT
     // set to the step's numeric code and the cycle enters ERR.
     tStepTimeoutMs          : UDINT := 10000;
 
+    // Dedicated timeout for WAIT_PLATE (bounded by robot placement time, not
+    // by a motion budget). On expiry, iErrorCode := 9 and the cycle enters ERR.
+    tPlateWaitTimeoutMs     : UDINT := 10000;
+
     // If TRUE, the 4 movement states ignore sensor feedback and advance when
     // tStepTimeoutMs expires — the timeout doubles as the fixed step duration.
     // No timeout-error path while sensorless. Mirrors ST_HmiPistonAutoCfg.bNoSensors.
