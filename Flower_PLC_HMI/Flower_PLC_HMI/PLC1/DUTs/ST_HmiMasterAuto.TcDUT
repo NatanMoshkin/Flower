@@ -17,7 +17,7 @@ STRUCT
     tElapsedS        : LREAL;        // seconds spent in the current step (0.0 on transition)
     iErrorCode       : INT;          // 0 = OK; see FB_MasterAutoCycle header for the code table
     sErrorText       : STRING(80);
-    nCyclesCompleted : UDINT;        // incremented at end of SEP_RETRACTED_DWELL
+    nCyclesCompleted : UDINT;        // incremented at end of GRIP_RETRACTING
 
     // HMI writes -- bench sim of the robot's start handshake. OR-ed with the
     // real stRobot.bStartAssembly level; FB auto-clears it after the rising
@@ -29,6 +29,9 @@ STRUCT
     bSimStep_Idle          : BOOL;
     bSimStep_InitPushRet   : BOOL;
     bSimStep_InitSepRet    : BOOL;
+    bSimStep_InitGripRet   : BOOL;
+    bSimStep_WaitPlate     : BOOL;
+    bSimStep_GripExt       : BOOL;
     bSimStep_SepExt        : BOOL;
     bSimStep_WaitPos2      : BOOL;
     bSimStep_PushExt       : BOOL;
@@ -37,6 +40,7 @@ STRUCT
     bSimStep_PushRetDwell  : BOOL;
     bSimStep_SepRet        : BOOL;
     bSimStep_SepRetDwell   : BOOL;
+    bSimStep_GripRet       : BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

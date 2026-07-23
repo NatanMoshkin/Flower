@@ -25,7 +25,11 @@ WriteOutputs();
      dIn[9..10]  = PushSol2 (Retract, Extend)
      dIn[11..12] = PushSol3 (Retract, Extend)
      dIn[13]     = Robot STAND_SEQ_DO (robot DO 2) -> bStartAssembly
-     dIn[14..16] = free
+     dIn[14..15] = GripSolL (Retract, Extend)
+     dIn[16..17] = GripSolR (Retract, Extend)
+     dIn[18]     = PlateSenL (plate-presence, left)
+     dIn[19]     = PlateSenR (plate-presence, right)
+     dIn[20..24] = free
    ========================================== *)
 GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
 GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
@@ -42,7 +46,18 @@ GVL_App.bSensorPushExtended3  := GVL_IO.dIn[12];
 
 (* Robot handshake — FROM robot: STAND_SEQ_DO (robot DO 2) -> PLC DI 13.
    Level signal; rising edge in IDLE triggers a cycle in FB_MasterAutoCycle. *)
-GVL_Robot.stRobot.bStartAssembly := GVL_IO.dIn[13];]]></ST>
+GVL_Robot.stRobot.bStartAssembly := GVL_IO.dIn[13];
+
+(* Grip pistons — DI 14..17. *)
+GVL_App.bSensorGripRetractedL := GVL_IO.dIn[14];
+GVL_App.bSensorGripExtendedL  := GVL_IO.dIn[15];
+GVL_App.bSensorGripRetractedR := GVL_IO.dIn[16];
+GVL_App.bSensorGripExtendedR  := GVL_IO.dIn[17];
+
+(* Plate-presence sensors — DI 18..19. Both must be TRUE for WAIT_PLATE to
+   advance the cycle into GRIP_EXTENDING. *)
+GVL_App.bPlateSenL := GVL_IO.dIn[18];
+GVL_App.bPlateSenR := GVL_IO.dIn[19];]]></ST>
       </Implementation>
     </Action>
     <Action Name="WriteOutputs" Id="{d4911134-0871-485c-a76f-89221ed9b4ed}">
@@ -51,10 +66,12 @@ GVL_Robot.stRobot.bStartAssembly := GVL_IO.dIn[13];]]></ST>
    WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels.
    Single Extend coil per actuator (SOL-Spring, spring retracts).
    DO layout:
-     dOut[1..3]  = SepSol1..3 Extend coils
-     dOut[4..6]  = PushSol1..3 Extend coils
-     dOut[7]     = PLC -> Robot STAND_SEQ_DI (robot DI 1) = bAssemblyRunning
-     dOut[8..16] = free
+     dOut[1..3]   = SepSol1..3 Extend coils
+     dOut[4..6]   = PushSol1..3 Extend coils
+     dOut[7]      = PLC -> Robot STAND_SEQ_DI (robot DI 1) = bAssemblyRunning
+     dOut[8]      = GripSolL Extend coil
+     dOut[9]      = GripSolR Extend coil
+     dOut[10..16] = free
    ========================================== *)
 GVL_IO.dOut[1] := GVL_App.bValveSepExtend1;
 GVL_IO.dOut[2] := GVL_App.bValveSepExtend2;
@@ -67,6 +84,10 @@ GVL_IO.dOut[6] := GVL_App.bValvePushExtend3;
    Level; TRUE in every non-IDLE FB_MasterAutoCycle state (including ERR).
    The Dobot polls this line for FALSE ("assembler finished"). *)
 GVL_IO.dOut[7] := GVL_Robot.stRobot.bAssemblyRunning;
+
+(* Grip piston extend coils. *)
+GVL_IO.dOut[8] := GVL_App.bValveGripExtendL;
+GVL_IO.dOut[9] := GVL_App.bValveGripExtendR;
 ]]></ST>
       </Implementation>
     </Action>

@@ -17,6 +17,10 @@ TYPE E_MasterAutoStep :
     SEP_RETRACTED_DWELL  := 8,
     INIT_PUSH_RETRACTING := 10,
     INIT_SEP_RETRACTING  := 11,
+    INIT_GRIP_RETRACTING := 12,
+    WAIT_PLATE           := 20,
+    GRIP_EXTENDING       := 21,
+    GRIP_RETRACTING      := 22,
     ERR                  := 99
 ) ;
 END_TYPE

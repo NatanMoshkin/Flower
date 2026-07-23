@@ -16,7 +16,7 @@
    is TRUE in every non-IDLE state (including ERR, so the robot times out
    on PLC fault) and FALSE in IDLE.
 
-   Sequence (all 3 pairs move in parallel):
+   Sequence (all 3 Sep/Push pairs move in parallel; both grips move together):
 
      IDLE                    START button OR bStartAssembly rising OR SimIdle
                              OR bContinuous checked (level - keeps re-arming)
@@ -28,13 +28,26 @@
                              SepIsRetracted. Push must retract first (see INIT
                              above) because sep retract with push extended is
                              the same collision case avoided end-of-cycle.
-     SEP_EXTENDING           drive SepCmdExtend[1..3]; wait AND of all SepIsExtended
+     INIT_GRIP_RETRACTING    drive GripCmdRetract[1..2]; wait AND of all
+                             GripIsRetracted. Defensive symmetry with the INIT
+                             Sep/Push states, so a manual jog left extended
+                             does not collide with the arriving plate.
+     WAIT_PLATE              wait bPlateSenL AND bPlateSenR (robot has placed
+                             the plate on the fixture). Latched at start only;
+                             sensors are not monitored past this step.
+     GRIP_EXTENDING          drive GripCmdExtend[1..2]; wait AND of all
+                             GripIsExtended. Plate is clamped from both sides.
+     SEP_EXTENDING           drive SepCmdExtend[1..3]; wait AND of all SepIsExtended.
+                             Grip stays extended for every state below.
      PUSH_EXTENDING          drive PushCmdExtend[1..3]; wait AND of all PushIsExtended
      DWELL_PUSH              hold both extended; wait tDwellPushMs
      PUSH_RETRACTING         drive PushCmdRetract[1..3]; wait AND of all PushIsRetracted
      PUSH_RETRACTED_DWELL    wait tPushRetractedDwellMs
      SEP_RETRACTING          drive SepCmdRetract[1..3]; wait AND of all SepIsRetracted
-     SEP_RETRACTED_DWELL     wait tSepRetractedDwellMs -> IDLE
+     SEP_RETRACTED_DWELL     wait tSepRetractedDwellMs
+     GRIP_RETRACTING         drive GripCmdRetract[1..2]; wait AND of all
+                             GripIsRetracted. Releases the plate; increment
+                             nCyclesCompleted; back to IDLE.
      ERR                     latched; iErrorCode set to step code; bContinuous
                              cleared so RESET does not restart motion.
                              Reset on HMI RESET rising edge.
@@ -47,6 +60,10 @@
      5  = SEP_RETRACTING timed out
      6  = INIT_PUSH_RETRACTING timed out
      7  = INIT_SEP_RETRACTING timed out
+     8  = INIT_GRIP_RETRACTING timed out
+     9  = WAIT_PLATE timed out (plate never arrived / one sensor never TRUE)
+    10  = GRIP_EXTENDING timed out
+    11  = GRIP_RETRACTING timed out
     99  = Operator STOP while running
 
    The former WAIT_POS2 state (error code 2) is retired: the robot code
@@ -69,11 +86,28 @@ VAR_INPUT
        driven by the robot's STAND_SEQ_DO through a PLC DI channel). *)
     bStartAssembly        : BOOL;
 
+    (* Global machine-mode gate (stCfg.bAutoMode). While FALSE the cycle is
+       held in IDLE: every start trigger is ignored and a running cycle is
+       aborted back to IDLE. This is the hard interlock that stops the
+       operator or a stray robot edge starting motion while the machine is
+       in Manual. *)
+    bMachineAuto          : BOOL;
+
     (* Per-pair sensor state. MAIN wires each element from stSepSolK/stPushSolK.bIs*. *)
     bSepIsExtended        : ARRAY[1..3] OF BOOL;
     bSepIsRetracted       : ARRAY[1..3] OF BOOL;
     bPushIsExtended       : ARRAY[1..3] OF BOOL;
     bPushIsRetracted      : ARRAY[1..3] OF BOOL;
+
+    (* Grip pistons — L=[1], R=[2]. MAIN wires from stGripSolL/R.bIs*. *)
+    bGripIsExtended       : ARRAY[1..2] OF BOOL;
+    bGripIsRetracted      : ARRAY[1..2] OF BOOL;
+
+    (* Plate-presence sensors gating WAIT_PLATE. Both must be TRUE before the
+       cycle can advance out of WAIT_PLATE into GRIP_EXTENDING. Latched at
+       cycle start only — not monitored past that step. *)
+    bPlateSenL            : BOOL;
+    bPlateSenR            : BOOL;
 END_VAR
 
 VAR_IN_OUT
@@ -88,6 +122,11 @@ VAR_OUTPUT
     bSepCmdRetract        : ARRAY[1..3] OF BOOL;
     bPushCmdExtend        : ARRAY[1..3] OF BOOL;
     bPushCmdRetract       : ARRAY[1..3] OF BOOL;
+
+    (* Grip piston commands. Extend held TRUE from GRIP_EXTENDING through
+       SEP_RETRACTED_DWELL so the plate stays clamped for the entire cycle. *)
+    bGripCmdExtend        : ARRAY[1..2] OF BOOL;
+    bGripCmdRetract       : ARRAY[1..2] OF BOOL;
 
     (* TRUE while the master cycle is in any state other than IDLE or ERR.
        MAIN reads this to force enabled pistons' stHmi.eMode := Automatic
@@ -107,6 +146,9 @@ VAR
     fbSim_Idle            : R_TRIG;
     fbSim_InitPushRet     : R_TRIG;
     fbSim_InitSepRet      : R_TRIG;
+    fbSim_InitGripRet     : R_TRIG;
+    fbSim_WaitPlate       : R_TRIG;
+    fbSim_GripExt         : R_TRIG;
     fbSim_SepExt          : R_TRIG;
     fbSim_PushExt         : R_TRIG;
     fbSim_DwellPush       : R_TRIG;
@@ -114,6 +156,7 @@ VAR
     fbSim_PushRetDwell    : R_TRIG;
     fbSim_SepRet          : R_TRIG;
     fbSim_SepRetDwell     : R_TRIG;
+    fbSim_GripRet         : R_TRIG;
 
     (* Per-step timer. Same TON, different PT depending on state. On DWELL
        states PT is the dwell; on wait states PT is the timeout. *)
@@ -128,6 +171,9 @@ VAR
     bAllSepRetracted      : BOOL;
     bAllPushExtended      : BOOL;
     bAllPushRetracted     : BOOL;
+    bAllGripExtended      : BOOL;
+    bAllGripRetracted     : BOOL;
+    bPlateOk              : BOOL;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
@@ -141,6 +187,9 @@ fbTrigStartAssembly(CLK := stRobot.bStartAssembly OR stHmi.bSimStartAssembly);
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
 fbSim_InitPushRet (CLK := stHmi.bSimStep_InitPushRet);
 fbSim_InitSepRet  (CLK := stHmi.bSimStep_InitSepRet);
+fbSim_InitGripRet (CLK := stHmi.bSimStep_InitGripRet);
+fbSim_WaitPlate   (CLK := stHmi.bSimStep_WaitPlate);
+fbSim_GripExt     (CLK := stHmi.bSimStep_GripExt);
 fbSim_SepExt      (CLK := stHmi.bSimStep_SepExt);
 fbSim_PushExt     (CLK := stHmi.bSimStep_PushExt);
 fbSim_DwellPush   (CLK := stHmi.bSimStep_DwellPush);
@@ -148,6 +197,7 @@ fbSim_PushRet     (CLK := stHmi.bSimStep_PushRet);
 fbSim_PushRetDwell(CLK := stHmi.bSimStep_PushRetDwell);
 fbSim_SepRet      (CLK := stHmi.bSimStep_SepRet);
 fbSim_SepRetDwell (CLK := stHmi.bSimStep_SepRetDwell);
+fbSim_GripRet     (CLK := stHmi.bSimStep_GripRet);
 
 (* ==========================================
    0b. AUTO-CLEAR ONE-SHOT FLAGS ON RISING EDGE
@@ -182,6 +232,9 @@ END_IF;
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
 IF fbSim_InitPushRet.Q  THEN stHmi.bSimStep_InitPushRet  := FALSE; END_IF;
 IF fbSim_InitSepRet.Q   THEN stHmi.bSimStep_InitSepRet   := FALSE; END_IF;
+IF fbSim_InitGripRet.Q  THEN stHmi.bSimStep_InitGripRet  := FALSE; END_IF;
+IF fbSim_WaitPlate.Q    THEN stHmi.bSimStep_WaitPlate    := FALSE; END_IF;
+IF fbSim_GripExt.Q      THEN stHmi.bSimStep_GripExt      := FALSE; END_IF;
 IF fbSim_SepExt.Q       THEN stHmi.bSimStep_SepExt       := FALSE; END_IF;
 IF fbSim_PushExt.Q      THEN stHmi.bSimStep_PushExt      := FALSE; END_IF;
 IF fbSim_DwellPush.Q    THEN stHmi.bSimStep_DwellPush    := FALSE; END_IF;
@@ -189,6 +242,7 @@ IF fbSim_PushRet.Q      THEN stHmi.bSimStep_PushRet      := FALSE; END_IF;
 IF fbSim_PushRetDwell.Q THEN stHmi.bSimStep_PushRetDwell := FALSE; END_IF;
 IF fbSim_SepRet.Q       THEN stHmi.bSimStep_SepRet       := FALSE; END_IF;
 IF fbSim_SepRetDwell.Q  THEN stHmi.bSimStep_SepRetDwell  := FALSE; END_IF;
+IF fbSim_GripRet.Q      THEN stHmi.bSimStep_GripRet      := FALSE; END_IF;
 
 (* ==========================================
    1. AGGREGATE SENSOR STATE
@@ -197,6 +251,9 @@ bAllSepExtended   := bSepIsExtended[1]   AND bSepIsExtended[2]   AND bSepIsExten
 bAllSepRetracted  := bSepIsRetracted[1]  AND bSepIsRetracted[2]  AND bSepIsRetracted[3];
 bAllPushExtended  := bPushIsExtended[1]  AND bPushIsExtended[2]  AND bPushIsExtended[3];
 bAllPushRetracted := bPushIsRetracted[1] AND bPushIsRetracted[2] AND bPushIsRetracted[3];
+bAllGripExtended  := bGripIsExtended[1]  AND bGripIsExtended[2];
+bAllGripRetracted := bGripIsRetracted[1] AND bGripIsRetracted[2];
+bPlateOk          := bPlateSenL AND bPlateSenR;
 
 (* ==========================================
    2. GLOBAL OVERRIDES — STOP and RESET
@@ -218,6 +275,16 @@ IF fbTrigReset.Q AND stHmi.eStep = E_MasterAutoStep.ERR THEN
     stHmi.iErrorCode := 0;
     stHmi.sErrorText := '';
     stHmi.eStep      := E_MasterAutoStep.IDLE;
+END_IF;
+
+(* Global Auto/Manual hard interlock. Switching the machine to Manual (or
+   being in Manual) forces the cycle back to IDLE from any running state and
+   drops Continuous, so a stray robot bStartAssembly edge cannot restart
+   motion. Not treated as a fault (no ERR/error code) — Manual is a normal
+   operator choice, not an alarm. ERR stays latched until RESET. *)
+IF NOT bMachineAuto AND stHmi.eStep <> E_MasterAutoStep.IDLE AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
+    stCfg.bContinuous := FALSE;
+    stHmi.eStep       := E_MasterAutoStep.IDLE;
 END_IF;
 
 (* ==========================================
@@ -248,7 +315,8 @@ IF stHmi.eStep <> ePrevStep THEN
     ePrevStep := stHmi.eStep;
 END_IF;
 
-(* PT depends on state. Wait states use tStepTimeoutMs; dwell states use their own. *)
+(* PT depends on state. Wait states use tStepTimeoutMs; dwell states use their own.
+   WAIT_PLATE uses tPlateWaitTimeoutMs (bounded by robot placement time). *)
 CASE stHmi.eStep OF
     E_MasterAutoStep.DWELL_PUSH:
         tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tDwellPushMs));
@@ -256,12 +324,17 @@ CASE stHmi.eStep OF
         tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tPushRetractedDwellMs));
     E_MasterAutoStep.SEP_RETRACTED_DWELL:
         tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tSepRetractedDwellMs));
+    E_MasterAutoStep.WAIT_PLATE:
+        tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tPlateWaitTimeoutMs));
     E_MasterAutoStep.SEP_EXTENDING,
     E_MasterAutoStep.PUSH_EXTENDING,
     E_MasterAutoStep.PUSH_RETRACTING,
     E_MasterAutoStep.SEP_RETRACTING,
     E_MasterAutoStep.INIT_PUSH_RETRACTING,
-    E_MasterAutoStep.INIT_SEP_RETRACTING:
+    E_MasterAutoStep.INIT_SEP_RETRACTING,
+    E_MasterAutoStep.INIT_GRIP_RETRACTING,
+    E_MasterAutoStep.GRIP_EXTENDING,
+    E_MasterAutoStep.GRIP_RETRACTING:
         tonStep(IN := TRUE, PT := UDINT_TO_TIME(stCfg.tStepTimeoutMs));
 ELSE
     tonStep(IN := FALSE, PT := T#0MS);
@@ -273,7 +346,9 @@ stHmi.tElapsedS := DINT_TO_LREAL(TIME_TO_DINT(tonStep.ET)) / 1000.0;
    4. STATE MACHINE
    Default: clear all commands each cycle in the ELSE-ish paths so a
    dropped state doesn't leave stale coils driven. Each state re-asserts
-   the commands it owns.
+   the commands it owns. Grip commands are held TRUE from GRIP_EXTENDING
+   through SEP_RETRACTED_DWELL so the plate stays clamped for the entire
+   Sep/Push cycle.
    ========================================== *)
 CASE stHmi.eStep OF
 
@@ -284,13 +359,19 @@ CASE stHmi.eStep OF
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
         (* No active error while in IDLE (unless just about to enter ERR
            via a global override, handled above). *)
         stHmi.iErrorCode := 0;
         stHmi.sErrorText := '';
 
-        IF fbTrigStart.Q OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous THEN
+        IF bMachineAuto AND (fbTrigStart.Q OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous) THEN
             (* Robot side (or operator, or bench sim) has requested a cycle.
+               Gated by bMachineAuto: in Manual the machine cannot start,
+               even on a robot bStartAssembly edge (no double-control).
                While bContinuous is checked, IDLE starts the next cycle
                immediately — no START / bStartAssembly edge needed.
                bAssemblyRunning goes TRUE immediately via Section 5 mirror.
@@ -298,19 +379,23 @@ CASE stHmi.eStep OF
                Enter INIT_PUSH_RETRACTING first (not SEP_EXTENDING directly)
                so pistons left extended by a prior manual move are driven
                home before the cycle proper starts. If everything is already
-               retracted, the two INIT states self-satisfy on the next scan. *)
+               retracted, the three INIT states self-satisfy on the next scan. *)
             stHmi.eStep := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;
 
     E_MasterAutoStep.INIT_PUSH_RETRACTING:
         (* Mirror end-of-cycle PUSH_RETRACTING: assert push retract only. Sep
            stays uncommanded (whatever position it was left in — its retract
-           follows in INIT_SEP_RETRACTING). *)
+           follows in INIT_SEP_RETRACTING). Grip uncommanded here. *)
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]   := FALSE;
             bSepCmdRetract[i]  := FALSE;
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := TRUE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
         END_FOR;
 
         IF bAllPushRetracted OR fbSim_InitPushRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
@@ -330,12 +415,83 @@ CASE stHmi.eStep OF
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
 
         IF bAllSepRetracted OR fbSim_InitSepRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
-            stHmi.eStep := E_MasterAutoStep.SEP_EXTENDING;
+            stHmi.eStep := E_MasterAutoStep.INIT_GRIP_RETRACTING;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 7;
             stHmi.sErrorText := 'INIT_SEP_RETRACTING timed out';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
+        END_IF;
+
+    E_MasterAutoStep.INIT_GRIP_RETRACTING:
+        (* Both Sep and Push confirmed home; now retract grip. Defensive
+           symmetry with INIT_PUSH_RETRACTING / INIT_SEP_RETRACTING so a
+           prior manual jog does not leave grip clamped when the plate
+           arrives. *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := FALSE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := FALSE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := TRUE;
+        END_FOR;
+
+        IF bAllGripRetracted OR fbSim_InitGripRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
+            stHmi.eStep := E_MasterAutoStep.WAIT_PLATE;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 8;
+            stHmi.sErrorText := 'INIT_GRIP_RETRACTING timed out';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
+        END_IF;
+
+    E_MasterAutoStep.WAIT_PLATE:
+        (* Nothing driven — waiting for the robot to place the plate on the
+           fixture. Both plate sensors must confirm TRUE before advancing.
+           No sensorless fallback: the whole point of this state is to gate
+           on the plate presence. Timeout uses tPlateWaitTimeoutMs (see
+           Section 3 timer selector). *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := FALSE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := FALSE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
+
+        IF bPlateOk OR fbSim_WaitPlate.Q THEN
+            stHmi.eStep := E_MasterAutoStep.GRIP_EXTENDING;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 9;
+            stHmi.sErrorText := 'WAIT_PLATE timed out (plate never arrived)';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
+        END_IF;
+
+    E_MasterAutoStep.GRIP_EXTENDING:
+        (* Plate is on the fixture; clamp it from both sides. *)
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := TRUE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
+
+        IF bAllGripExtended OR fbSim_GripExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
+            stHmi.eStep := E_MasterAutoStep.SEP_EXTENDING;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 10;
+            stHmi.sErrorText := 'GRIP_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
             stCfg.bContinuous := FALSE;
         END_IF;
@@ -344,6 +500,9 @@ CASE stHmi.eStep OF
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]  := TRUE;
             bSepCmdRetract[i] := FALSE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;   (* hold grip clamped *)
         END_FOR;
 
         IF bAllSepExtended OR fbSim_SepExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
@@ -363,6 +522,9 @@ CASE stHmi.eStep OF
             bPushCmdExtend[i]  := TRUE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
+        END_FOR;
 
         IF bAllPushExtended OR fbSim_PushExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.DWELL_PUSH;
@@ -379,6 +541,9 @@ CASE stHmi.eStep OF
             bSepCmdExtend[i]  := TRUE;
             bPushCmdExtend[i] := TRUE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
+        END_FOR;
 
         IF tonStep.Q OR fbSim_DwellPush.Q THEN
             stHmi.eStep := E_MasterAutoStep.PUSH_RETRACTING;
@@ -390,6 +555,9 @@ CASE stHmi.eStep OF
             bSepCmdExtend[i]   := TRUE;
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := TRUE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
         END_FOR;
 
         IF bAllPushRetracted OR fbSim_PushRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
@@ -408,6 +576,9 @@ CASE stHmi.eStep OF
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
+        END_FOR;
 
         IF tonStep.Q OR fbSim_PushRetDwell.Q THEN
             stHmi.eStep := E_MasterAutoStep.SEP_RETRACTING;
@@ -417,6 +588,9 @@ CASE stHmi.eStep OF
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]  := FALSE;
             bSepCmdRetract[i] := TRUE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
         END_FOR;
 
         IF bAllSepRetracted OR fbSim_SepRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
@@ -429,19 +603,45 @@ CASE stHmi.eStep OF
         END_IF;
 
     E_MasterAutoStep.SEP_RETRACTED_DWELL:
-        (* Everything home. *)
+        (* Sep/Push home; grip still clamped (released in GRIP_RETRACTING). *)
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]   := FALSE;
             bSepCmdRetract[i]  := FALSE;
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i] := TRUE;
+        END_FOR;
 
         IF tonStep.Q OR fbSim_SepRetDwell.Q THEN
+            stHmi.eStep := E_MasterAutoStep.GRIP_RETRACTING;
+        END_IF;
+
+    E_MasterAutoStep.GRIP_RETRACTING:
+        (* Very last motion: release the plate. On successful retract,
+           increment nCyclesCompleted and return to IDLE. *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := FALSE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := FALSE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := TRUE;
+        END_FOR;
+
+        IF bAllGripRetracted OR fbSim_GripRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.nCyclesCompleted := stHmi.nCyclesCompleted + 1;
             (* Back to IDLE. If bContinuous is still checked, IDLE re-arms
                the next cycle by itself on the next scan. *)
             stHmi.eStep := E_MasterAutoStep.IDLE;
+        ELSIF tonStep.Q THEN
+            stHmi.iErrorCode := 11;
+            stHmi.sErrorText := 'GRIP_RETRACTING timed out';
+            stHmi.eStep := E_MasterAutoStep.ERR;
+            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.ERR:
@@ -454,6 +654,10 @@ CASE stHmi.eStep OF
             bPushCmdExtend[i]  := FALSE;
             bPushCmdRetract[i] := FALSE;
         END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
 
 ELSE
     (* Defensive: any undefined value snaps to IDLE with no commands. *)
@@ -462,6 +666,10 @@ ELSE
         bSepCmdRetract[i]  := FALSE;
         bPushCmdExtend[i]  := FALSE;
         bPushCmdRetract[i] := FALSE;
+    END_FOR;
+    FOR i := 1 TO 2 DO
+        bGripCmdExtend[i]  := FALSE;
+        bGripCmdRetract[i] := FALSE;
     END_FOR;
     stHmi.eStep := E_MasterAutoStep.IDLE;
 END_CASE;

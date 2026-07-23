@@ -10,6 +10,8 @@ VAR_GLOBAL
     stPushSol1 : ST_HmiPiston := (Name := 'PushSol1');
     stPushSol2 : ST_HmiPiston := (Name := 'PushSol2');
     stPushSol3 : ST_HmiPiston := (Name := 'PushSol3');
+    stGripSolL : ST_HmiPiston := (Name := 'GripSolL');
+    stGripSolR : ST_HmiPiston := (Name := 'GripSolR');
 
     // Runtime state for the per-piston auto sequencers. Config for each
     // lives in the matching stXxxAutoCfg in GVL_HmiPersistent (PERSISTENT).
@@ -19,6 +21,11 @@ VAR_GLOBAL
     stPushSol1Auto : ST_HmiPistonAuto;
     stPushSol2Auto : ST_HmiPistonAuto;
     stPushSol3Auto : ST_HmiPistonAuto;
+
+    // Plate-presence sensors exposed to the HMI (indicator lamps on the
+    // AutoCycle page). Mirror of GVL_App.bPlateSen* driven in MAIN.
+    bPlateSenL : BOOL;
+    bPlateSenR : BOOL;
 
     // Runtime state for the master (multi-piston + robot-coordinated) auto
     // sequence. Config for it lives in GVL_HmiPersistent.stMasterAutoCfg.
