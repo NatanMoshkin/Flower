@@ -8,70 +8,76 @@ _(active TODOs land here; deferred items go under "Out of scope
 <!-- no active TODOs at the moment -->
 
 
-## OPEN ISSUE: robot integration architecture (blocking — decide before shipping)
+## SHIPPED: robot integration architecture — TCP-only (2026-07-26)
 
-The current design (`RobotBridge/` Python + pyads) cannot run on the CP6606
-because Windows Embedded Compact 7 on ARM has no supported CPython + pyads.
-Discovered 2026-07-10. Four options on the table; details, tradeoffs, and
-cost/effort estimates in `docs/robot-integration-options.md`.
+Resolved. `FB_RobotTcpClient` (`Tc2_TcpIp` on TF6310) is the sole channel
+between the PLC and the Dobot. The former discrete-I/O handshake
+(`STAND_SEQ_DO`/`STAND_SEQ_DI`) is retired; `DI[13]` and `DO[7]` are free.
 
-Summary of the options (ranking updated 2026-07-10 after robot code inspection):
-
-| # | Option | Status |
-|---|--------|--------|
-| **1** | **Discrete I/O between robot and PLC (skip TCP entirely)** | **★ Recommended.** Dobot code (SAAD 167-01) already defines `STAND_SEQ_DO` / `STAND_SEQ_DI` and has ≥ 10 DI + 4 DO in use — the handshake half is already built on the robot side. |
-| 2 | Replace CP6606 with x86 Beckhoff (CX5340 + panel, or CP2xxx) | Fallback if Option 1 blocks. Capital cost, downtime, license transfer. |
-| 3 | Add companion box (RPi 4 Linux or industrial NUC) hosting `RobotBridge/` | Fallback if Option 1 blocks. Adds one production-critical device. |
-| 4 | Serial (RS-232 / RS-485) via EL6001 / EL6021 + free Tc2_SerialCom | Likely N/A — Dobot Lua code shows no serial usage. |
-| — | Rewrite bridge in C#/.NET CF 3.5 for CE 7 (rejected: dead tooling) | — |
-
-Note: `FlowerPyHmi/` is engineering-side (runs on any developer laptop) —
-it is **not** part of this decision and stays on the engineering PC
-regardless of which option wins. Only `RobotBridge/` is at stake.
+The four original options in `docs/robot-integration-options.md` are now
+historic; the file is kept for archaeology but does not describe current
+behaviour. `RobotBridge/` (Python) is out of scope for the panel — kept
+only as protocol reference (`Client_working_example/`). `FlowerPyHmi/`
+remains engineering-side (runs on any developer laptop) and unaffected.
 
 
-## DECISION: 167_01 panel solution — native Tc2_TcpIp param comms + global Auto/Manual interlock
+## DECISION: 167_01 panel solution — TCP-only robot comms + global Auto/Manual interlock
 
-Scope: `Panel_PLC_HMI/167_01_Saad_PLC/` ONLY (the real CP6606 target). The
-dev solution `Flower_PLC_HMI/` is unchanged.
+Scope: `Panel_PLC_HMI/167_01_Saad_PLC/` is the real CP6606 target. The dev
+solution `Flower_PLC_HMI/` mirrors the same PLC content byte-for-byte for
+local (developer PC) testing.
 
 **Global Auto/Manual hard interlock (2026-07-19).** A single machine-wide
 BOOL `GVL_HmiPersistent.stMasterAutoCfg.bAutoMode` is the sole source of
 truth for every piston's mode — "no option to double control". `MAIN` drives
-it unconditionally each scan onto BOTH `eMode` and `bMode` of all six pistons
-(`FB_SolSpringPiston_2Pos` edge-syncs the two, so forcing only one would let a
-stray toggle propagate for a scan; forcing both closes that gap). In Auto the
-MasterAutoCycle owns all six pistons — the per-piston auto tiles/FBs and their
-OR-merge are removed in this solution. In Manual the master cycle is held IDLE
-and the operator jogs. `E_ControlMode`: Manual=0, Automatic=1.
+it unconditionally each scan onto BOTH `eMode` and `bMode` of all eight
+pistons (six Sep/Push + two Grip). `FB_SolSpringPiston_2Pos` edge-syncs the
+two, so forcing only one would let a stray toggle propagate for a scan;
+forcing both closes that gap. In Auto the MasterAutoCycle owns all eight
+pistons — no per-piston auto tiles in the panel solution. In Manual the
+master cycle is held IDLE and the operator jogs. `E_ControlMode`:
+Manual=0, Automatic=1.
 
-**Robot TCP/IP param/trigger comms (2026-07-19), ADDED ALONGSIDE the
-discrete-I/O handshake.** The safety-critical start/done path stays on
-`STAND_SEQ_DO`/`STAND_SEQ_DI` (see the FB_MasterAutoCycle robot-interface
-table above). Layered on top: `FB_RobotTcpClient` (native ST, uses free-with-
-TF6310 `Tc2_TcpIp`) is a TCP **client** dialing the robot server `:6001` for
-the Dobot tuning protocol. TF6310 is installed+running on the CP6606 (verified
-2026-07-19) — this is the documented exception to the avoid-paid-libs rule.
-This supersedes the "Reconcile RobotBridge protocol" out-of-scope item and the
-Python `RobotBridge/` for this solution (the bridge can't run on WinCE-ARM).
+**Robot comms — TCP-only (2026-07-26).** `FB_RobotTcpClient` (native ST,
+uses free-with-TF6310 `Tc2_TcpIp`) dials the robot server `:6001`. TF6310
+is installed+running on the CP6606 — the documented exception to the
+avoid-paid-libs rule. All start/stop/reset traffic goes through this
+channel; the former discrete-I/O handshake (`STAND_SEQ_DO`/`STAND_SEQ_DI`)
+is retired and its DI[13] / DO[7] channels are free.
 
 - Protocol (raw ASCII, NO newline framing; one send → one reply — matches
-  `RobotBridge/Client_working_example/tcp client.py` + `dummy_server.py`):
-  `GET_SYNC`→`SYNC:NAME=VALUE,...`; `NAME:VALUE`→`OK: SET NAME`;
-  `New_Bulb:1`→`OK: SET New_Bulb`; `HEARTBEAT`→`1`.
-- New `DUTs/ST_RobotParams.TcDUT`: 11 INT tuning params (J_SPEED, L_SPEED,
-  REPEATS, START_WAIT, WATER_WAIT, STAND_WAIT, END_WAIT, WATER_SPEED,
-  WAX_WAIT_TIME_IN, WAX_WAIT_TIME_OUT, WAX_SPEED) + request flags (bGetSync,
-  bSetParam/sSetName/nSetVal, bTriggerNewBulb, FB auto-clears each after ACK).
-- `GVL_Robot` adds `stParams`, `sRobotHost` (default '192.168.201.1'),
-  `nRobotPort` (6001), `bTcpEnable`. Status reuses the deprecated `stRobot`
-  fields (`eConnState`/`sConnStateText`/`nPacketsRx`/`nPacketsTx`/
-  `sLastMessage`/`sLastTxMessage`). `MAIN` calls `fbRobotTcp` each scan.
-- State machine (mirrors the Python supervisor): Disconnected → Connecting →
-  Connected → (any socket error) close + reconnect after 3 s. Empty
-  `sSrvNetId` targets the local TF6310 server. **Build verified on the local
-  PC (XAE, 2026-07-19); online test against the robot / sim server still
-  pending** (CP6606 not on hand at authoring time).
+  `RobotBridge/Client_working_example/tcp client.py` + `dummy_server.py`
+  plus the new STATE/CMD frames):
+
+  | PLC → robot | Robot → PLC | Purpose |
+  |---|---|---|
+  | `GET_SYNC` | `SYNC:NAME=VALUE,...` | Pull all 11 tuning params |
+  | `NAME:VALUE` | `OK: SET NAME` | Set one tuning param |
+  | `New_Bulb:1` | `OK: SET New_Bulb` | Start a fresh bulb |
+  | `STATE:<n>` | `CMD:<m>` | State push + command receive |
+
+- `STATE:<n>` (`n = INT` value of `E_MasterAutoStep`, or `MANUAL=30` when
+  `bAutoMode=FALSE`). Sent on every change of `stParams.nStateOut` and
+  every `IDLE_STATE_MS` (default 1000 ms) as keep-alive. Replaces the old
+  `HEARTBEAT` frame.
+- `CMD:<m>` (`m` ∈ {0,1,2}: 0=none, 1=start cycle, 2=reset error).
+  Written into `stParams.nRobotCmd`; `MAIN` R_TRIGs on the value and
+  feeds pulses into FB_MasterAutoCycle (`bExtStartPulse`) or the HMI's
+  `bReset`. The robot is responsible for zeroing after the next state
+  push acknowledges the command.
+
+- `DUTs/ST_RobotParams.TcDUT` — 11 INT tuning params + request flags
+  (`bGetSync`, `bSetParam`/`sSetName`/`nSetVal`, `bTriggerNewBulb`, FB
+  auto-clears each after ACK) + the two INTs `nStateOut` / `nRobotCmd`.
+- `GVL_Robot`: `stParams`, `sRobotHost` (default '192.168.201.1'),
+  `nRobotPort` (6001), `bTcpEnable`. Status mirror in `stRobot`:
+  `eConnState`/`sConnStateText`/`nPacketsRx`/`nPacketsTx`/
+  `sLastMessage`/`sLastTxMessage`. `MAIN` calls `fbRobotTcp` each scan.
+- Connection state machine: Disconnected → Connecting → Connected → (any
+  socket error) close + reconnect after 3 s. Empty `sSrvNetId` targets
+  the local TF6310 server. Build verified on the local PC (XAE);
+  online test against the robot / sim server pending until robot Lua
+  side is updated to speak `STATE`/`CMD`.
 
 
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
@@ -83,54 +89,73 @@ PushSolN) pistons in parallel with a single robot handshake signal. The
 former "Pair count" runtime knob (`uiPairCount`) was removed 2026-07-12 —
 pair count is fixed at 3.
 
-**Robot interface (simplified 2026-07-10):** two discrete signals, both
-level (not pulsed), per the Option 1 decision in
-`docs/robot-integration-options.md`. See the OPEN ISSUE section above.
+**Robot interface (TCP-only, 2026-07-26):** all robot signals travel over
+`FB_RobotTcpClient` (see the panel-solution decision above for the
+protocol). No discrete-I/O handshake anymore.
 
-| Direction | ST_HmiRobot field | Wire to Dobot (from `..\167-01-Saad\global.lua`) | Semantic |
+| Direction | ST_RobotParams field | Wire | Semantic |
 |---|---|---|---|
-| Robot → PLC | `bStartAssembly` | robot DO 2 (`STAND_SEQ_DO`) | Rising edge triggers a cycle from IDLE |
-| PLC → Robot | `bAssemblyRunning` | robot DI 1 (`STAND_SEQ_DI`) | TRUE in every non-IDLE state (including ERR); FALSE in IDLE |
+| PLC → Robot | `nStateOut : INT` | `STATE:<n>` frame | `TO_INT(eStep)` in Auto; `MANUAL=30` in Manual. Robot derives "PLC is running" from `n ≠ 0`. |
+| Robot → PLC | `nRobotCmd : INT` | `CMD:<m>` reply | 0=none, 1=start cycle (rising edge → `bExtStartPulse`), 2=reset error (rising edge → `stMasterAuto.bReset`). |
 
 The former `POS1/POS2/POS3` + `AUTO_STARTED/PUSH_DONE/PISTONS_ERROR` TCP
-protocol is retired. `WAIT_POS2` is retired too — the Dobot's
-`PerformStandSequence` moves the arm clear of the stand *before* raising
-`STAND_SEQ_DO`, so no intermediate "robot moved away" wait is needed.
+protocol and the `STAND_SEQ_DO`/`STAND_SEQ_DI` discrete-I/O handshake
+are both retired. `WAIT_POS2` is retired too — the Dobot's
+`PerformStandSequence` moves the arm clear of the stand *before* it
+issues `CMD:1`, so no intermediate "robot moved away" wait is needed.
 
-**Eleven-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value still
-declared in the enum but unused — safe to remove once the HMI is cleaned):
+**Fifteen-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value
+still declared in the enum but unused — safe to remove once every HMI
+page has stopped referring to it):
 
 ```
-IDLE                    Wait for operator START OR stRobot.bStartAssembly rising
-                        OR bSimStep_Idle OR bContinuous checked (level — while
-                        checked, IDLE starts the next cycle immediately).
-                        On start, transitions to INIT_PUSH_RETRACTING (not
-                        directly to SEP_EXTENDING) so pistons left extended
-                        by a prior manual move are driven home first.
-                        bAssemblyRunning drops LOW here.
-INIT_PUSH_RETRACTING    Drive PushCmdRetract[1..3]; wait AND of all 3
+IDLE (0)                Wait for operator START OR bExtStartPulse (robot
+                        CMD:1 edge) OR bSimStep_Idle OR bContinuous checked
+                        (level — while checked, IDLE starts the next cycle
+                        immediately). On start, transitions to
+                        INIT_PUSH_RETRACTING (not directly to SEP_EXTENDING)
+                        so pistons left extended by a prior manual move are
+                        driven home first. nStateOut = 0 here so the robot
+                        sees "PLC idle" via TCP.
+INIT_PUSH_RETRACTING(10) Drive PushCmdRetract[1..3]; wait AND of all 3
                         PushIsRetracted. Auto-satisfies on the next scan
-                        when push is already home. Guarantees push is home
-                        before sep retract (same collision constraint as
-                        the end-of-cycle PUSH_RETRACTING → SEP_RETRACTING
-                        ordering).
-INIT_SEP_RETRACTING     Drive SepCmdRetract[1..3]; wait AND of all 3
-                        SepIsRetracted. Push is now confirmed home.
-SEP_EXTENDING           Drive SepCmdExtend[1..3]; wait AND of all 3 SepIsExtended
-                        (or tStepTimeoutMs expiry when bNoSensors).
-PUSH_EXTENDING          Drive PushCmdExtend[1..3]; wait AND of all 3 PushIsExtended.
-DWELL_PUSH              Hold both extended; wait tDwellPushMs (default 2000).
-PUSH_RETRACTING         Drive PushCmdRetract[1..3]; wait AND of all 3 PushIsRetracted.
-PUSH_RETRACTED_DWELL    Wait tPushRetractedDwellMs (default 500).
-SEP_RETRACTING          Drive SepCmdRetract[1..3]; wait AND of all 3 SepIsRetracted.
-SEP_RETRACTED_DWELL     Wait tSepRetractedDwellMs (default 500). Increment nCyclesCompleted.
-                        → IDLE (which re-arms by itself while Continuous is checked).
-ERR                     Latched. iErrorCode = step's fault code. bContinuous is
-                        cleared on entry so RESET does not restart motion.
-                        bAssemblyRunning stays HIGH so the robot's own polling
-                        times out and its error handler fires. Reset on HMI
-                        RESET rising edge only.
+                        when push is already home.
+INIT_SEP_RETRACTING (11) Drive SepCmdRetract[1..3]; wait AND of all 3
+                        SepIsRetracted.
+INIT_GRIP_RETRACTING(12) Drive GripCmdRetract[1..2]; wait AND of all
+                        GripIsRetracted. Defensive symmetry with the INIT
+                        Sep/Push states so a manual jog left extended does
+                        not collide with the arriving plate.
+WAIT_PLATE (20)         Wait `bPlateSenL AND bPlateSenR` (robot has placed
+                        the plate). Latched at start only; sensors not
+                        monitored past this step. Timeout uses
+                        `tPlateWaitTimeoutMs` (bounded by robot placement time).
+GRIP_EXTENDING (21)     Drive GripCmdExtend[1..2]; wait AND of all
+                        GripIsExtended. Plate clamped from both sides.
+SEP_EXTENDING (1)       Drive SepCmdExtend[1..3]; wait AND of all
+                        SepIsExtended. Grip stays extended for every state
+                        below (held from GRIP_EXTENDING through SEP_RETRACTED_DWELL).
+PUSH_EXTENDING (3)      Drive PushCmdExtend[1..3]; wait AND of all PushIsExtended.
+DWELL_PUSH (4)          Hold both extended; wait tDwellPushMs (default 2000).
+PUSH_RETRACTING (5)     Drive PushCmdRetract[1..3]; wait AND of all PushIsRetracted.
+PUSH_RETRACTED_DWELL(6) Wait tPushRetractedDwellMs (default 500).
+SEP_RETRACTING (7)      Drive SepCmdRetract[1..3]; wait AND of all SepIsRetracted.
+SEP_RETRACTED_DWELL (8) Wait tSepRetractedDwellMs (default 500).
+GRIP_RETRACTING (22)    Drive GripCmdRetract[1..2]; wait AND of all
+                        GripIsRetracted. Releases the plate; increment
+                        nCyclesCompleted; back to IDLE (which re-arms by
+                        itself while Continuous is checked).
+ERR (99)                Latched. iErrorCode = step's fault code.
+                        bContinuous cleared on entry so RESET does not
+                        restart motion. nStateOut = 99 so the robot sees
+                        the fault via TCP. Reset on HMI RESET rising edge
+                        OR robot CMD:2.
 ```
+
+A 16th sentinel value **MANUAL (30)** exists in the enum but is never
+assigned to `eStep`. `MAIN` reports it to the robot as `nStateOut = 30`
+while `bAutoMode = FALSE` — the enum is the shared vocabulary between
+PLC and robot, so this sentinel lives there rather than as a magic INT.
 
 **Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
 
@@ -143,54 +168,44 @@ ERR                     Latched. iErrorCode = step's fault code. bContinuous is
 | 5    | SEP_RETRACTING timeout             |
 | 6    | INIT_PUSH_RETRACTING timeout       |
 | 7    | INIT_SEP_RETRACTING timeout        |
+| 8    | INIT_GRIP_RETRACTING timeout       |
+| 9    | WAIT_PLATE timeout (plate not present) |
+| 10   | GRIP_EXTENDING timeout             |
+| 11   | GRIP_RETRACTING timeout            |
 | 99   | Operator STOP while running        |
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
-**Master sensorless mode** (`stMasterAutoCfg.bNoSensors`, default FALSE,
-added 2026-07-12) — mirrors the per-piston `bNoSensors`. When TRUE, the 6
-movement states (INIT_PUSH_RETRACTING, INIT_SEP_RETRACTING, SEP_EXTENDING,
-PUSH_EXTENDING, PUSH_RETRACTING, SEP_RETRACTING) ignore sensor feedback and
-advance when `tStepTimeoutMs` expires — the timeout doubles as the fixed
-step duration, so error codes 1/3/4/5/6/7 cannot occur while sensorless.
-HMI checkbox "No sensors (timed steps)" sits below Continuous on the
-AutoCycle page.
-
-**Piston mode force ("Put all to Auto")** — optional, off by default. When
-`stMasterAutoCfg.bForceAllAuto` is TRUE, MAIN forces all six pistons
-into Automatic while the master cycle is running so `bAutoCmd*`
-reaches the coil. When FALSE (default), only pistons the operator already
-put into Automatic participate; pistons in Manual mode are skipped. The
-gate is `bAnyRunning AND bForceAllAuto`, so on IDLE/ERR the block never
-touches the operator's mode choice regardless of the flag. HMI checkbox
-lives next to Continuous on the AutoCycle page.
-
-**Coexists** with the per-piston `fbSepSol{1..3}Auto` / `fbPushSol{1..3}Auto`
-tiles via OR-merge on `bAutoCmd*` at each piston call site (`fbXxxAuto.bCmd*
-OR fbMasterAutoCycle.bXxxCmd*[i]`). Bench-testing loops independently still
-works — see `DECISION: per-piston auto tiles` below.
+**Master sensorless mode** (`stMasterAutoCfg.bNoSensors`, default FALSE) —
+mirrors the per-piston `bNoSensors`. When TRUE, the 8 movement states
+(both INIT sets, both GRIP states, all 4 Sep/Push states) ignore sensor
+feedback and advance when `tStepTimeoutMs` expires — the timeout doubles
+as the fixed step duration, so error codes 1/3/4/5/6/7/8/10/11 cannot
+occur while sensorless. `WAIT_PLATE` uses its own `tPlateWaitTimeoutMs`
+and still requires both plate sensors TRUE (bNoSensors doesn't skip the
+plate gate). HMI checkbox "No sensors (timed steps)" sits below
+Continuous on the AutoCycle page.
 
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
-triggered, FB auto-clears after consumption. The `AutoCycle` HMI page
-renders them as a vertical 11-row table (`Row0_*` … `Row10_*` in
-`UC_MasterAutoCycle.usercontrol`) — one row per state in chronological
-run order, background highlights yellow when `auto::eStep` matches the
-row's enum value, red for the ERR row.
+triggered, FB auto-clears after consumption. `UC_MasterAutoCycle` renders
+them as a vertical table (one row per state in chronological run order),
+background highlights yellow when `eStep` matches the row's enum value,
+red for the ERR row.
 
-**Logging** (calls `F_LogEvent` — mirrors the pattern from
-`FB_PistonAutoCycle`): every state transition emits one entry, INFO for
-normal advances (`"PREV -> NEW"` via `TO_STRING()`), ERR for entries into
-`ERR` (`sMsg = stHmi.sErrorText`). Operator button rising edges (`bStart`,
-`bStop`, `bReset`) and the robot / sim `bStartAssembly` rising edge each
-emit one INFO entry. `sSource` = `stHmi.Name`. Bench-only sim step
-advances are deliberately not logged (would spam production). The `Sim bStartAssembly` checkbox binds
-`ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — an auto-clearing sim flag
-OR-ed with the real `stRobot.bStartAssembly` level before the R_TRIG; the
-FB clears it after the rising edge is consumed and never writes the
-robot-owned signal. (The old binding wrote `robot::bStartAssembly`
-directly without TwoWay, leaving a stale level that ate the next edge —
-fixed 2026-07-12.)
+**External start pulse.** MAIN owns the `R_TRIG` on `stParams.nRobotCmd = 1`
+and feeds a one-scan pulse into FB_MasterAutoCycle's `bExtStartPulse`
+VAR_INPUT. HMI checkbox "Sim bStartAssembly" binds
+`ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — a bench sim flag consumed
+by the FB's own R_TRIG and OR-merged inside the IDLE state exit condition
+alongside the operator's START button and the external pulse. Also driven
+by PB1 rising edge in Auto mode (see the panel-hardware decision below).
+
+**Logging.** `F_LogEvent` fires on every state transition (INFO for
+normal `PREV -> NEW`, ERR for entries into ERR with `sMsg = sErrorText`),
+on operator START/STOP/RESET edges, on Sim start edges, and on external
+start pulses. `sSource = stHmi.Name`. Bench sim step advances are not
+logged (would spam production).
 
 ## DECISION: per-piston auto tiles + sensorless mode
 
@@ -211,40 +226,51 @@ other.
   timer expiry. Same fields become fixed extend/retract *durations*
   (relabelled in the UC as "Extend time (ms)" / "Retract time (ms)"). No
   feedback-mismatch check, no "sensor never arrived" error path. Use for
-  bench cycling on pistons whose proximity switches aren't wired
-  (SepSol2/3, PushSol2/3 today per the DI channel open issue below).
+  bench cycling on pistons whose proximity switches aren't wired.
 
-## DECISION: robot is the TCP server; bridge is the client
+## DECISION: PLC is the TCP client; robot is the server
 
-The robot comms are done via a **Python bridge** in `RobotBridge/` that
-talks TCP/IP to the robot and ADS to the PLC. This sidesteps Beckhoff's
-paid TF6310 TCP/IP supplement — see
-`.claude/projects/…/memory/feedback_avoid_licensed_beckhoff_libs.md`
-for the rationale.
+The robot comms live in `FB_RobotTcpClient` (`Panel_PLC_HMI/…/PLC1/POUs/`)
+which uses the free-with-TF6310 `Tc2_TcpIp` library to dial the robot at
+`GVL_Robot.sRobotHost:nRobotPort` (default `192.168.201.1:6001`). TF6310
+is installed+running on the CP6606 — this is the documented exception
+to the avoid-paid-libs rule (see project memory
+`feedback_avoid_licensed_beckhoff_libs.md`).
 
-**Robot side is the TCP server, bridge dials in.** Committed values in
-`RobotBridge/config.yaml`:
+The former Python bridge (`RobotBridge/`) is out of scope for the panel
+solution because Windows Embedded Compact 7 on ARM has no supported
+CPython+pyads. Kept only as protocol reference
+(`Client_working_example/tcp client.py` and `dummy_server.py`).
 
-```yaml
-robot:
-  role: "client"
-  host: "192.168.201.1"
-  port: 6001
-```
-
-The connection semantics follow the reference client at
-`RobotBridge/Client_working_example/tcp client.py`:
-
+Connection semantics:
 - Persistent socket (one open TCP connection while up).
-- 2-second socket timeout on connect/recv/send.
-- `SO_KEEPALIVE` enabled so a half-open TCP (peer power loss, cable pulled)
-  is eventually detected by the OS.
-- Optional idle-probe: after `heartbeat_idle_seconds` with no data from
-  the robot, the bridge sends `HEARTBEAT` bytes just to see whether the
-  send raises. We do not require the robot to reply — this only catches
-  a half-open connection faster than TCP KEEPALIVE would.
-- On any exception, the top-level supervisor closes the socket, waits
-  `reconnect.delay_seconds`, and re-dials.
+- 2-second timeout on connect / send / recv (per Tc2_TcpIp).
+- On any error → close socket → wait 3 s → re-dial. Repeats forever
+  while `bTcpEnable = TRUE`.
+- `STATE:<n>` keep-alive every ~1 s serves the "is the socket alive?"
+  role that a bare HEARTBEAT used to fill.
+
+## PANEL HARDWARE: 3 push buttons + 3 LEDs (2026-07-26)
+
+Three momentary-contact push buttons with integrated LEDs are wired to
+the panel's DI/DO. Behaviour is gated by `bAutoMode`:
+
+| PB | DI | LED (DO) | In Automatic | In Manual |
+|---|---|---|---|---|
+| PB1 | dIn[20] | dOut[10] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | Held → both grip pistons extend (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
+| PB2 | dIn[21] | dOut[11] | Ignored. | Held → all 3 SepSol pistons extend. |
+| PB3 | dIn[22] | dOut[12] | Ignored. | Held → all 3 PushSol pistons extend. |
+
+LEDs are dumb mirrors of the raw PB press state (`GVL_App.bLedPbN :=
+GVL_App.bPbN`) — a wiring / hardware-health diagnostic, not a status
+indicator. Room to repurpose later: swap the LED-write source (running,
+error latched, TCP connected, etc.) without touching the DI wiring.
+
+PB inputs live in `GVL_App` (not HMI-mapped). `PRG_IoMap.ReadInputs`
+copies from `dIn[20..22]`; `PRG_IoMap.WriteOutputs` copies to
+`dOut[10..12]`. MAIN's jog OR-merge into piston FBs uses the new
+`FB_SolSpringPiston_2Pos.bJogExtend` VAR_INPUT so the HMI-owned
+`stHmi.bManJogExtend` field is not mutated by MAIN.
 
 ## DECISION: HMI contract lives in any GVL with the `TcHmiSymbol.AddSymbol` pragma
 
@@ -300,10 +326,7 @@ PROGRAM with two actions — `PRG_IoMap.ReadInputs` and
 priority 15) which pre-empts `PlcTask` (10 ms, priority 20). MAIN sees
 fresh sensor state when it starts, and command writes it makes to
 `GVL_App.bValve*` land on the physical outputs within the next 5 ms
-IOmapTask cycle. MAIN no longer touches `GVL_IO` directly. Robot-handshake
-wiring (`GVL_Robot.stRobot.bStartAssembly` from a DI, `bAssemblyRunning`
-to a DO) is stubbed in as commented `TODO(#3)` lines inside the actions —
-un-comment once channels are picked from the open-issue table.
+IOmapTask cycle. MAIN no longer touches `GVL_IO` directly.
 
 **Do not call `PRG_IoMap.ReadInputs` / `.WriteOutputs` from MAIN** — that
 would double-execute them on top of the task-driven call and break scan
@@ -331,48 +354,52 @@ Level 1 is the ceiling for this platform.
 
 ## DECISION: physical IO channel assignment
 
-`GVL_IO.dIn` / `GVL_IO.dOut` sized `ARRAY[1..16] OF BOOL`. All six
-pistons and the robot handshake are wired; channels 14..16 (DI) and
-8..16 (DO) are free for future use. The mapping lives in
-`PRG_IoMap.TcPOU` (`ReadInputs` and `WriteOutputs` actions).
+`GVL_IO.dIn` sized `ARRAY[1..24] OF BOOL`, `GVL_IO.dOut` sized
+`ARRAY[1..16] OF BOOL`. All 8 pistons, the plate sensors, and the
+panel push-buttons + LEDs are wired. Mapping lives in `PRG_IoMap.TcPOU`
+(`ReadInputs` / `WriteOutputs` actions).
 
-| Actuator / signal        | DI (Retract) | DI (Extend) | DO (Extend / robot) |
-|--------------------------|--------------|-------------|---------------------|
-| SepSol1                  | dIn[1]       | dIn[2]      | dOut[1]             |
-| SepSol2                  | dIn[3]       | dIn[4]      | dOut[2]             |
-| SepSol3                  | dIn[5]       | dIn[6]      | dOut[3]             |
-| PushSol1                 | dIn[7]       | dIn[8]      | dOut[4]             |
-| PushSol2                 | dIn[9]       | dIn[10]     | dOut[5]             |
-| PushSol3                 | dIn[11]      | dIn[12]     | dOut[6]             |
-| Robot → PLC `bStartAssembly` (STAND_SEQ_DO) | dIn[13] | — | — |
-| PLC → Robot `bAssemblyRunning` (STAND_SEQ_DI) | — | — | dOut[7] |
+| Actuator / signal | DI (Retract) | DI (Extend) | DO |
+|---|---|---|---|
+| SepSol1 | dIn[1] | dIn[2] | dOut[1] |
+| SepSol2 | dIn[3] | dIn[4] | dOut[2] |
+| SepSol3 | dIn[5] | dIn[6] | dOut[3] |
+| PushSol1 | dIn[7] | dIn[8] | dOut[4] |
+| PushSol2 | dIn[9] | dIn[10] | dOut[5] |
+| PushSol3 | dIn[11] | dIn[12] | dOut[6] |
+| (retired robot discrete-IO) | dIn[13] free | — | dOut[7] free |
+| GripSolL | dIn[14] | dIn[15] | dOut[8] |
+| GripSolR | dIn[16] | dIn[17] | dOut[9] |
+| PlateSenL | dIn[18] | — | — |
+| PlateSenR | dIn[19] | — | — |
+| PB1 (grip / cycle-start bypass) | dIn[20] | — | dOut[10] LED1 |
+| PB2 (Sep jog) | dIn[21] | — | dOut[11] LED2 |
+| PB3 (Push jog) | dIn[22] | — | dOut[12] LED3 |
+| free | dIn[23..24] | — | dOut[13..16] |
 
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side — the
 retracted-position feedback is useful even without a retract coil.
 
-To add a new actuator, extend `GVL_IO` (already sized 1..16), add its
-GVL_App alias, wire it in `PRG_IoMap.ReadInputs` / `WriteOutputs`, then
-finish the EtherCAT link in the System Manager.
+To add a new actuator, extend `GVL_IO` (already sized DI[1..24] /
+DO[1..16]; grow arrays if needed), add its GVL_App alias, wire it in
+`PRG_IoMap.ReadInputs` / `WriteOutputs`, then finish the EtherCAT link
+in the System Manager.
 
 ## Out of scope (Future)
 
-- **Invert `bAssemblyRunning` polarity** → `bAssemblyNOTRunning`. Safer
-  fail-open semantic: PLC writes TRUE when it is *safe* to move the robot,
-  so a broken PLC / cable / loose wire reads as FALSE and the robot holds
-  station.
 - **Review persistent vars** — verify `stXxxAutoCfg` and `stMasterAutoCfg`
   actually survive a power-cycle. Needs a bench test (set value → hard
   power cycle → verify), not a code review.
-- **Reconcile `RobotBridge/` protocol with the actual Dobot code.** Its
-  `robot_bridge.py` assumes the robot pushes `POS1` / `POS2` / `POS3` on
-  TCP:6001, but the SAAD 167-01 Dobot Lua only uses port 6001 for
-  parameter tuning (`GET_SYNC`, `NAME:VALUE`, `HEARTBEAT`, `New_Bulb:1`);
-  the operational handshake is discrete I/O (`STAND_SEQ_DO` /
-  `STAND_SEQ_DI`). Options: retire the bridge (Option 1 outcome above),
-  repurpose it for parameter tuning only, or ask the robot side to add
-  position frames (unlikely — duplicates DIO). Confirm with the robot
-  programmer before doing either.
+- **Reassign LEDs to functional statuses.** Currently PB1/2/3 LEDs are
+  dumb mirrors of the press state. Repurposing candidates: LED1 = cycle
+  running, LED2 = error latched, LED3 = TCP connected. Deferred until
+  operator preference is known — the LED source is a one-line change in
+  `MAIN.TcPOU`.
+- **Delete deprecated fields in `ST_HmiRobot`** (`bAtPos1/2/3`,
+  `bTx*`, `bRxResetError`). Kept only for legacy HMI page bindings on
+  the retired TCP POS/AUTO_STARTED protocol. Safe to delete once no HMI
+  page references them; grep the Flower_HMI usercontrols first.
 
 
 ## Playwright
