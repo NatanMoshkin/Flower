@@ -7,21 +7,33 @@ STRUCT
     // Dobot tuning parameters exchanged over TCP:6001. TCP is now the ONLY
     // robot channel -- start/stop moved from discrete I/O to STATE:n / CMD:n
     // frames (see nStateOut / nRobotCmd below). Field names and order match
-    // the robot's SYNC string (see global.lua / dummy_server.py in
-    // RobotBridge\Client_working_example). All INT so the classic VISU HMI
-    // binds NumericInput directly. Defaults mirror the dummy server.
+    // the robot's SYNC string (global.lua / dummy_server.py). Defaults
+    // mirror the dummy server.
+    //
+    // UNITS AND RANGES. The four speeds are PERCENTAGES, not absolute
+    // velocities: global.lua Init() passes J_SPEED / L_SPEED to VelJ() /
+    // VelL(), and WAX_SPEED / WATER_SPEED feed the v= velocity-ratio option
+    // of MovL. A global SpeedFactor(80) scales everything on top. The waits
+    // are milliseconds. INT is an encoding detail, not a statement of range.
+    //
+    // Ranges below are the vendor's own -- the Dobot tuning GUI
+    // (Robot\167-01-Saad\tcp client.py) clamps to them, and readme.txt
+    // mirrors the table. The robot's Lua does NOT validate (src2.lua assigns
+    // tonumber() straight through), so FB_RobotTcpClient.ClampParam enforces
+    // them for every writer. The panel's NumericInputs also carry matching
+    // InputBoxMin/Max, but per-control limits only bound their own control.
     // ------------------------------------------------------------------
-    J_SPEED            : INT := 10;
-    L_SPEED            : INT := 10;
-    REPEATS            : INT := 2;
-    START_WAIT         : INT := 500;
-    WATER_WAIT         : INT := 500;
-    STAND_WAIT         : INT := 2000;
-    END_WAIT           : INT := 500;
-    WATER_SPEED        : INT := 10;
-    WAX_WAIT_TIME_IN   : INT := 500;
-    WAX_WAIT_TIME_OUT  : INT := 500;
-    WAX_SPEED          : INT := 10;
+    J_SPEED            : INT := 10;     //    1..100  %
+    L_SPEED            : INT := 10;     //    1..100  %
+    REPEATS            : INT := 2;      //    1..10
+    START_WAIT         : INT := 500;    //   10..10000 ms
+    WATER_WAIT         : INT := 500;    //   10..10000 ms
+    STAND_WAIT         : INT := 2000;   //   10..10000 ms
+    END_WAIT           : INT := 500;    //   10..10000 ms
+    WATER_SPEED        : INT := 10;     //    0..100  %
+    WAX_WAIT_TIME_IN   : INT := 500;    //    0..10000 ms
+    WAX_WAIT_TIME_OUT  : INT := 500;    //   10..10000 ms
+    WAX_SPEED          : INT := 10;     //    0..100  %
 
     // ------------------------------------------------------------------
     // Request flags -- FB_RobotTcpClient consumes each on the next idle

@@ -49,17 +49,32 @@ NumericInput directly") describes an intent that was never implemented.
 
 To do, in preference order:
 
-1. **Clamp in `FB_RobotTcpClient` where `bSetParam` is consumed** — a
-   `LIMIT()` per parameter name bounds *every* writer (VISU, FlowerPyHmi, any
-   future ADS client) in one place. Preferred: per-control limits protect only
-   the control they are set on.
+1. ~~Clamp in `FB_RobotTcpClient`.~~ **Done 2026-07-26.** `ClampParam` /
+   `ParamMin` / `ParamMax` bound every writer that reaches the robot through
+   this FB — the panel, FlowerPyHmi over ADS, any future ADS client, and the
+   `bSetParam` escape hatch (via `ParamIndex` reverse lookup; unknown names
+   pass through unclamped, which is the point of an escape hatch).
+
+   Two design points worth not undoing:
+   - The clamp **writes the bounded value back into `stParams`**
+     (`SetParamValue`). It is not cosmetic: the shadow is updated to the
+     value that was *sent*, so leaving an out-of-range number in the field
+     would keep it permanently different from its shadow and the FB would
+     re-send on every idle scan — a silent packet storm. Writing back
+     converges, and the panel then shows what the robot actually got.
+   - Clamping applies **only on the way out**, never to values arriving in a
+     `SYNC` reply. Rewriting a robot-sourced value would push our table back
+     at the robot, and if the table were ever wrong the two ends would fight.
 2. ~~Add the NumericInputs to `Robot.TcVIS` with `min`/`max`.~~ **Done
    2026-07-26** — 11 editable fields, each range-clamped per the table.
    (The open question of whether a panel operator *should* be able to change
    robot speeds was answered by doing it; revisit if that turns out wrong.)
-3. Either way, replace the stale `ST_RobotParams` comment with the real units
-   and ranges, citing `global.lua:44-48` — the values being `INT` is an
-   encoding detail, not a statement about valid range.
+3. ~~Replace the stale `ST_RobotParams` comment with the real units and
+   ranges.~~ **Done 2026-07-26** — the struct now documents percentages vs
+   milliseconds, cites `global.lua` for the units, carries the range per
+   field, and says outright that `INT` is an encoding detail. The old claim
+   that it was "all INT so the classic VISU HMI binds NumericInput directly"
+   described an intent that went unimplemented until the panel grid landed.
 
 Keep `scripts/check_pyhmi_contract.py` in mind: if bounds move into the PLC,
 FlowerPyHmi's copy in `flower_py_hmi/robot.py` (`ParamField.lo/hi`) becomes a
@@ -557,14 +572,10 @@ in the System Manager.
   running, LED2 = error latched, LED3 = TCP connected. Deferred until
   operator preference is known — the LED source is a one-line change in
   `MAIN.TcPOU`.
-- **Delete deprecated fields in `ST_HmiRobot`** (`bAtPos1/2/3`,
-  `bTx*`, `bRxResetError`) — **now unblocked.** They were kept only for
-  legacy `Flower_HMI` page bindings on the retired TCP POS/AUTO_STARTED
-  protocol, and that project was deleted 2026-07-26. The only remaining
-  consumer is `FlowerPyHmi`, which does not read them (verified by
-  `python scripts/check_pyhmi_contract.py` — 229/229 symbols resolve without
-  them). No PLC code touches them either. Safe to delete; re-run the
-  contract check afterwards.
+- ~~Delete deprecated fields in `ST_HmiRobot`.~~ **Done 2026-07-26** —
+  `bAtPos1/2/3`, `bTx*` and `bRxResetError` removed. Nothing referenced them:
+  no POU, no VISU page, and `scripts/check_pyhmi_contract.py` still resolves
+  229/229 FlowerPyHmi symbols without them.
 
 
 ## Playwright

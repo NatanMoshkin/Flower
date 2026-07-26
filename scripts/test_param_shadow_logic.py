@@ -17,6 +17,16 @@ SYNC_ORDER = [
 ]
 PARAM_COUNT = len(SYNC_ORDER)
 
+# Mirrors ParamMin / ParamMax in the FB. Vendor ranges -- see ClampParam's
+# header comment for provenance.
+RANGES = {
+    "J_SPEED": (1, 100), "L_SPEED": (1, 100), "REPEATS": (1, 10),
+    "START_WAIT": (10, 10000), "WATER_WAIT": (10, 10000),
+    "STAND_WAIT": (10, 10000), "END_WAIT": (10, 10000),
+    "WATER_SPEED": (0, 100), "WAX_WAIT_TIME_IN": (0, 10000),
+    "WAX_WAIT_TIME_OUT": (10, 10000), "WAX_SPEED": (0, 100),
+}
+
 
 class Robot:
     """Stands in for the Dobot server. Records every frame it receives."""
@@ -75,6 +85,16 @@ class Fb:
     def param_name(self, i):
         return SYNC_ORDER[i - 1]
 
+    def set_param_value(self, i, val):
+        self.stParams[SYNC_ORDER[i - 1]] = val
+
+    def clamp_param(self, i, val):
+        lo, hi = RANGES[SYNC_ORDER[i - 1]]
+        return max(lo, min(val, hi))
+
+    def param_index(self, name):
+        return SYNC_ORDER.index(name) + 1 if name in SYNC_ORDER else 0
+
     def find_changed_param(self):
         for i in range(1, PARAM_COUNT + 1):
             if self.param_value(i) != self.aShadow[i - 1]:
@@ -96,6 +116,9 @@ class Fb:
             tx, pend = f"STATE:{self.nStateOut}", self.TX_STATE
             self.nLastStateSent, self.nPendIdx = self.nStateOut, 0
         elif self.bSetParam:
+            idx = self.param_index(self.sSetName)
+            if idx > 0:
+                self.nSetVal = self.clamp_param(idx, self.nSetVal)
             tx, pend = f"{self.sSetName}:{self.nSetVal}", self.TX_SETPARAM
             self.nPendIdx = 0
         elif self.bTriggerNewBulb:
@@ -104,7 +127,10 @@ class Fb:
             tx, pend = "GET_SYNC", self.TX_GETSYNC
         elif nChanged > 0:
             self.nPendIdx = nChanged
-            self.nPendVal = self.param_value(nChanged)
+            self.nPendVal = self.clamp_param(nChanged, self.param_value(nChanged))
+            # Write back, or the field stays out of range, never matches the
+            # shadow, and the FB re-sends forever.
+            self.set_param_value(nChanged, self.nPendVal)
             tx, pend = f"{self.param_name(nChanged)}:{self.nPendVal}", self.TX_SETPARAM
         elif idle_elapsed:
             tx, pend = f"STATE:{self.nStateOut}", self.TX_STATE
@@ -280,6 +306,90 @@ def t_malformed_sync_still_enables_detection():
     assert settle(fb) == ["J_SPEED:15"]
 
 
+def t_clamp_above_max():
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    fb.stParams["J_SPEED"] = 500          # operator typo, max is 100
+    sent = settle(fb)
+    assert sent == ["J_SPEED:100"], f"sent unclamped: {sent}"
+    assert r.params["J_SPEED"] == 100, "robot got an out-of-range value"
+    assert fb.stParams["J_SPEED"] == 100, \
+        "clamped value not written back -- HMI would show 500 while robot has 100"
+
+
+def t_clamp_below_min():
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    fb.stParams["START_WAIT"] = 0          # min is 10
+    assert settle(fb) == ["START_WAIT:10"]
+    assert fb.stParams["START_WAIT"] == 10
+
+
+def t_clamp_does_not_loop():
+    """The failure this design exists to prevent.
+
+    If the clamp only bounded the transmitted value and left the field
+    alone, the field would differ from the shadow forever and the FB would
+    re-send on every idle scan -- a silent packet storm.
+    """
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    fb.stParams["WAX_SPEED"] = 9999
+    first = settle(fb)
+    assert first == ["WAX_SPEED:100"], first
+    for _ in range(5):
+        assert settle(fb) == [], "re-sent after clamping -- shadow never converged"
+
+
+def t_clamp_all_params():
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    for k in SYNC_ORDER:
+        fb.stParams[k] = 99999
+    settle(fb)
+    for k in SYNC_ORDER:
+        hi = RANGES[k][1]
+        assert r.params[k] == hi, f"{k}: robot got {r.params[k]}, expected {hi}"
+        assert fb.stParams[k] == hi, f"{k}: field not written back"
+
+
+def t_clamp_escape_hatch():
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    fb.bSetParam, fb.sSetName, fb.nSetVal = True, "REPEATS", 77   # max 10
+    assert settle(fb) == ["REPEATS:10"]
+    assert fb.nSetVal == 10, "nSetVal not written back for the caller to see"
+
+
+def t_unknown_name_passes_through():
+    """The escape hatch exists for names that are not struct fields."""
+    r = Robot(ROBOT_DEFAULTS)
+    fb = Fb(r, PLC_DEFAULTS)
+    settle(fb)
+    fb.bSetParam, fb.sSetName, fb.nSetVal = True, "SOME_OTHER_NAME", 9999
+    assert settle(fb) == ["SOME_OTHER_NAME:9999"], "unknown name was clamped"
+
+
+def t_sync_values_not_clamped():
+    """A value pulled FROM the robot must not be silently rewritten.
+
+    Clamping applies to what we send, not to what we read. Rewriting a
+    SYNC-sourced value would push our table back at the robot and, if the
+    table were ever wrong, the two ends would fight.
+    """
+    r = Robot(dict(ROBOT_DEFAULTS, J_SPEED=250))
+    fb = Fb(r, PLC_DEFAULTS)
+    sent = settle(fb)
+    assert fb.stParams["J_SPEED"] == 250, "SYNC value was clamped on the way in"
+    assert not any(s.startswith("J_SPEED:") for s in sent), \
+        f"pushed a correction back at the robot: {sent}"
+
+
 if __name__ == "__main__":
     tests = [
         ("no startup echo of robot values", t_no_startup_echo),
@@ -291,6 +401,13 @@ if __name__ == "__main__":
         ("explicit bSetParam escape hatch", t_escape_hatch_still_works),
         ("manual GET_SYNC re-baselines", t_resync_rebaselines),
         ("malformed SYNC still enables detection", t_malformed_sync_still_enables_detection),
+        ("clamp above max", t_clamp_above_max),
+        ("clamp below min", t_clamp_below_min),
+        ("clamped write does not re-send forever", t_clamp_does_not_loop),
+        ("all 11 params clamp to their max", t_clamp_all_params),
+        ("escape hatch is clamped too", t_clamp_escape_hatch),
+        ("unknown escape-hatch name passes through", t_unknown_name_passes_through),
+        ("SYNC-sourced values are not clamped", t_sync_values_not_clamped),
     ]
     ok = all([run(label, body) for label, body in tests])
     print()

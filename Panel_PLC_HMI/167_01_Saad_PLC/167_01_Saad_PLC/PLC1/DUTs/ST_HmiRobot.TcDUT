@@ -24,18 +24,11 @@ STRUCT
     sLastMessage   : STRING(80);
     sLastTxMessage : STRING(80);
 
-    // ------------------------------------------------------------------
-    // Deprecated -- kept only for legacy HMI page bindings on the retired
-    // TCP POS/AUTO_STARTED protocol. Not read/written anywhere on the PLC
-    // side. Safe to delete once no HMI page references them.
-    // ------------------------------------------------------------------
-    bAtPos1        : BOOL;
-    bAtPos2        : BOOL;
-    bAtPos3        : BOOL;
-    bTxAutoStarted  : BOOL;
-    bTxPushDone     : BOOL;
-    bTxPistonsError : BOOL;
-    bRxResetError   : BOOL;
+    // The deprecated POS/AUTO_STARTED fields (bAtPos1/2/3, bTxAutoStarted,
+    // bTxPushDone, bTxPistonsError, bRxResetError) were deleted 2026-07-26.
+    // They existed only for legacy Flower_HMI page bindings on the retired
+    // TCP POS protocol; that project is gone, no PLC code touched them, and
+    // FlowerPyHmi does not poll them (scripts/check_pyhmi_contract.py).
 END_STRUCT
 END_TYPE
 ]]></Declaration>

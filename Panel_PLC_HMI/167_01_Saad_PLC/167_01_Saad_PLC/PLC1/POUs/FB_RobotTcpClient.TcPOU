@@ -181,6 +181,7 @@ stRobot.sConnStateText := TO_STRING(eState);
 METHOD ConnectedIo : BOOL
 VAR
     nChanged : INT;   // index of first param edited by the HMI, 0 = none
+    nIdx     : INT;   // param index behind an explicit bSetParam name
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -218,6 +219,13 @@ IO_IDLE:
         SendState();
     ELSIF stParams.bSetParam THEN
         // Explicit escape hatch: caller supplies the raw name/value pair.
+        // Clamp it too, and write the clamped value back so the caller can
+        // see what was actually sent. Unknown names pass through untouched --
+        // that is the point of the escape hatch.
+        nIdx := ParamIndex(stParams.sSetName);
+        IF nIdx > 0 THEN
+            stParams.nSetVal := ClampParam(i := nIdx, nVal := stParams.nSetVal);
+        END_IF
         sTxMsg   := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
         iPend    := TX_SETPARAM;
         nPendIdx := 0;
@@ -232,8 +240,16 @@ IO_IDLE:
         StartSend();
     ELSIF nChanged > 0 THEN
         // One param per round-trip; the next idle scan picks up the rest.
+        //
+        // Clamp, and write the clamped value BACK into the field before
+        // sending. Writing back is not cosmetic: the shadow is updated to
+        // the value we sent, so if the field kept the operator's
+        // out-of-range number it would differ from the shadow forever and
+        // the FB would re-send on every idle scan. Writing back converges,
+        // and the HMI then shows what the robot actually got.
         nPendIdx := nChanged;
-        nPendVal := ParamValue(nChanged);
+        nPendVal := ClampParam(i := nChanged, nVal := ParamValue(nChanged));
+        SetParamValue(i := nChanged, nVal := nPendVal);
         sTxMsg   := CONCAT(CONCAT(ParamName(nChanged), ':'), INT_TO_STRING(nPendVal));
         iPend    := TX_SETPARAM;
         StartSend();
@@ -371,6 +387,137 @@ END_VAR
     11: ParamValue := stParams.WAX_SPEED;
 ELSE
     ParamValue := 0;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetParamValue" Id="{1a2b3c4d-5e6f-4708-8192-a3b4c5d6e7f8}">
+      <Declaration><![CDATA[// Write a value into param i. Inverse of ParamValue; same index order.
+METHOD SetParamValue : BOOL
+VAR_INPUT
+    i    : INT;
+    nVal : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE i OF
+     1: stParams.J_SPEED           := nVal;
+     2: stParams.L_SPEED           := nVal;
+     3: stParams.REPEATS           := nVal;
+     4: stParams.START_WAIT        := nVal;
+     5: stParams.WATER_WAIT        := nVal;
+     6: stParams.STAND_WAIT        := nVal;
+     7: stParams.END_WAIT          := nVal;
+     8: stParams.WATER_SPEED       := nVal;
+     9: stParams.WAX_WAIT_TIME_IN  := nVal;
+    10: stParams.WAX_WAIT_TIME_OUT := nVal;
+    11: stParams.WAX_SPEED         := nVal;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParamIndex" Id="{2b3c4d5e-6f70-4819-92a3-b4c5d6e7f809}">
+      <Declaration><![CDATA[// Index of a param by its wire name, or 0 if the name is not one of the
+// eleven. Used to clamp the explicit bSetParam escape hatch; an unknown
+// name deliberately returns 0 and is passed through unclamped.
+METHOD ParamIndex : INT
+VAR_INPUT
+    sName : STRING(30);
+END_VAR
+VAR
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ParamIndex := 0;
+
+FOR i := 1 TO PARAM_COUNT DO
+    IF ParamName(i) = sName THEN
+        ParamIndex := i;
+        RETURN;
+    END_IF
+END_FOR
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ClampParam" Id="{3c4d5e6f-7081-492a-a3b4-c5d6e7f8091a}">
+      <Declaration><![CDATA[(*
+   Bound one parameter to the robot's documented range.
+
+   These limits are the vendor's own: the Dobot-side tuning GUI
+   (Robot\167-01-Saad\tcp client.py, PARAMS table + its clamp) refuses
+   anything outside them, and readme.txt mirrors the same table. The robot's
+   Lua (src2.lua) does NOT validate -- it assigns tonumber() straight
+   through -- so nothing downstream of us catches a bad value.
+
+   Clamping here rather than only on the VISU NumericInputs is deliberate:
+   a per-control min/max bounds only that control, while every writer
+   (panel, FlowerPyHmi over ADS, any future ADS client, and the bSetParam
+   escape hatch) funnels through this FB.
+
+   Units are percentages for the four speed values -- global.lua Init()
+   passes J_SPEED / L_SPEED to VelJ() / VelL() and the WAX / WATER speeds to
+   the v= velocity-ratio option of MovL. The waits are milliseconds.
+*)
+METHOD ClampParam : INT
+VAR_INPUT
+    i    : INT;
+    nVal : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ClampParam := LIMIT(ParamMin(i), nVal, ParamMax(i));
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParamMin" Id="{4d5e6f70-8192-4a3b-b4c5-d6e7f8091a2b}">
+      <Declaration><![CDATA[// Lower bound of param i. Same index order as ParamValue / ParamName.
+METHOD ParamMin : INT
+VAR_INPUT
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE i OF
+     1: ParamMin :=  1;    // J_SPEED            %
+     2: ParamMin :=  1;    // L_SPEED            %
+     3: ParamMin :=  1;    // REPEATS
+     4: ParamMin := 10;    // START_WAIT         ms
+     5: ParamMin := 10;    // WATER_WAIT         ms
+     6: ParamMin := 10;    // STAND_WAIT         ms
+     7: ParamMin := 10;    // END_WAIT           ms
+     8: ParamMin :=  0;    // WATER_SPEED        %
+     9: ParamMin :=  0;    // WAX_WAIT_TIME_IN   ms
+    10: ParamMin := 10;    // WAX_WAIT_TIME_OUT  ms
+    11: ParamMin :=  0;    // WAX_SPEED          %
+ELSE
+    ParamMin := 0;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParamMax" Id="{5e6f7081-92a3-4b4c-85d6-e7f8091a2b3c}">
+      <Declaration><![CDATA[// Upper bound of param i. Same index order as ParamValue / ParamName.
+METHOD ParamMax : INT
+VAR_INPUT
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE i OF
+     1: ParamMax :=   100;   // J_SPEED
+     2: ParamMax :=   100;   // L_SPEED
+     3: ParamMax :=    10;   // REPEATS
+     4: ParamMax := 10000;   // START_WAIT
+     5: ParamMax := 10000;   // WATER_WAIT
+     6: ParamMax := 10000;   // STAND_WAIT
+     7: ParamMax := 10000;   // END_WAIT
+     8: ParamMax :=   100;   // WATER_SPEED
+     9: ParamMax := 10000;   // WAX_WAIT_TIME_IN
+    10: ParamMax := 10000;   // WAX_WAIT_TIME_OUT
+    11: ParamMax :=   100;   // WAX_SPEED
+ELSE
+    ParamMax := 32767;
 END_CASE
 ]]></ST>
       </Implementation>
