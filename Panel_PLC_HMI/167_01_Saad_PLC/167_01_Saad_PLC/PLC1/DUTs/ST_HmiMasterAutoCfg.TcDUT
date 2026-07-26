@@ -13,13 +13,25 @@ STRUCT
     tStepTimeoutMs          : UDINT := 10000;
 
     // Dedicated timeout for WAIT_PLATE (bounded by robot placement time, not
-    // by a motion budget). On expiry, iErrorCode := 9 and the cycle enters ERR.
+    // by a motion budget). On expiry, iErrorCode := 9 and the cycle enters ERR
+    // — unless bBypassPlateSensors is set, see below.
     tPlateWaitTimeoutMs     : UDINT := 10000;
 
     // If TRUE, the 4 movement states ignore sensor feedback and advance when
     // tStepTimeoutMs expires — the timeout doubles as the fixed step duration.
     // No timeout-error path while sensorless. Mirrors ST_HmiPistonAutoCfg.bNoSensors.
+    // Deliberately does NOT cover WAIT_PLATE — use bBypassPlateSensors for that.
     bNoSensors              : BOOL  := FALSE;
+
+    // Plate-sensor bypass. Removes only the WAIT_PLATE timeout ERROR, not the
+    // wait itself: the bPlateSenL AND bPlateSenR fast-path still advances the
+    // cycle as normal, so with healthy sensors nothing changes. With unwired
+    // or faulty ones, tPlateWaitTimeoutMs degrades into a fixed placement
+    // dwell and the cycle continues instead of raising error 9.
+    // Separate from bNoSensors on purpose: skipping the plate gate is a
+    // safety-relevant decision and should be made explicitly, not inherited
+    // from a bench-testing flag.
+    bBypassPlateSensors     : BOOL  := FALSE;
 
     // While TRUE, IDLE immediately starts the next cycle (no START or
     // robot CMD:1 edge needed). Uncheck to stop after the cycle returns

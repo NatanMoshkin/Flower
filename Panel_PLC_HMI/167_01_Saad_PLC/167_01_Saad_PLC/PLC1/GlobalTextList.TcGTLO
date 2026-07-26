@@ -261,6 +261,26 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"660"</v>
+              <v n="TextDefault">"Bypass plate sensors"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"670"</v>
+              <v n="TextDefault">"Plate"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"671"</v>
+              <v n="TextDefault">"L"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"672"</v>
+              <v n="TextDefault">"R"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"550"</v>
               <v n="TextDefault">"Pistons Manual"</v>
               <l n="LanguageTexts" t="ArrayList" />

@@ -251,6 +251,8 @@ WAIT_PLATE (20)         Wait `bPlateSenL AND bPlateSenR` (robot has placed
                         the plate). Latched at start only; sensors not
                         monitored past this step. Timeout uses
                         `tPlateWaitTimeoutMs` (bounded by robot placement time).
+                        `stCfg.bBypassPlateSensors` suppresses the timeout
+                        ERROR only — see the plate-sensor section below.
 GRIP_EXTENDING (21)     Drive GripCmdExtend[1..2]; wait AND of all
                         GripIsExtended. Plate clamped from both sides.
 SEP_EXTENDING (1)       Drive SepCmdExtend[1..3]; wait AND of all
@@ -290,7 +292,7 @@ PLC and robot, so this sentinel lives there rather than as a magic INT.
 | 6    | INIT_PUSH_RETRACTING timeout       |
 | 7    | INIT_SEP_RETRACTING timeout        |
 | 8    | INIT_GRIP_RETRACTING timeout       |
-| 9    | WAIT_PLATE timeout (plate not present) |
+| 9    | WAIT_PLATE timeout (plate not present) — suppressed by `bBypassPlateSensors` |
 | 10   | GRIP_EXTENDING timeout             |
 | 11   | GRIP_RETRACTING timeout            |
 | 99   | Operator STOP while running        |
@@ -312,6 +314,33 @@ cloning approach for any further classic-VISU element** — these files use
 numeric-ID serialization and XAE silently drops elements it cannot parse,
 so always open the page in TcXaeShell and confirm the element renders
 before activating.
+
+## PLATE SENSORS: status on Main + bypass (2026-07-26)
+
+**Status.** `Main.TcVIS` shows both plate sensors in the 110 px strip to the
+right of the embedded AutoMain frame (which spans x −4…684): a "Plate" title
+with `L` / `R` lamps at x=724, bound to `GVL_HMI.bPlateSenL` / `bPlateSenR`
+(MAIN's mirror of `GVL_App.bPlateSen*`). On the home screen, so the operator
+can see plate presence without opening a page.
+Built by `scripts/add_main_plate_status.py`.
+
+**Bypass.** `stCfg.bBypassPlateSensors` (default FALSE, 4th checkbox on
+AutoMain at (20,375)). It removes **only the WAIT_PLATE timeout error**, not
+the wait:
+
+- the `bPlateSenL AND bPlateSenR` fast-path still advances the cycle, so
+  with healthy sensors behaviour is completely unchanged;
+- with unwired or faulty sensors, `tPlateWaitTimeoutMs` degrades into a
+  fixed placement dwell and the cycle continues instead of raising error 9.
+
+That shape was chosen over "ignore the sensors entirely" because the robot
+still needs time to place the plate — a bypass that advanced instantly would
+close the grippers on nothing.
+
+It is deliberately **separate from `bNoSensors`**, which by long-standing
+decision does not cover `WAIT_PLATE`. Skipping the plate gate is
+safety-relevant and should be an explicit choice, not something inherited
+from a bench-testing flag.
 
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
