@@ -5,7 +5,64 @@
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
-<!-- no active TODOs at the moment -->
+### Robot tuning parameters — VISU exposure + range limits
+
+The 11 `ST_RobotParams` tuning values have **documented valid ranges that
+nothing on the PLC side enforces**. Ranges and units were traced to the
+robot repo (`167_01_Saad_Flower/Robot/167-01-Saad/`, which is neither this
+repo nor FlowerPyHmi — easy to miss):
+
+- **Units are percentages.** `global.lua:44-48` `Init()` calls
+  `VelJ(J_SPEED)` / `VelL(L_SPEED)` — commented "Joint Speed %" / "Linear
+  Speed %" — plus `SpeedFactor(FACTOR_SPEED)` with `FACTOR_SPEED = 80`
+  scaling everything globally. `WAX_SPEED` / `WATER_SPEED` feed the `v=`
+  velocity-ratio option of `MovL` (`src0.lua:112,114,144,152`).
+- **Authoritative ranges**, from the vendor's own GUI which clamps to them
+  (`Robot/167-01-Saad/tcp client.py:14-21`, clamp at `:90`; byte-identical
+  copy at `RobotBridge/Client_working_example/tcp client.py`, pasted into
+  `readme.txt:27-32`):
+
+  | Param | Range |
+  |---|---|
+  | `J_SPEED`, `L_SPEED` | 1–100 |
+  | `WAX_SPEED`, `WATER_SPEED` | 0–100 |
+  | `REPEATS` | 1–10 |
+  | `START_WAIT`, `WATER_WAIT`, `STAND_WAIT`, `END_WAIT`, `WAX_WAIT_TIME_OUT` | 10–10000 |
+  | `WAX_WAIT_TIME_IN` | 0–10000 |
+
+Nothing validates these anywhere in our stack: `src2.lua:44-54` assigns
+`tonumber()` straight through with no clamp, `ST_RobotParams` is bare `INT`
+defaults, and `FB_RobotTcpClient` only marshals name/value. FlowerPyHmi now
+range-checks on write (rejects with a 400 rather than clamping silently, so
+the operator sees what was refused) — but it is only one of several possible
+writers.
+
+**Current VISU state:** `PLC1/VISU/Robot.TcVIS` binds just four symbols —
+`stParams.bGetSync`, `stParams.bTriggerNewBulb`, `stParams.nRobotCmd`,
+`stParams.nStateOut`. **None of the 11 tuning values are exposed on the
+panel at all**, so there is no bypass today; FlowerPyHmi is the only tuning
+surface. The gap opens the moment someone adds the inputs.
+
+Note the comment in `ST_RobotParams` ("All INT so the classic VISU HMI binds
+NumericInput directly") describes an intent that was never implemented.
+
+To do, in preference order:
+
+1. **Clamp in `FB_RobotTcpClient` where `bSetParam` is consumed** — a
+   `LIMIT()` per parameter name bounds *every* writer (VISU, FlowerPyHmi, any
+   future ADS client) in one place. Preferred: per-control limits protect only
+   the control they are set on.
+2. **Then, if panel-side tuning is actually wanted**, add the NumericInputs to
+   `Robot.TcVIS` with `min`/`max` set per the table above. Decide first whether
+   an operator at the panel *should* be able to change robot speeds, or whether
+   this stays engineering-side in FlowerPyHmi.
+3. Either way, replace the stale `ST_RobotParams` comment with the real units
+   and ranges, citing `global.lua:44-48` — the values being `INT` is an
+   encoding detail, not a statement about valid range.
+
+Keep `scripts/check_pyhmi_contract.py` in mind: if bounds move into the PLC,
+FlowerPyHmi's copy in `flower_py_hmi/robot.py` (`ParamField.lo/hi`) becomes a
+second source of truth that nothing keeps in step.
 
 
 ## SHIPPED: robot integration architecture — TCP-only (2026-07-26)
@@ -303,6 +360,50 @@ Connection semantics:
   while `bTcpEnable = TRUE`.
 - `STATE:<n>` keep-alive every ~1 s serves the "is the socket alive?"
   role that a bare HEARTBEAT used to fill.
+
+## PANEL VISU: page inventory + the numeric-entry constraint (2026-07-26)
+
+Six classic VISU pages, all registered in `PLC1.plcproj` with a
+`<Compile Include>` + `<DependentUpon>VISU\VisualizationManager.TcVMO</...>`
+block (a new `.TcVIS` is invisible to the build without one):
+
+| Page | Contents | Reached from |
+|---|---|---|
+| `Main` | AutoMain embedded as a frame + 3 nav buttons | — |
+| `AutoMain` | title, step/error fields, START/STOP/RESET, 3 checkboxes | embedded in Main |
+| `PistonsManual` | 6 Piston frames (Sep/Push 1-3) | Main |
+| `GripperManual` | 2 Piston frames (`stGripSolL` / `stGripSolR`) | Main |
+| `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons | Main |
+| `Piston` | the reusable per-piston control, instanced via frames | — |
+
+Each page's `<Visu Id>` GUID equals every `VisualElementOwningObjectGuid`
+inside it — hold that invariant when cloning a page.
+
+**The numeric-entry constraint.** The project contains exactly two input
+mechanisms: `Visu_TapInput` (button → BOOL) and `ChangeVisuInputAction`
+(navigation). There is **no numeric-entry element anywhere to clone**, so
+any editable number must start from a template element authored once in
+TcXaeShell. Do not hand-author the `VisualElementInputActions` /
+WriteVariable structure — that is the invent-don't-clone path that
+corrupted AutoMain.
+
+Pending on that template: the Robot page's 11 tuning params (the right-hand
+column, x ≥ 420, is deliberately left empty for them) and the 5
+`ST_HmiMasterAutoCfg` timers, which go in AutoMain's free right column
+(x 500-780; the page's existing content stops at x=480, y=365).
+
+Build/verify scripts, all idempotent and all cloning proven blocks rather
+than authoring them: `scripts/build_grippermanual.py`,
+`scripts/build_robot_page.py`, `scripts/add_main_nav.py`,
+`scripts/add_nosensors_checkbox.py`, and `scripts/validate_visu.py`
+(**run this after every VISU edit** — it asserts each element is a direct
+child of `VisualElementList`, which is the check XML well-formedness does
+not give you).
+
+Static label text lives in `GlobalTextList.TcGTLO`, keyed by each element's
+counter member `823443203L`. The scripts register their own entries; XAE
+also adds missing ones on first open.
+
 
 ## PANEL HARDWARE: 3 push buttons + 3 LEDs (2026-07-26)
 

@@ -127,6 +127,14 @@
       <SubType>Code</SubType>
       <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
+    <Compile Include="VISU\Robot.TcVIS">
+      <SubType>Code</SubType>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
+    </Compile>
+    <Compile Include="VISU\GripperManual.TcVIS">
+      <SubType>Code</SubType>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
+    </Compile>
     <Compile Include="VISU\Piston.TcVIS">
       <SubType>Code</SubType>
       <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
