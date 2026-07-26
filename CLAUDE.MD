@@ -37,11 +37,12 @@ range-checks on write (rejects with a 400 rather than clamping silently, so
 the operator sees what was refused) — but it is only one of several possible
 writers.
 
-**Current VISU state:** `PLC1/VISU/Robot.TcVIS` binds just four symbols —
-`stParams.bGetSync`, `stParams.bTriggerNewBulb`, `stParams.nRobotCmd`,
-`stParams.nStateOut`. **None of the 11 tuning values are exposed on the
-panel at all**, so there is no bypass today; FlowerPyHmi is the only tuning
-surface. The gap opens the moment someone adds the inputs.
+**Current VISU state (updated 2026-07-26):** all 11 tuning values are now
+editable on `PLC1/VISU/Robot.TcVIS`, each with `InputBoxMin`/`InputBoxMax`
+set to the vendor range in the table above (`scripts/add_robot_params.py`).
+So the panel is bounded — **but per-control limits only protect the control
+they are set on**, which is why item 1 below still matters: FlowerPyHmi,
+any future ADS client, and the `bSetParam` escape hatch all bypass them.
 
 Note the comment in `ST_RobotParams` ("All INT so the classic VISU HMI binds
 NumericInput directly") describes an intent that was never implemented.
@@ -52,10 +53,10 @@ To do, in preference order:
    `LIMIT()` per parameter name bounds *every* writer (VISU, FlowerPyHmi, any
    future ADS client) in one place. Preferred: per-control limits protect only
    the control they are set on.
-2. **Then, if panel-side tuning is actually wanted**, add the NumericInputs to
-   `Robot.TcVIS` with `min`/`max` set per the table above. Decide first whether
-   an operator at the panel *should* be able to change robot speeds, or whether
-   this stays engineering-side in FlowerPyHmi.
+2. ~~Add the NumericInputs to `Robot.TcVIS` with `min`/`max`.~~ **Done
+   2026-07-26** — 11 editable fields, each range-clamped per the table.
+   (The open question of whether a panel operator *should* be able to change
+   robot speeds was answered by doing it; revisit if that turns out wrong.)
 3. Either way, replace the stale `ST_RobotParams` comment with the real units
    and ranges, citing `global.lua:44-48` — the values being `INT` is an
    encoding detail, not a statement about valid range.
@@ -379,18 +380,23 @@ block (a new `.TcVIS` is invisible to the build without one):
 Each page's `<Visu Id>` GUID equals every `VisualElementOwningObjectGuid`
 inside it — hold that invariant when cloning a page.
 
-**The numeric-entry constraint.** The project contains exactly two input
-mechanisms: `Visu_TapInput` (button → BOOL) and `ChangeVisuInputAction`
-(navigation). There is **no numeric-entry element anywhere to clone**, so
-any editable number must start from a template element authored once in
-TcXaeShell. Do not hand-author the `VisualElementInputActions` /
-WriteVariable structure — that is the invent-don't-clone path that
-corrupted AutoMain.
+**Numeric entry — resolved 2026-07-26.** The project originally had only two
+input mechanisms (`Visu_TapInput` → BOOL, and `ChangeVisuInputAction`), so
+there was nothing to clone for an editable number. The operator authored one
+template in TcXaeShell (`GenElemInst_229` on `Robot`), and all 16 editable
+fields are clones of it.
 
-Pending on that template: the Robot page's 11 tuning params (the right-hand
-column, x ≥ 420, is deliberately left empty for them) and the 5
-`ST_HmiMasterAutoCfg` timers, which go in AutoMain's free right column
-(x 500-780; the page's existing content stops at x=480, y=365).
+The template is a plain **`VisuFbElemTextfield`** whose `OnMouseClick`
+carries an **`InputBoxInputAction`**; `UseTextOutputVariable=true` means it
+writes back through the normal displayed-variable member (`2477733581L`).
+So a display field and an edit field differ *only* by that action block —
+which is exactly why it could not be invented and had to come from the IDE.
+
+- `Robot` — 11 params at x 420-770, `GVL_Robot.stParams.<NAME>` (absolute:
+  standalone page).
+- `AutoMain` — 5 timers at x 500-780, `stCfg.<name>` (**interface-relative**:
+  AutoMain is embedded as a frame in Main and declares
+  `stCfg : ST_HmiMasterAutoCfg`; absolute paths would be wrong here).
 
 Build/verify scripts, all idempotent and all cloning proven blocks rather
 than authoring them: `scripts/build_grippermanual.py`,
