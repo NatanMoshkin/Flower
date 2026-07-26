@@ -6,19 +6,23 @@
    pairs of SepSol / PushSol pistons (pair count fixed at 3 for this
    machine).
 
-   Simplified robot interface (2026-07-10, per docs/robot-integration-options.md
-   Option 1). Two signals cross the boundary, both level (not pulsed):
+   Robot interface (TCP-only, 2026-07-26). The former discrete-I/O handshake
+   is retired. All robot-side signals travel over FB_RobotTcpClient's
+   STATE:n / CMD:n protocol:
 
-     Robot -> PLC   stRobot.bStartAssembly     (robot's STAND_SEQ_DO)
-     PLC -> Robot   stRobot.bAssemblyRunning   (robot's STAND_SEQ_DI)
+     Robot -> PLC   nRobotCmd in {1,2}  (1=start, 2=reset error)
+                    MAIN R_TRIGs on the edges; start pulse arrives here as
+                    the VAR_INPUT bExtStartPulse.
+     PLC -> Robot   nStateOut = TO_INT(eStep) or MANUAL(30)
+                    Written by MAIN each scan, pushed by FB_RobotTcpClient
+                    on change and as keep-alive.
 
-   The cycle starts on the rising edge of bStartAssembly. bAssemblyRunning
-   is TRUE in every non-IDLE state (including ERR, so the robot times out
-   on PLC fault) and FALSE in IDLE.
+   The cycle starts on any rising edge of bExtStartPulse (robot cmd=1, one
+   scan wide), the HMI START button, or the sim-start flag.
 
    Sequence (all 3 Sep/Push pairs move in parallel; both grips move together):
 
-     IDLE                    START button OR bStartAssembly rising OR SimIdle
+     IDLE                    START button OR bExtStartPulse pulse OR SimIdle
                              OR bContinuous checked (level - keeps re-arming)
      INIT_PUSH_RETRACTING    drive PushCmdRetract[1..3]; wait AND of all
                              PushIsRetracted. Guarantees pistons are home before
@@ -82,9 +86,11 @@
    as the fixed step duration. Error codes 1/3/4/5 cannot occur while
    sensorless. *)
 VAR_INPUT
-    (* Robot trigger (level flag from GVL_Robot.stRobot.bStartAssembly;
-       driven by the robot's STAND_SEQ_DO through a PLC DI channel). *)
-    bStartAssembly        : BOOL;
+    (* External start pulse (rising-edge; one scan wide). MAIN fires this
+       when the robot's CMD:1 arrives via TCP, or a physical PB1 rising
+       edge in Auto mode. HMI START button and SimStartAssembly are
+       consumed separately below via their own R_TRIGs. *)
+    bExtStartPulse        : BOOL;
 
     (* Global machine-mode gate (stCfg.bAutoMode). While FALSE the cycle is
        held in IDLE: every start trigger is ignored and a running cycle is
@@ -182,7 +188,7 @@ END_VAR]]></Declaration>
 fbTrigStart        (CLK := stHmi.bStart);
 fbTrigStop         (CLK := stHmi.bStop);
 fbTrigReset        (CLK := stHmi.bReset);
-fbTrigStartAssembly(CLK := stRobot.bStartAssembly OR stHmi.bSimStartAssembly);
+fbTrigStartAssembly(CLK := stHmi.bSimStartAssembly);
 
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
 fbSim_InitPushRet (CLK := stHmi.bSimStep_InitPushRet);
@@ -203,9 +209,8 @@ fbSim_GripRet     (CLK := stHmi.bSimStep_GripRet);
    0b. AUTO-CLEAR ONE-SHOT FLAGS ON RISING EDGE
    HMI button flags and Sim flags are momentary; after we detect the
    rising edge we clear the raw flag so the operator's next click can
-   fire again. stRobot.bStartAssembly is a level flag driven by the
-   robot's STAND_SEQ_DO through a physical DI channel; we only consume
-   its rising edge and never clear it (the robot owns the level).
+   fire again. bExtStartPulse is already a one-scan pulse produced by
+   MAIN's R_TRIG on the robot's TCP command channel -- nothing to clear.
    ========================================== *)
 IF fbTrigStart.Q  THEN
     stHmi.bStart := FALSE;
@@ -220,13 +225,16 @@ IF fbTrigReset.Q  THEN
     F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'RESET pressed');
 END_IF;
 
-(* Bench sim of the robot start: clear only the sim flag after the edge is
-   consumed; the robot-owned level itself is never written. Log fires for
-   both real robot rising edges and bench-sim ones — the source is unified
-   at the R_TRIG so the log entry does not distinguish. *)
+(* Bench sim of the robot start: fires on the HMI checkbox rising edge and
+   auto-clears. Log so bench-driven cycles show up in the event log. The
+   robot-driven start comes in as bExtStartPulse (already an edge, no R_TRIG
+   needed here) and is logged from MAIN when nRobotCmd goes 0->1. *)
 IF fbTrigStartAssembly.Q THEN
     stHmi.bSimStartAssembly := FALSE;
-    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'bStartAssembly rising');
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'Sim start pressed');
+END_IF;
+IF bExtStartPulse THEN
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'External start pulse');
 END_IF;
 
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
@@ -279,9 +287,9 @@ END_IF;
 
 (* Global Auto/Manual hard interlock. Switching the machine to Manual (or
    being in Manual) forces the cycle back to IDLE from any running state and
-   drops Continuous, so a stray robot bStartAssembly edge cannot restart
-   motion. Not treated as a fault (no ERR/error code) — Manual is a normal
-   operator choice, not an alarm. ERR stays latched until RESET. *)
+   drops Continuous, so a stray robot start pulse cannot restart motion.
+   Not treated as a fault (no ERR/error code) — Manual is a normal operator
+   choice, not an alarm. ERR stays latched until RESET. *)
 IF NOT bMachineAuto AND stHmi.eStep <> E_MasterAutoStep.IDLE AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
     stCfg.bContinuous := FALSE;
     stHmi.eStep       := E_MasterAutoStep.IDLE;
@@ -368,13 +376,13 @@ CASE stHmi.eStep OF
         stHmi.iErrorCode := 0;
         stHmi.sErrorText := '';
 
-        IF bMachineAuto AND (fbTrigStart.Q OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous) THEN
-            (* Robot side (or operator, or bench sim) has requested a cycle.
-               Gated by bMachineAuto: in Manual the machine cannot start,
-               even on a robot bStartAssembly edge (no double-control).
-               While bContinuous is checked, IDLE starts the next cycle
-               immediately — no START / bStartAssembly edge needed.
-               bAssemblyRunning goes TRUE immediately via Section 5 mirror.
+        IF bMachineAuto AND (fbTrigStart.Q OR bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous) THEN
+            (* Robot (via TCP CMD:1 -> MAIN R_TRIG -> bExtStartPulse),
+               operator (fbTrigStart), or bench sim (fbTrigStartAssembly)
+               has requested a cycle. Gated by bMachineAuto: in Manual the
+               machine cannot start, even on a robot start pulse (no
+               double-control). While bContinuous is checked, IDLE starts
+               the next cycle immediately — no external edge needed.
 
                Enter INIT_PUSH_RETRACTING first (not SEP_EXTENDING directly)
                so pistons left extended by a prior manual move are driven
@@ -507,7 +515,7 @@ CASE stHmi.eStep OF
 
         IF bAllSepExtended OR fbSim_SepExt.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             (* Skip the former WAIT_POS2 — the robot has already moved clear
-               of the stand before raising bStartAssembly. *)
+               of the stand before signaling start via TCP CMD:1. *)
             stHmi.eStep := E_MasterAutoStep.PUSH_EXTENDING;
         ELSIF tonStep.Q THEN   (* only reachable when NOT bNoSensors *)
             stHmi.iErrorCode := 1;
@@ -645,9 +653,9 @@ CASE stHmi.eStep OF
         END_IF;
 
     E_MasterAutoStep.ERR:
-        (* Latched. stRobot.bAssemblyRunning stays TRUE while in ERR (see
-           Section 5), so the robot times out its own polling wait and
-           enters its error handler. Exit only via Section 2 (HMI RESET). *)
+        (* Latched. nStateOut mirrors ERR(99) so the robot's TCP client
+           sees the fault via STATE:99 and can invoke its own error
+           handler. Exit only via Section 2 (HMI RESET or CMD:2). *)
         FOR i := 1 TO 3 DO
             bSepCmdExtend[i]   := FALSE;
             bSepCmdRetract[i]  := FALSE;
@@ -675,19 +683,19 @@ ELSE
 END_CASE;
 
 (* ==========================================
-   5. STATUS MIRROR — human-readable step name + running flags
+   5. STATUS MIRROR — human-readable step name + running flag
    TO_STRING relies on the enum's {to_string} attribute.
    bAnyRunning is TRUE any time the cycle is actively driving pistons —
    MAIN uses it to force enabled pistons into Automatic mode. False in ERR
    so the operator's manual choice is preserved after a fault.
-   stRobot.bAssemblyRunning is the outbound level to the robot — TRUE in
-   any non-IDLE state (including ERR, so the robot times out on PLC fault)
-   and FALSE only in IDLE.
+
+   The "PLC is running" signal to the robot is derived robot-side from
+   nStateOut != IDLE (see FB_RobotTcpClient); no separate outbound field
+   needed here.
    ========================================== *)
 stHmi.sStepText := TO_STRING(stHmi.eStep);
 bAnyRunning     := (stHmi.eStep <> E_MasterAutoStep.IDLE)
                AND (stHmi.eStep <> E_MasterAutoStep.ERR);
-stRobot.bAssemblyRunning := (stHmi.eStep <> E_MasterAutoStep.IDLE);
 ]]></ST>
     </Implementation>
   </POU>

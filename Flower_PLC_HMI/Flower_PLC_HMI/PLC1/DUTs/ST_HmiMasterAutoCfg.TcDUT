@@ -21,8 +21,8 @@ STRUCT
     // No timeout-error path while sensorless. Mirrors ST_HmiPistonAutoCfg.bNoSensors.
     bNoSensors              : BOOL  := FALSE;
 
-    // While TRUE, IDLE immediately starts the next cycle (no START /
-    // bStartAssembly edge needed). Uncheck to stop after the cycle returns
+    // While TRUE, IDLE immediately starts the next cycle (no START or
+    // robot CMD:1 edge needed). Uncheck to stop after the cycle returns
     // to IDLE. Cleared by the FB on entry to ERR so a RESET does not
     // instantly restart motion.
     bContinuous             : BOOL  := FALSE;

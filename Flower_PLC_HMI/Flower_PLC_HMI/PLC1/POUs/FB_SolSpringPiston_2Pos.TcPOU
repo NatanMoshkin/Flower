@@ -26,6 +26,12 @@ VAR_INPUT
     bAutoCmdExtend    : BOOL;
     bAutoCmdRetract   : BOOL;
 
+    (* External jog request (e.g. panel push-button). OR-merged with the
+       HMI's stHmi.bManJogExtend inside so a physical PB and the HMI
+       button can drive the same jog without stepping on each other.
+       Only takes effect while eMode = Manual (same gate as the HMI jog). *)
+    bJogExtend        : BOOL;
+
     (* Physical Feedback (Proximity Switches) *)
     bSwitchExtended   : BOOL;
     bSwitchRetracted  : BOOL;
@@ -137,7 +143,7 @@ END_IF;
 // Section 1 above already copied stHmi.bSelected* into bTarget*. The stale
 // bTarget* is harmless because Section 2's jog branches sit ahead of the
 // bTarget* branches in the IF/ELSIF ladder and preempt them.
-IF stHmi.bManJogExtend OR stHmi.bManJogRetract THEN
+IF stHmi.bManJogExtend OR stHmi.bManJogRetract OR bJogExtend THEN
     stHmi.bSelectedExtend := FALSE; stHmi.bSelectedRetract := FALSE;
 END_IF;
 
@@ -170,8 +176,9 @@ IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract :
    Fail-safe still holds: cold boot, PLC reset, or e-stop leave bOutSolenoid
    at its default FALSE and the spring retracts.
    ========================================== *)
-// JOG EXTEND: while held in Manual, energise coil
-IF stHmi.bManJogExtend AND stHmi.eMode = E_ControlMode.Manual THEN
+// JOG EXTEND: while held in Manual, energise coil. HMI-owned bManJogExtend
+// OR external bJogExtend (panel push-button) -- both share the Manual gate.
+IF (stHmi.bManJogExtend OR bJogExtend) AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := TRUE;
 
 // JOG RETRACT: while held in Manual, de-energise coil (spring retracts)
