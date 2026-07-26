@@ -19,9 +19,9 @@ STRUCT
     sErrorText       : STRING(80);
     nCyclesCompleted : UDINT;        // incremented at end of GRIP_RETRACTING
 
-    // HMI writes -- bench sim of the robot's start handshake. OR-ed with the
-    // real stRobot.bStartAssembly level; FB auto-clears it after the rising
-    // edge is consumed (never writes the robot-owned signal itself).
+    // HMI writes -- bench sim of the robot's start command. Rising edge inside
+    // the FB behaves the same as an incoming CMD:1 pulse (see bExtStartPulse).
+    // FB auto-clears this flag after the rising edge is consumed.
     bSimStartAssembly      : BOOL;
 
     // HMI writes -- per-step Simulate flags. Rising edge shortcuts the current

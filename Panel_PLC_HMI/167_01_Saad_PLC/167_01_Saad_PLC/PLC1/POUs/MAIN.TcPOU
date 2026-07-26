@@ -13,20 +13,32 @@ VAR
     fbGripSolR : FB_SolSpringPiston_2Pos;
 
     // Full-machine sequencer coordinating the 3 pairs of (SepSolN,
-    // PushSolN) plus the robot handshake. In this panel solution the
-    // master cycle is the ONLY auto driver — the per-piston auto tiles
+    // PushSolN) + the 2 grip pistons. In this panel solution the master
+    // cycle is the ONLY auto driver — the per-piston auto tiles
     // (bench-only feature) are removed, so no OR-merge at the call sites.
     fbMasterAutoCycle : FB_MasterAutoCycle;
 
-    // Robot TCP/IP client — parameter/trigger protocol on :6001 (tuning
-    // params + New_Bulb). ADDED ALONGSIDE the discrete-I/O start/done
-    // handshake (GVL_Robot.stRobot.bStartAssembly / bAssemblyRunning),
-    // which stays the safety-critical path. Free Tc2_TcpIp over TF6310.
+    // Robot TCP/IP client — TCP-only protocol on :6001. Carries tuning
+    // params + New_Bulb + STATE/CMD (state push out, command in). The
+    // former discrete-I/O handshake (STAND_SEQ_DO/DI) is retired.
     fbRobotTcp : FB_RobotTcpClient;
 
+    // Edge detectors on the robot's TCP command channel (nRobotCmd:
+    // 0=none, 1=start cycle, 2=reset error). Rising edge on =1 feeds
+    // fbMasterAutoCycle's start pulse; rising edge on =2 pulses the
+    // HMI-owned bReset flag which the FB's own R_TRIG then consumes.
+    fbTrigRobotStart : R_TRIG;
+    fbTrigRobotReset : R_TRIG;
+
+    // PB1 rising edge in Auto mode triggers a cycle start (bypass of the
+    // robot's CMD:1). Fed into stMasterAuto.bSimStartAssembly which the FB
+    // already OR-merges with the external start pulse and auto-clears.
+    fbTrigPb1 : R_TRIG;
+
     // Scratch copies of the global machine mode, computed once per scan and
-    // fanned out to all six pistons (both eMode and bMode) just below.
+    // fanned out to all eight pistons (both eMode and bMode) just below.
     bMachineAuto : BOOL;
+    bManualMode  : BOOL;   // = NOT bMachineAuto; gates PB jogs
     eMachineMode : E_ControlMode;
 END_VAR
 ]]></Declaration>
@@ -67,8 +79,18 @@ fbMasterAutoCycle.bPlateSenR := GVL_App.bPlateSenR;
 GVL_HMI.bPlateSenL := GVL_App.bPlateSenL;
 GVL_HMI.bPlateSenR := GVL_App.bPlateSenR;
 
+(* Robot command edge detection. nRobotCmd is written by fbRobotTcp on
+   each CMD:<n> reply (see below). RESET pulse is fanned into the HMI
+   bReset flag so the operator- and robot-initiated resets share one
+   consumption path inside the FB. *)
+fbTrigRobotStart(CLK := GVL_Robot.stParams.nRobotCmd = 1);
+fbTrigRobotReset(CLK := GVL_Robot.stParams.nRobotCmd = 2);
+IF fbTrigRobotReset.Q THEN
+    GVL_HMI.stMasterAuto.bReset := TRUE;
+END_IF
+
 fbMasterAutoCycle(
-    bStartAssembly := GVL_Robot.stRobot.bStartAssembly,
+    bExtStartPulse := fbTrigRobotStart.Q,
     bMachineAuto   := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode,
     stHmi          := GVL_HMI.stMasterAuto,
     stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
@@ -94,6 +116,26 @@ GVL_HMI.stGripSolL.eMode := eMachineMode;  GVL_HMI.stGripSolL.bMode := bMachineA
 GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineAuto;
 
 (* ==========================================
+   Panel push buttons.
+   * LED outputs mirror the raw PB press state (wiring diagnostic).
+   * PB1 in Auto mode: rising edge triggers a cycle-start bypass of the
+     robot's CMD:1 -- feed into the master cycle's own sim-start flag which
+     it OR-merges with the external start pulse.
+   * PB1/2/3 in Manual mode: hold to jog corresponding piston group. The
+     jog itself is passed through the piston FB's bJogExtend input below.
+   ========================================== *)
+GVL_App.bLedPb1 := GVL_App.bPb1;
+GVL_App.bLedPb2 := GVL_App.bPb2;
+GVL_App.bLedPb3 := GVL_App.bPb3;
+
+fbTrigPb1(CLK := GVL_App.bPb1);
+IF bMachineAuto AND fbTrigPb1.Q THEN
+    GVL_HMI.stMasterAuto.bSimStartAssembly := TRUE;
+END_IF;
+
+bManualMode := NOT bMachineAuto;
+
+(* ==========================================
    Pin separators (SOL-Spring, 2 limit switches, single Extend coil).
    The master cycle is the only auto driver; in Manual the piston FB
    ignores bAutoCmd* and follows the operator's jog buttons instead.
@@ -101,6 +143,7 @@ GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineA
 fbSepSol1(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[1],
+    bJogExtend       := bManualMode AND GVL_App.bPb2,
     bSwitchExtended  := GVL_App.bSensorSepExtended1,
     bSwitchRetracted := GVL_App.bSensorSepRetracted1,
     stHmi            := GVL_HMI.stSepSol1,
@@ -110,6 +153,7 @@ fbSepSol1(
 fbSepSol2(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[2],
+    bJogExtend       := bManualMode AND GVL_App.bPb2,
     bSwitchExtended  := GVL_App.bSensorSepExtended2,
     bSwitchRetracted := GVL_App.bSensorSepRetracted2,
     stHmi            := GVL_HMI.stSepSol2,
@@ -119,6 +163,7 @@ fbSepSol2(
 fbSepSol3(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[3],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[3],
+    bJogExtend       := bManualMode AND GVL_App.bPb2,
     bSwitchExtended  := GVL_App.bSensorSepExtended3,
     bSwitchRetracted := GVL_App.bSensorSepRetracted3,
     stHmi            := GVL_HMI.stSepSol3,
@@ -131,6 +176,7 @@ fbSepSol3(
 fbPushSol1(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[1],
+    bJogExtend       := bManualMode AND GVL_App.bPb3,
     bSwitchExtended  := GVL_App.bSensorPushExtended1,
     bSwitchRetracted := GVL_App.bSensorPushRetracted1,
     stHmi            := GVL_HMI.stPushSol1,
@@ -140,6 +186,7 @@ fbPushSol1(
 fbPushSol2(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[2],
+    bJogExtend       := bManualMode AND GVL_App.bPb3,
     bSwitchExtended  := GVL_App.bSensorPushExtended2,
     bSwitchRetracted := GVL_App.bSensorPushRetracted2,
     stHmi            := GVL_HMI.stPushSol2,
@@ -149,6 +196,7 @@ fbPushSol2(
 fbPushSol3(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[3],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[3],
+    bJogExtend       := bManualMode AND GVL_App.bPb3,
     bSwitchExtended  := GVL_App.bSensorPushExtended3,
     bSwitchRetracted := GVL_App.bSensorPushRetracted3,
     stHmi            := GVL_HMI.stPushSol3,
@@ -162,6 +210,7 @@ fbPushSol3(
 fbGripSolL(
     bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[1],
+    bJogExtend       := bManualMode AND GVL_App.bPb1,
     bSwitchExtended  := GVL_App.bSensorGripExtendedL,
     bSwitchRetracted := GVL_App.bSensorGripRetractedL,
     stHmi            := GVL_HMI.stGripSolL,
@@ -171,6 +220,7 @@ fbGripSolL(
 fbGripSolR(
     bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
+    bJogExtend       := bManualMode AND GVL_App.bPb1,
     bSwitchExtended  := GVL_App.bSensorGripExtendedR,
     bSwitchRetracted := GVL_App.bSensorGripRetractedR,
     stHmi            := GVL_HMI.stGripSolR,
@@ -178,10 +228,22 @@ fbGripSolR(
 );
 
 (* ==========================================
-   Robot TCP/IP client (parameter/trigger protocol, port 6001). Runs every
-   scan; its internal state machine dials the robot server and auto-reconnects
-   on drop. The safety-critical start/done handshake is discrete I/O elsewhere.
+   Robot TCP/IP client (TCP-only protocol, port 6001). Runs every scan;
+   its internal state machine dials the robot server and auto-reconnects
+   on drop. The former discrete-I/O handshake is retired -- start/reset
+   commands arrive via CMD:<n> replies, PLC state pushes via STATE:<n>.
+
+   Compute nStateOut immediately after the master cycle so any transition
+   this scan is visible to the robot on the next STATE push. MANUAL(30)
+   sentinel while bAutoMode=FALSE so the robot knows the panel is out of
+   auto and won't issue CMD:1.
    ========================================== *)
+IF NOT GVL_HmiPersistent.stMasterAutoCfg.bAutoMode THEN
+    GVL_Robot.stParams.nStateOut := INT#30;   (* MANUAL *)
+ELSE
+    GVL_Robot.stParams.nStateOut := TO_INT(GVL_HMI.stMasterAuto.eStep);
+END_IF
+
 fbRobotTcp(
     bEnable     := GVL_Robot.bTcpEnable,
     sRemoteHost := GVL_Robot.sRobotHost,

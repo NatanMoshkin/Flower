@@ -2,12 +2,12 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_RobotTcpClient" Id="{9a819722-65ef-4bb0-a58a-040059e1d2fe}" SpecialFunc="None">
     <Declaration><![CDATA[(*
-   TCP/IP client for the Dobot parameter/trigger protocol on port 6001.
-   PLC dials the robot's server (the robot is the TCP server). This carries
-   ONLY the tuning parameters and one-shot triggers -- the safety-critical
-   start/done handshake stays on discrete I/O (STAND_SEQ_DO / STAND_SEQ_DI,
-   see ST_HmiRobot). Uses the free-with-TF6310 Tc2_TcpIp socket FBs; empty
-   sSrvNetId targets the local TwinCAT TCP/IP Connection Server.
+   TCP/IP client for the Dobot protocol on port 6001. Robot is the TCP
+   server; PLC dials in. Robot comms are TCP-ONLY: the former discrete-I/O
+   handshake (STAND_SEQ_DO / STAND_SEQ_DI) is retired and its channels
+   (DI[13], DO[7]) are now free. Uses the free-with-TF6310 Tc2_TcpIp
+   socket FBs; empty sSrvNetId targets the local TwinCAT TCP/IP Connection
+   Server.
 
    Protocol (raw ASCII, no newline framing; one send -> one reply, matching
    RobotBridge\Client_working_example\tcp client.py / dummy_server.py):
@@ -15,7 +15,14 @@
      "GET_SYNC"          "SYNC:J_SPEED=10,L_SPEED=10,..."
      "NAME:VALUE"        "OK: SET NAME"
      "New_Bulb:1"        "OK: SET New_Bulb"
-     "HEARTBEAT"         "1"
+     "STATE:n"           "CMD:m"
+
+   STATE frames are the PLC's continuous state push (n = INT value of
+   E_MasterAutoStep, or MANUAL=30 when bAutoMode=FALSE). Sent on every
+   change of stParams.nStateOut and every IDLE_STATE_MS as keep-alive.
+   The robot's reply carries the next command (m in {0,1,2}: 0=none,
+   1=start cycle, 2=reset error) which is written to stParams.nRobotCmd
+   for MAIN to R_TRIG.
 
    State machine mirrors the Python supervisor: Disconnected -> Connecting
    -> Connected; any socket error closes and re-dials after RECONNECT_MS.
@@ -49,7 +56,7 @@ VAR
     iPend  : INT;            // which message we last sent (drives reply parse)
 
     tonReconnect : TON;      // delay before re-dial after a drop
-    tonIdle      : TON;      // idle -> HEARTBEAT keep-alive
+    tonIdle      : TON;      // idle -> STATE keep-alive
     tonReply     : TON;      // reply timeout guard
 
     sTxMsg    : STRING(255);
@@ -57,22 +64,23 @@ VAR
     aRxBuffer : ARRAY[0..255] OF BYTE;
 
     bAutoSyncQueued : BOOL;  // one-shot GET_SYNC right after each (re)connect
+    nLastStateSent  : INT := -1;   // last nStateOut we transmitted; -1 forces first push
 END_VAR
 VAR CONSTANT
     IO_IDLE      : INT := 0;
     IO_WAIT_SEND : INT := 1;
     IO_WAIT_RECV : INT := 2;
 
-    TX_NONE      : INT := 0;
-    TX_GETSYNC   : INT := 1;
-    TX_SETPARAM  : INT := 2;
-    TX_NEWBULB   : INT := 3;
-    TX_HEARTBEAT : INT := 4;
+    TX_NONE     : INT := 0;
+    TX_GETSYNC  : INT := 1;
+    TX_SETPARAM : INT := 2;
+    TX_NEWBULB  : INT := 3;
+    TX_STATE    : INT := 4;
 
-    RECONNECT_MS  : TIME := T#3S;
-    IDLE_HB_MS    : TIME := T#2S;
-    REPLY_TO_MS   : TIME := T#2S;
-    CONNECT_TO_MS : TIME := T#2S;
+    RECONNECT_MS   : TIME := T#3S;
+    IDLE_STATE_MS  : TIME := T#1S;   // keep-alive STATE push cadence
+    REPLY_TO_MS    : TIME := T#2S;
+    CONNECT_TO_MS  : TIME := T#2S;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -107,6 +115,7 @@ E_RobotConnState.Connecting:
             iIo             := IO_IDLE;
             iPend           := TX_NONE;
             bAutoSyncQueued := TRUE;   // pull current params right after connect
+            nLastStateSent  := -1;     // force initial STATE push
             tonIdle(IN := FALSE);
             eState := E_RobotConnState.Connected;
         END_IF
@@ -145,7 +154,8 @@ METHOD ConnectedIo : BOOL
         <ST><![CDATA[CASE iIo OF
 
 IO_IDLE:
-    // Priority: explicit sets, then new-bulb trigger, then sync, then idle keep-alive.
+    // Priority: explicit sets, then new-bulb trigger, then sync, then
+    // STATE push (on change or every IDLE_STATE_MS as keep-alive).
     IF stParams.bSetParam THEN
         sTxMsg := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
         iPend  := TX_SETPARAM;
@@ -160,10 +170,11 @@ IO_IDLE:
         iPend  := TX_GETSYNC;
         StartSend();
     ELSE
-        tonIdle(IN := TRUE, PT := IDLE_HB_MS);
-        IF tonIdle.Q THEN
-            sTxMsg := 'HEARTBEAT';
-            iPend  := TX_HEARTBEAT;
+        tonIdle(IN := TRUE, PT := IDLE_STATE_MS);
+        IF stParams.nStateOut <> nLastStateSent OR tonIdle.Q THEN
+            sTxMsg         := CONCAT('STATE:', INT_TO_STRING(stParams.nStateOut));
+            nLastStateSent := stParams.nStateOut;
+            iPend          := TX_STATE;
             StartSend();
         END_IF
     END_IF
@@ -208,10 +219,11 @@ IO_WAIT_RECV:
             HandleReply();
             iIo := IO_IDLE;
         ELSIF tonReply.Q THEN
-            // No reply in time. HEARTBEAT may go unanswered -- tolerate it;
-            // anything else is a real fault -> drop and reconnect.
+            // No reply in time. STATE may go unanswered occasionally --
+            // tolerate it (we'll try again next keep-alive); everything
+            // else is a real fault -> drop and reconnect.
             tonReply(IN := FALSE);
-            IF iPend = TX_HEARTBEAT THEN
+            IF iPend = TX_STATE THEN
                 iPend := TX_NONE;
                 iIo   := IO_IDLE;
             ELSE
@@ -243,6 +255,12 @@ METHOD HandleReply : BOOL
         <ST><![CDATA[stRobot.nPacketsRx   := stRobot.nPacketsRx + 1;
 stRobot.sLastMessage := sRxMsg;
 
+// Any reply may embed the next robot command as "CMD:n". Parse it
+// regardless of iPend so the state-push round-trip carries commands.
+IF FIND(sRxMsg, 'CMD:') = 1 AND LEN(sRxMsg) > 4 THEN
+    stParams.nRobotCmd := STRING_TO_INT(MID(sRxMsg, LEN(sRxMsg) - 4, 5));
+END_IF
+
 CASE iPend OF
     TX_GETSYNC:
         IF FIND(sRxMsg, 'SYNC:') = 1 THEN
@@ -253,6 +271,9 @@ CASE iPend OF
         stParams.bSetParam := FALSE;
     TX_NEWBULB:
         stParams.bTriggerNewBulb := FALSE;
+    TX_STATE:
+        // CMD parsing already handled above; no flag to clear.
+        ;
 END_CASE
 
 iPend := TX_NONE;

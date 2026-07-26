@@ -4,10 +4,10 @@
     <Declaration><![CDATA[TYPE ST_RobotParams :
 STRUCT
     // ------------------------------------------------------------------
-    // Dobot tuning parameters exchanged over TCP:6001 (parameter/trigger
-    // protocol; the safety-critical start/done handshake stays on discrete
-    // I/O -- STAND_SEQ_DO / STAND_SEQ_DI). Field names and order match the
-    // robot's SYNC string (see global.lua / dummy_server.py in
+    // Dobot tuning parameters exchanged over TCP:6001. TCP is now the ONLY
+    // robot channel -- start/stop moved from discrete I/O to STATE:n / CMD:n
+    // frames (see nStateOut / nRobotCmd below). Field names and order match
+    // the robot's SYNC string (see global.lua / dummy_server.py in
     // RobotBridge\Client_working_example). All INT so the classic VISU HMI
     // binds NumericInput directly. Defaults mirror the dummy server.
     // ------------------------------------------------------------------
@@ -41,6 +41,22 @@ STRUCT
 
     // Send "New_Bulb:1"; robot replies "OK: SET New_Bulb" and starts a fresh bulb.
     bTriggerNewBulb    : BOOL;
+
+    // ------------------------------------------------------------------
+    // State + command channel (replaces the retired discrete-I/O handshake).
+    //
+    // nStateOut : INT -- MAIN writes each scan. Value is TO_INT(eStep) in
+    //   Automatic mode, or E_MasterAutoStep.MANUAL (30) when bAutoMode=FALSE.
+    //   FB_RobotTcpClient sends "STATE:n" on change and every STATE_IDLE_MS
+    //   as keep-alive.
+    //
+    // nRobotCmd : INT -- FB_RobotTcpClient writes each time a "CMD:n" reply
+    //   arrives. MAIN R_TRIGs on nRobotCmd=1 (start cycle) and =2 (reset
+    //   error). Robot is responsible for zeroing after the PLC's next state
+    //   push acknowledges the command.
+    // ------------------------------------------------------------------
+    nStateOut          : INT;
+    nRobotCmd          : INT;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

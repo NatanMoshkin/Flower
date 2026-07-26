@@ -7,41 +7,35 @@ STRUCT
     Name           : STRING(30);
 
     // ------------------------------------------------------------------
-    // Active interface — discrete-IO handshake (2026-07-10)
-    // See docs/robot-integration-options.md (Option 1). Replaces the former
-    // TCP protocol (POS1/POS2/POS3 + AUTO_STARTED/PUSH_DONE/PISTONS_ERROR).
-    // The Dobot side uses STAND_SEQ_DO (robot -> PLC) and STAND_SEQ_DI
-    // (PLC -> robot); see global.lua in ..\167-01-Saad.
-    // ------------------------------------------------------------------
-
-    // FROM robot: level driven by robot's STAND_SEQ_DO (robot DO 2).
-    // FB_MasterAutoCycle triggers on rising edge in IDLE.
-    bStartAssembly    : BOOL;
-
-    // TO robot: level driving robot's STAND_SEQ_DI (robot DI 1).
-    // FB_MasterAutoCycle sets TRUE in every non-IDLE state (including ERR
-    // so the robot times out on PLC error) and FALSE in IDLE. The robot's
-    // src0.lua polls for OFF as "assembler finished".
-    bAssemblyRunning  : BOOL;
-
-    // ------------------------------------------------------------------
-    // Deprecated — kept for HMI-page binding compat until the Robot page
-    // is migrated to the discrete-IO interface. Not read/written by
-    // FB_MasterAutoCycle anymore. Can be deleted once the HMI is updated.
+    // Robot comms are now TCP-only. Start/reset commands come from the
+    // robot as CMD:n replies (see ST_RobotParams.nRobotCmd); PLC state is
+    // pushed to the robot as STATE:n (see ST_RobotParams.nStateOut). The
+    // former discrete-I/O handshake (bStartAssembly/bAssemblyRunning wired
+    // to STAND_SEQ_DO/STAND_SEQ_DI) is retired -- DI[13] and DO[7] are now
+    // free channels.
+    //
+    // Fields below are the TCP status mirror written by FB_RobotTcpClient
+    // and read by the HMI.
     // ------------------------------------------------------------------
     eConnState     : E_RobotConnState;
     sConnStateText : STRING(20);
+    nPacketsRx     : UDINT;
+    nPacketsTx     : UDINT;
+    sLastMessage   : STRING(80);
+    sLastTxMessage : STRING(80);
+
+    // ------------------------------------------------------------------
+    // Deprecated -- kept only for legacy HMI page bindings on the retired
+    // TCP POS/AUTO_STARTED protocol. Not read/written anywhere on the PLC
+    // side. Safe to delete once no HMI page references them.
+    // ------------------------------------------------------------------
     bAtPos1        : BOOL;
     bAtPos2        : BOOL;
     bAtPos3        : BOOL;
-    nPacketsRx     : UDINT;
-    sLastMessage   : STRING(80);
     bTxAutoStarted  : BOOL;
     bTxPushDone     : BOOL;
     bTxPistonsError : BOOL;
     bRxResetError   : BOOL;
-    nPacketsTx      : UDINT;
-    sLastTxMessage  : STRING(80);
 END_STRUCT
 END_TYPE
 ]]></Declaration>

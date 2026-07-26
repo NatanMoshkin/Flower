@@ -21,6 +21,7 @@ TYPE E_MasterAutoStep :
     WAIT_PLATE           := 20,
     GRIP_EXTENDING       := 21,
     GRIP_RETRACTING      := 22,
+    MANUAL               := 30,
     ERR                  := 99
 ) ;
 END_TYPE
