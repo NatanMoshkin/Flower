@@ -1,5 +1,9 @@
 Flower_PLC_HMI.sln
-First was created to develop and test on Local PC, then on the temporary PLC.
+REMOVED 2026-07-26. Was the develop/test solution for the Local PC and the
+temporary PLC, and carried the TwinCAT web HMI (Flower_HMI). Both retired:
+the engineering-side UI is now FlowerPyHmi (separate repo at
+167_01_Saad_Flower\FlowerPyHmi, talks ADS to the panel). Recoverable from
+git history if ever needed.
 
 167_01_Saad_PLC.sln
 real CP6606 Panel

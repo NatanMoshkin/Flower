@@ -6,9 +6,11 @@
 VAR_GLOBAL
     stRobot : ST_HmiRobot := (Name := 'Robot');
 
-    // Robot tuning parameters + request flags, exchanged over TCP:6001 by
-    // FB_RobotTcpClient (parameter/trigger protocol, added alongside the
-    // discrete-I/O start/done handshake in stRobot).
+    // Robot tuning parameters, request flags, and the STATE/CMD channel --
+    // all exchanged over TCP:6001 by FB_RobotTcpClient, which is the SOLE
+    // robot channel (the discrete-I/O handshake was retired 2026-07-26).
+    // The 11 tuning params are read/write: editing one here is detected by
+    // the FB's shadow-copy comparison and pushed to the robot.
     stParams : ST_RobotParams;
 
     // TCP client target. PLC dials the robot's server. Host is set by the

@@ -149,7 +149,7 @@ flowchart LR
 <!-- ============================================================ -->
 <section class="panel" id="panel-plc">
   <h2>PLC — TwinCAT project</h2>
-  <p>Project root: <code>Flower_PLC_HMI/Flower_PLC_HMI/</code>. PLC1 uses only free Beckhoff libraries: <code>Tc2_Standard</code>, <code>Tc2_System</code>, <code>Tc3_Module</code>. No paid supplement is referenced.</p>
+  <p>Project root: <code>Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC/</code>. PLC1 uses free Beckhoff libraries (<code>Tc2_Standard</code>, <code>Tc2_System</code>, <code>Tc3_Module</code>) plus <code>Tc2_TcpIp</code>, which ships with TF6310 — installed and running on the CP6606, and the one documented exception to the no-paid-supplement rule.</p>
 
   <div class="card" data-c="plc">
     <h3>DUTs (data types)</h3>
@@ -241,7 +241,7 @@ flowchart LR
 <!-- ============================================================ -->
 <section class="panel" id="panel-hmi">
   <h2>HMI — TcHmi runtime</h2>
-  <p>Project root: <code>Flower_PLC_HMI/Flower_HMI/</code>. Dark theme (Base-Dark). Two functional pages plus the stock StartPage / Events / Settings.</p>
+  <p><b>Retired 2026-07-26.</b> The TwinCAT web HMI (<code>Flower_PLC_HMI/Flower_HMI/</code>) and the dev PLC solution alongside it were deleted from the repo; the engineering-side UI is now <code>FlowerPyHmi</code>, a separate repo at <code>167_01_Saad_Flower/FlowerPyHmi</code> that talks ADS to the panel. Recover the old project from git history if ever needed.</p>
 
   <div class="card" data-c="hmi">
     <h3>Pages</h3>

@@ -74,8 +74,8 @@ END_VAR]]></Declaration>
       <ST><![CDATA[(* ==========================================
    0b. MODE-FIELD BRIDGE — sync bMode <-> eMode
    The classic PLC HMI (VISUs) writes stHmi.bMode because its Rotary Switch
-   element is boolean-only. The web HMI (Flower_HMI) writes stHmi.eMode via
-   a ToggleSwitch. Rest of this FB reads eMode as the authoritative field,
+   element is boolean-only. FlowerPyHmi writes stHmi.eMode over ADS.
+   (The retired Flower_HMI web project did the same via a ToggleSwitch.) Rest of this FB reads eMode as the authoritative field,
    so we mirror bMode into eMode when the classic HMI toggled the switch,
    and mirror eMode back into bMode when the web HMI (or anyone else) wrote
    eMode. Edge-triggered — whichever side changed since last cycle wins.

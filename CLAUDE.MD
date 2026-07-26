@@ -23,9 +23,17 @@ remains engineering-side (runs on any developer laptop) and unaffected.
 
 ## DECISION: 167_01 panel solution — TCP-only robot comms + global Auto/Manual interlock
 
-Scope: `Panel_PLC_HMI/167_01_Saad_PLC/` is the real CP6606 target. The dev
-solution `Flower_PLC_HMI/` mirrors the same PLC content byte-for-byte for
-local (developer PC) testing.
+Scope: `Panel_PLC_HMI/167_01_Saad_PLC/` is the **only** PLC solution.
+
+**`Flower_PLC_HMI/` was deleted 2026-07-26.** It held the dev PLC solution
+(a byte-for-byte mirror for local PC testing) and the TwinCAT web HMI
+`Flower_HMI/`. Both are retired — there is no mirror to keep in sync any
+more, so PLC edits land in one place only. The engineering-side UI is now
+`FlowerPyHmi` (separate git repo at `167_01_Saad_Flower/FlowerPyHmi`,
+talks ADS to the panel; not a submodule, so nothing keeps its symbol
+contract in step automatically — run `python scripts/check_pyhmi_contract.py`
+after changing any HMI-facing GVL or DUT). Recover the old solution from
+git history if ever needed.
 
 **Global Auto/Manual hard interlock (2026-07-19).** A single machine-wide
 BOOL `GVL_HmiPersistent.stMasterAutoCfg.bAutoMode` is the sole source of
@@ -75,9 +83,49 @@ is retired and its DI[13] / DO[7] channels are free.
   `sLastMessage`/`sLastTxMessage`. `MAIN` calls `fbRobotTcp` each scan.
 - Connection state machine: Disconnected → Connecting → Connected → (any
   socket error) close + reconnect after 3 s. Empty `sSrvNetId` targets
-  the local TF6310 server. Build verified on the local PC (XAE);
-  online test against the robot / sim server pending until robot Lua
-  side is updated to speak `STATE`/`CMD`.
+  the local TF6310 server. `CMD:0/1/2` verified against the robot
+  2026-07-26.
+
+**Tuning params are read/write (shadow-copy push, 2026-07-26).** They used
+to be read-only in practice: `GET_SYNC` pulled values in, but the only way
+to push one back was the `bSetParam`/`sSetName`/`nSetVal` triple, which
+*nothing* ever set — no VISU page, no MAIN code, no HMI binding. Since
+`GVL_Robot` is `AddSymbol`-exposed, an operator editing `stParams.J_SPEED`
+saw the value change, nothing was sent, and the next reconnect's `GET_SYNC`
+silently reverted it.
+
+`FB_RobotTcpClient` now keeps `aShadow : ARRAY[1..11] OF INT`, re-baselined
+by `SetShadowAll` after every `GET_SYNC` round-trip. Any live field that
+diverges from its shadow slot is an operator edit and is pushed as
+`NAME:VALUE`, one param per round-trip; `HandleReply` banks the value that
+was *sent* (`nPendVal`), so an edit made mid-round-trip is re-sent rather
+than swallowed. So an HMI NumericInput can bind straight to
+`GVL_Robot.stParams.J_SPEED` and just work. The `bSetParam` triple survives
+as a raw escape hatch for names that aren't struct fields.
+
+Index↔name mapping lives in `ParamValue` / `ParamName` and **must** match
+the robot's `SYNC_ORDER`. `bShadowValid` gates detection until the first
+SYNC lands, so the compiled-in defaults are never mistaken for edits.
+
+`IO_IDLE` priority order matters and is asserted by the tests:
+1. post-connect one-shot `GET_SYNC` — a `STATE` reply can carry `CMD:1`,
+   and a cycle must not start on unsynced params;
+2. `STATE` on change — `CMD` frames ride back on `STATE` replies, so a
+   write burst must not starve start/reset;
+3. explicit `bSetParam` / `bTriggerNewBulb` / `bGetSync`;
+4. detected edits;
+5. `STATE` keep-alive.
+
+*Known limitation:* `stParams` is both setpoint and actual, so an edit made
+while the link is down is overwritten by the reconnect's `GET_SYNC`.
+Separating desired-vs-actual needs a second struct — deferred.
+
+`scripts/test_param_shadow_logic.py` ports the sequencer to Python and runs it
+against the protocol (9 cases: no startup echo, edit pushed, all three
+speeds, state preemption, CMD during write burst, mid-flight re-edit,
+escape hatch, re-sync baseline, malformed SYNC). Run
+`python scripts/test_param_shadow_logic.py`. It validates the *algorithm*, not
+the ST build — a TwinCAT compile is still required.
 
 
 ## DECISION: FB_MasterAutoCycle drives the full-machine auto sequence
@@ -183,8 +231,14 @@ feedback and advance when `tStepTimeoutMs` expires — the timeout doubles
 as the fixed step duration, so error codes 1/3/4/5/6/7/8/10/11 cannot
 occur while sensorless. `WAIT_PLATE` uses its own `tPlateWaitTimeoutMs`
 and still requires both plate sensors TRUE (bNoSensors doesn't skip the
-plate gate). HMI checkbox "No sensors (timed steps)" sits below
-Continuous on the AutoCycle page.
+plate gate). Panel checkbox "No sensors (timed steps)" is the third
+checkbox on `AutoMain.TcVIS` at (20,335), bound to `stCfg.bNoSensors`
+— added 2026-07-26 by `scripts/add_nosensors_checkbox.py`, which clones the
+existing "Auto Mode" checkbox block rather than authoring one. **Use that
+cloning approach for any further classic-VISU element** — these files use
+numeric-ID serialization and XAE silently drops elements it cannot parse,
+so always open the page in TcXaeShell and confirm the element renders
+before activating.
 
 **Per-step simulate flags** on `ST_HmiMasterAuto.bSimStep_*` let a bench
 operator advance any waiting step without physical sensors — rising-edge
@@ -281,7 +335,7 @@ pragma is the searchable marker — grep for it under `PLC1/GVLs/` and you
 have the whole PLC↔HMI contract:
 
 ```
-grep -l "TcHmiSymbol.AddSymbol" Flower_PLC_HMI/Flower_PLC_HMI/PLC1/GVLs/
+grep -l "TcHmiSymbol.AddSymbol" Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC/PLC1/GVLs/
 ```
 
 **Rule for new HMI-facing symbols:** put them in the GVL whose concern
@@ -397,9 +451,13 @@ in the System Manager.
   operator preference is known — the LED source is a one-line change in
   `MAIN.TcPOU`.
 - **Delete deprecated fields in `ST_HmiRobot`** (`bAtPos1/2/3`,
-  `bTx*`, `bRxResetError`). Kept only for legacy HMI page bindings on
-  the retired TCP POS/AUTO_STARTED protocol. Safe to delete once no HMI
-  page references them; grep the Flower_HMI usercontrols first.
+  `bTx*`, `bRxResetError`) — **now unblocked.** They were kept only for
+  legacy `Flower_HMI` page bindings on the retired TCP POS/AUTO_STARTED
+  protocol, and that project was deleted 2026-07-26. The only remaining
+  consumer is `FlowerPyHmi`, which does not read them (verified by
+  `python scripts/check_pyhmi_contract.py` — 229/229 symbols resolve without
+  them). No PLC code touches them either. Safe to delete; re-run the
+  contract check afterwards.
 
 
 ## Playwright

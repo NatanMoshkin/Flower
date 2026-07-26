@@ -34,7 +34,11 @@ STRUCT
     // The FB also raises this itself once, right after each (re)connect.
     bGetSync           : BOOL;
 
-    // Send "sSetName:nSetVal" (e.g. "J_SPEED:15"); robot replies "OK: SET NAME".
+    // Raw escape hatch: send "sSetName:nSetVal" (e.g. "J_SPEED:15"); robot
+    // replies "OK: SET NAME". NOT needed for the 11 params above -- writing
+    // one of those fields directly (from the HMI or ST) is detected by
+    // FB_RobotTcpClient's shadow-copy comparison and pushed automatically.
+    // Use this only for names that are not fields of this struct.
     bSetParam          : BOOL;
     sSetName           : STRING(30);
     nSetVal            : INT;

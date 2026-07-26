@@ -95,7 +95,7 @@
   <div class="card">
     <h3>1. PLC — build &amp; activate</h3>
     <ol class="compact">
-      <li>Open <code>Flower_PLC_HMI/Flower_PLC_HMI.sln</code> in TcXaeShell.</li>
+      <li>Open <code>Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC.sln</code> in TcXaeShell.</li>
       <li><b>Build → Build Solution</b>. Zero errors expected.</li>
       <li><b>TwinCAT → Activate Configuration</b>. Restart the runtime in Run mode when prompted.</li>
       <li>Verify: <b>PLC → Login</b>, then in the online view confirm <code>GVL_Robot.stRobot</code> is present and <code>stRobot.Name = "Robot"</code>.</li>
@@ -145,7 +145,7 @@ cp config.example.yaml config.yaml
 
   <div class="card">
     <h3>7. CP6606 panel bring-up (TC3 PLC HMI)</h3>
-    <p>The <b>CP6606-0001-0020</b> is the whole control system in production: one ARM Cortex A8 device under Windows Embedded Compact 7, running both the TwinCAT PLC runtime and a native operator HMI on its 7-inch 800×480 touchscreen. There is no browser and no <code>TcHmiSrv</code> on the panel — the operator UI is Beckhoff's <b>TC3 PLC HMI</b> (visualizations authored inside the PLC project). The web HMI (<code>Flower_HMI</code>) stays on the developer's Windows x64 laptop for engineering use.</p>
+    <p>The <b>CP6606-0001-0020</b> is the whole control system in production: one ARM Cortex A8 device under Windows Embedded Compact 7, running both the TwinCAT PLC runtime and a native operator HMI on its 7-inch 800×480 touchscreen. There is no browser and no <code>TcHmiSrv</code> on the panel — the operator UI is Beckhoff's <b>TC3 PLC HMI</b> (visualizations authored inside the PLC project). The engineering-side UI is <code>FlowerPyHmi</code> (a separate repo, talks ADS to the panel) and runs on the developer's laptop. The former TwinCAT web HMI <code>Flower_HMI</code> was retired 2026-07-26.</p>
 
     <div class="callout">
       <b>Design first, then deploy.</b> Build the six <code>*.TcVISU</code> files in TcXaeShell (right-click <code>PLC1 → Add → Visualization</code>) — see the next card for the per-page design guide. The <code>.TcVISU</code> file format is TcXaeShell-generated XML; hand-authoring is not recommended.

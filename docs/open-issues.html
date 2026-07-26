@@ -109,7 +109,7 @@
     <p><b>How to resolve.</b> Once channels are assigned:</p>
     <ol class="compact" style="margin-left:22px">
       <li>Fill in the four TBD rows above.</li>
-      <li>Open <code>Flower_PLC_HMI/PLC1/POUs/MAIN.TcPOU</code>. Eight lines in the READ INPUTS block are commented placeholders like <code>// GVL_App.bSensorSepRetracted2 := GVL_IO.dIn[??];</code>.</li>
+      <li>Open <code>Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC/PLC1/POUs/PRG_IoMap.TcPOU</code> (IO copy moved out of MAIN into this program's <code>ReadInputs</code> / <code>WriteOutputs</code> actions).</li>
       <li>Replace each <code>[??]</code> with the actual slot number, uncomment the line, and remove its <code>TODO</code> marker.</li>
       <li>Rebuild + Activate. In the Watch window, force <code>GVL_IO.dIn[N]</code> for each new switch and confirm the corresponding <code>bIsExtended</code> / <code>bIsRetracted</code> indicator on the HMI updates.</li>
     </ol>

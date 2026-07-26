@@ -24,6 +24,19 @@
    1=start cycle, 2=reset error) which is written to stParams.nRobotCmd
    for MAIN to R_TRIG.
 
+   Tuning params are bidirectional. GET_SYNC pulls all 11 into stParams
+   after every connect, and the FB then snapshots them into aShadow. Any
+   later divergence between a live field and its shadow slot is treated as
+   an operator edit and pushed back as NAME:VALUE, one param per
+   round-trip. So an HMI NumericInput can bind straight to
+   GVL_Robot.stParams.J_SPEED and simply work -- no request flags to set.
+   The bSetParam / sSetName / nSetVal triple remains as a raw escape hatch
+   for names that are not struct fields.
+
+   Known limitation: stParams is both setpoint and actual. An edit made
+   while the link is down is overwritten by the GET_SYNC that follows the
+   next reconnect. Separating desired-vs-actual would need a second struct.
+
    State machine mirrors the Python supervisor: Disconnected -> Connecting
    -> Connected; any socket error closes and re-dials after RECONNECT_MS.
 *)
@@ -65,11 +78,26 @@ VAR
 
     bAutoSyncQueued : BOOL;  // one-shot GET_SYNC right after each (re)connect
     nLastStateSent  : INT := -1;   // last nStateOut we transmitted; -1 forces first push
+
+    // Shadow copy of the 11 tuning params, used to detect operator edits.
+    // Snapshotted from stParams after every GET_SYNC round-trip; any later
+    // divergence means "the HMI changed this field" and is pushed to the
+    // robot as NAME:VALUE. Held invalid until the first SYNC completes so
+    // the power-on defaults are never mistaken for edits.
+    aShadow      : ARRAY[1..11] OF INT;
+    bShadowValid : BOOL;
+
+    // Which param the in-flight TX_SETPARAM belongs to. 0 = the explicit
+    // bSetParam/sSetName/nSetVal escape hatch (no shadow slot to update).
+    nPendIdx : INT;
+    nPendVal : INT;   // value actually sent; written to aShadow on ACK
 END_VAR
 VAR CONSTANT
     IO_IDLE      : INT := 0;
     IO_WAIT_SEND : INT := 1;
     IO_WAIT_RECV : INT := 2;
+
+    PARAM_COUNT  : INT := 11;   // must match ST_RobotParams / SYNC_ORDER
 
     TX_NONE     : INT := 0;
     TX_GETSYNC  : INT := 1;
@@ -114,7 +142,9 @@ E_RobotConnState.Connecting:
             hSocket         := fbConnect.hSocket;
             iIo             := IO_IDLE;
             iPend           := TX_NONE;
+            nPendIdx        := 0;
             bAutoSyncQueued := TRUE;   // pull current params right after connect
+            bShadowValid    := FALSE;  // no edit detection until that SYNC lands
             nLastStateSent  := -1;     // force initial STATE push
             tonIdle(IN := FALSE);
             eState := E_RobotConnState.Connected;
@@ -149,34 +179,66 @@ stRobot.sConnStateText := TO_STRING(eState);
     <Method Name="ConnectedIo" Id="{47746f7b-ae67-4576-93f9-16e10d7f2768}">
       <Declaration><![CDATA[// Request/reply sequencer, run while eState = Connected.
 METHOD ConnectedIo : BOOL
+VAR
+    nChanged : INT;   // index of first param edited by the HMI, 0 = none
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[CASE iIo OF
 
 IO_IDLE:
-    // Priority: explicit sets, then new-bulb trigger, then sync, then
-    // STATE push (on change or every IDLE_STATE_MS as keep-alive).
-    IF stParams.bSetParam THEN
-        sTxMsg := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
-        iPend  := TX_SETPARAM;
+    tonIdle(IN := TRUE, PT := IDLE_STATE_MS);
+
+    // Detect an operator edit: any of the 11 params differing from the
+    // shadow snapshot taken after the last SYNC. Suppressed until the
+    // first SYNC validates the shadow, otherwise the compiled-in defaults
+    // would all look like edits on the very first scan after connect.
+    IF bShadowValid THEN
+        nChanged := FindChangedParam();
+    ELSE
+        nChanged := 0;
+    END_IF
+
+    // Priority order.
+    //  1. The post-connect one-shot GET_SYNC, before anything else: the
+    //     reply to a STATE push can carry CMD:1, and starting a cycle on
+    //     parameters we have not read back yet would run the robot on
+    //     stale values.
+    //  2. A CHANGED state. CMD frames ride back on STATE replies, so
+    //     delaying a state push behind a burst of parameter writes would
+    //     also delay start/reset commands from the robot.
+    //  3. Explicit requests, then detected edits.
+    //  4. The keep-alive push last, where it only fires on an idle link.
+    IF bAutoSyncQueued THEN
+        bAutoSyncQueued := FALSE;
+        sTxMsg := 'GET_SYNC';
+        iPend  := TX_GETSYNC;
+        StartSend();
+    ELSIF stParams.nStateOut <> nLastStateSent THEN
+        SendState();
+    ELSIF stParams.bSetParam THEN
+        // Explicit escape hatch: caller supplies the raw name/value pair.
+        sTxMsg   := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
+        iPend    := TX_SETPARAM;
+        nPendIdx := 0;
         StartSend();
     ELSIF stParams.bTriggerNewBulb THEN
         sTxMsg := 'New_Bulb:1';
         iPend  := TX_NEWBULB;
         StartSend();
-    ELSIF stParams.bGetSync OR bAutoSyncQueued THEN
-        bAutoSyncQueued := FALSE;
+    ELSIF stParams.bGetSync THEN
         sTxMsg := 'GET_SYNC';
         iPend  := TX_GETSYNC;
         StartSend();
-    ELSE
-        tonIdle(IN := TRUE, PT := IDLE_STATE_MS);
-        IF stParams.nStateOut <> nLastStateSent OR tonIdle.Q THEN
-            sTxMsg         := CONCAT('STATE:', INT_TO_STRING(stParams.nStateOut));
-            nLastStateSent := stParams.nStateOut;
-            iPend          := TX_STATE;
-            StartSend();
-        END_IF
+    ELSIF nChanged > 0 THEN
+        // One param per round-trip; the next idle scan picks up the rest.
+        nPendIdx := nChanged;
+        nPendVal := ParamValue(nChanged);
+        sTxMsg   := CONCAT(CONCAT(ParamName(nChanged), ':'), INT_TO_STRING(nPendVal));
+        iPend    := TX_SETPARAM;
+        StartSend();
+    ELSIF tonIdle.Q THEN
+        SendState();
     END_IF
 
 IO_WAIT_SEND:
@@ -236,6 +298,109 @@ END_CASE
 ]]></ST>
       </Implementation>
     </Method>
+    <Method Name="SendState" Id="{b1c4d2e0-3f7a-4c18-9d55-7e2a6b0f4c31}">
+      <Declaration><![CDATA[// Arm a STATE:n push and remember what we sent.
+METHOD SendState : BOOL
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sTxMsg         := CONCAT('STATE:', INT_TO_STRING(stParams.nStateOut));
+nLastStateSent := stParams.nStateOut;
+iPend          := TX_STATE;
+nPendIdx       := 0;
+StartSend();
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="FindChangedParam" Id="{c2d5e3f1-4a8b-4d29-8e66-8f3b7c1a5d42}">
+      <Declaration><![CDATA[// Index of the first param whose live value differs from the shadow
+// snapshot, or 0 when everything matches.
+METHOD FindChangedParam : INT
+VAR
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FindChangedParam := 0;
+
+FOR i := 1 TO PARAM_COUNT DO
+    IF ParamValue(i) <> aShadow[i] THEN
+        FindChangedParam := i;
+        RETURN;
+    END_IF
+END_FOR
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="SetShadowAll" Id="{d3e6f402-5b9c-4e3a-9f77-9a4c8d2b6e53}">
+      <Declaration><![CDATA[// Re-baseline the shadow to the current stParams values and enable edit
+// detection. Called after every GET_SYNC round-trip.
+METHOD SetShadowAll : BOOL
+VAR
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[FOR i := 1 TO PARAM_COUNT DO
+    aShadow[i] := ParamValue(i);
+END_FOR
+
+bShadowValid := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParamValue" Id="{e4f70513-6cad-4f4b-8a88-ab5d9e3c7f64}">
+      <Declaration><![CDATA[// Live value of param i. Index order must match ParamName and the
+// robot's SYNC_ORDER.
+METHOD ParamValue : INT
+VAR_INPUT
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE i OF
+     1: ParamValue := stParams.J_SPEED;
+     2: ParamValue := stParams.L_SPEED;
+     3: ParamValue := stParams.REPEATS;
+     4: ParamValue := stParams.START_WAIT;
+     5: ParamValue := stParams.WATER_WAIT;
+     6: ParamValue := stParams.STAND_WAIT;
+     7: ParamValue := stParams.END_WAIT;
+     8: ParamValue := stParams.WATER_SPEED;
+     9: ParamValue := stParams.WAX_WAIT_TIME_IN;
+    10: ParamValue := stParams.WAX_WAIT_TIME_OUT;
+    11: ParamValue := stParams.WAX_SPEED;
+ELSE
+    ParamValue := 0;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParamName" Id="{f5081624-7dbe-405c-9b99-bc6eaf4d8075}">
+      <Declaration><![CDATA[// Wire name of param i, as the robot expects it in NAME:VALUE.
+METHOD ParamName : STRING(30)
+VAR_INPUT
+    i : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE i OF
+     1: ParamName := 'J_SPEED';
+     2: ParamName := 'L_SPEED';
+     3: ParamName := 'REPEATS';
+     4: ParamName := 'START_WAIT';
+     5: ParamName := 'WATER_WAIT';
+     6: ParamName := 'STAND_WAIT';
+     7: ParamName := 'END_WAIT';
+     8: ParamName := 'WATER_SPEED';
+     9: ParamName := 'WAX_WAIT_TIME_IN';
+    10: ParamName := 'WAX_WAIT_TIME_OUT';
+    11: ParamName := 'WAX_SPEED';
+ELSE
+    ParamName := '';
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="StartSend" Id="{aaa8f8f6-1eec-428e-a921-2ce64744b1fb}">
       <Declaration><![CDATA[// Arm a send: reset edges/timers and enter the send wait state.
 METHOD StartSend : BOOL
@@ -266,9 +431,23 @@ CASE iPend OF
         IF FIND(sRxMsg, 'SYNC:') = 1 THEN
             ParseSync();
         END_IF
+        // Re-baseline unconditionally, even if the reply was malformed and
+        // ParseSync did nothing. The shadow then equals whatever stParams
+        // currently holds, so a pull never echoes straight back out as 11
+        // spurious writes -- and the edit detector becomes live either way
+        // instead of staying disabled behind one bad frame.
+        SetShadowAll();
         stParams.bGetSync := FALSE;
     TX_SETPARAM:
-        stParams.bSetParam := FALSE;
+        // Bank the value we actually sent, not the current field value: if
+        // the operator edited the same param again mid-round-trip, the
+        // mismatch survives and gets re-sent on the next idle scan.
+        IF nPendIdx > 0 THEN
+            aShadow[nPendIdx] := nPendVal;
+            nPendIdx := 0;
+        ELSE
+            stParams.bSetParam := FALSE;
+        END_IF
     TX_NEWBULB:
         stParams.bTriggerNewBulb := FALSE;
     TX_STATE:
