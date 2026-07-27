@@ -522,7 +522,7 @@ block (a new `.TcVIS` is invisible to the build without one):
 | `PistonsManual` | 6 Piston frames (Sep/Push 1-3) | Main |
 | `GripperManual` | 2 Piston frames (`stGripSolL` / `stGripSolR`) | Main |
 | `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons, 11 tuning params, editable Robot IP | Main |
-| `Logs` | 20 newest entries (Sev/Source/Message), Enabled + Debug checkboxes, write counter | Main |
+| `Logs` | 20 newest entries (Sev/Time/Message), Enabled + Debug checkboxes, write counter | Main |
 | `Piston` | the reusable per-piston control, instanced via frames | — |
 
 Each page's `<Visu Id>` GUID equals every `VisualElementOwningObjectGuid`
@@ -562,7 +562,7 @@ copies (uuid5-derived, so idempotent — rewrite the **clone**, never the
 original).
 
 **`Logs` page (2026-07-27, `scripts/build_log_page.py`).** 69 elements: a
-20-row × 3-column grid over `GVL_Log.aRecent[0..19]` (`eSev` / `sSource` /
+20-row × 3-column grid over `GVL_Log.aRecent[0..19]` (`sSevText` / `sTime` /
 `sMsg`), newest first — `F_LogEvent` shifts the slots down and writes
 `aRecent[0]` on every accepted call, so the page needs no PLC-side work and
 costs nothing per scan. Rows are display-only (asserted: no
@@ -592,7 +592,30 @@ name mapping now exists in two places. Left that way deliberately: Python has
 no need of the PLC's string, and coupling it would buy nothing.
 
 Retarget script: `scripts/fix_logs_sev_column.py` (idempotent; asserts it
-rewrote exactly 20 cells and left Source/Message untouched).
+rewrote exactly 20 cells and left the other columns untouched).
+
+**Time replaced Source in the middle column (2026-07-27).** `ST_LogEntry`
+carried an explicit comment saying it deliberately had *no* timestamp,
+because "Python assigns wall-clock time when it drains the ring". True, but
+that only ever covered FlowerPyHmi — the panel has no drainer, so the page
+had no way to show *when*. `sTime : STRING(8)` is now stamped by `F_LogEvent`
+from `GVL_Log.sNow`.
+
+`sNow` is refreshed by `MAIN` section 0a from
+`Tc2_Utilities.FB_LocalSystemTime` (`dwCycle := 1`), rebuilt only when the
+second rolls over. It lives in the GVL rather than inside `F_LogEvent`
+because **a FUNCTION cannot own an FB instance** — functions are stateless,
+so the cyclic tick has to happen in a POU that has one.
+
+If `bValid` is FALSE the string reads `'--:--:--'` rather than a plausible
+wrong time — the panel's RTC being unset should look like an unset clock, not
+like events at 00:00:03. **The timestamps are only as good as the panel
+RTC.**
+
+`sSource` is untouched in the struct and the ring; FlowerPyHmi still reads
+and renders it, and it still reaches the CSV. Only the panel column changed.
+Column swap by `scripts/fix_logs_time_column.py`; layout is now Sev 20-80,
+Time 84-174, Message 178-780.
 
 **Numeric entry — resolved 2026-07-26.** The project originally had only two
 input mechanisms (`Visu_TapInput` → BOOL, and `ChangeVisuInputAction`), so

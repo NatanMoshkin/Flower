@@ -7,7 +7,7 @@ the page can bind the array in display order with no PLC-side work.
 Layout (the panel is 800x480):
 
     Main | Log | [x] Enabled  [x] Debug   Writes [ nWriteIdx ]
-    Sev    Source          Message
+    Sev   Time      Message
     ...20 rows of aRecent[i], newest first...
 
 Severity binds to `aRecent[i].sSevText`, NOT to the eSev enum. Binding the
@@ -80,8 +80,8 @@ INDENT_O, INDENT_C = "              <o>", "              </o>"
 L = "GVL_Log."
 ROWS, ROW_TOP0, ROW_STEP, ROW_H = 20, 66, 20, 19
 COLS = [("Sev", 20, 60, "%s", "sSevText"),
-        ("Source", 84, 150, "%s", "sSource"),
-        ("Message", 238, 542, "%s", "sMsg")]
+        ("Time", 84, 90, "%s", "sTime"),
+        ("Message", 178, 602, "%s", "sMsg")]
 HDR_TOP, HDR_H = 44, 20
 
 NAV_ON_MAIN = (63, 417, 177, 44)      # next free slot; siblings at 243/423/603

@@ -3,10 +3,21 @@
   <DUT Name="ST_LogEntry" Id="{b5d2e891-cba4-4d5a-ae24-4a96cbe70dde}">
     <Declaration><![CDATA[TYPE ST_LogEntry :
 STRUCT
-    // Deliberately no timestamp field — Python assigns wall-clock time when it
-    // drains the ring. Trade-off: entries arrive up to plc_ring_poll_ms late in
-    // the CSV. Acceptable for state-transition / error logs; if sub-millisecond
-    // precision matters for a future event type, add nTick : UDINT.
+    // Wall-clock HH:MM:SS, stamped by F_LogEvent from GVL_Log.sNow (which
+    // MAIN refreshes once a second from FB_LocalSystemTime). Added 2026-07-27
+    // for the panel's Logs page, which has no drainer to stamp entries for it.
+    //
+    // This struct used to carry no timestamp on the reasoning that "Python
+    // assigns wall-clock time when it drains the ring" — true, but that only
+    // ever covered FlowerPyHmi. FlowerPyHmi still stamps its own arrival time
+    // and ignores this field; the two do not have to agree, and sTime is the
+    // more accurate of the two since it is taken at the moment of the event
+    // rather than up to plc_ring_poll_ms later.
+    //
+    // Second resolution only. If sub-second ordering ever matters, add
+    // nTick : UDINT rather than widening this string.
+    sTime   : STRING(8);
+
 
     eSev    : E_LogSev;
 

@@ -49,6 +49,12 @@ VAR
     // Not persistent itself, so FALSE on every PLC start -- which is exactly
     // what makes it a cold-boot latch. See section 0.
     bColdBootDone : BOOL;
+
+    // Wall clock for the log timestamps. Lives here because F_LogEvent is a
+    // FUNCTION and cannot own an FB instance. dwCycle is in SECONDS.
+    fbLocalTime : Tc2_Utilities.FB_LocalSystemTime;
+    nLastSec    : WORD := 16#FFFF;   // impossible value, forces a first build
+    sHH, sMM, sSS : STRING(2);
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -83,6 +89,30 @@ END_VAR
 IF NOT bColdBootDone THEN
     bColdBootDone := TRUE;
     GVL_HmiPersistent.stMasterAutoCfg.bContinuous := FALSE;
+END_IF
+
+(* ==========================================
+   0a. LOG WALL CLOCK
+   Refreshes GVL_Log.sNow, which F_LogEvent stamps into every entry so the
+   Logs page can show a Time column. Rebuilt only when the second actually
+   rolls over — the string work is trivial but there is no reason to redo it
+   100 times a second.
+
+   bValid gates it: an unset RTC shows '--:--:--' rather than a plausible
+   wrong time, which is the difference between "the clock is not set" and
+   "these events happened at 00:00:03".
+   ========================================== *)
+fbLocalTime(bEnable := TRUE, dwCycle := 1);
+
+IF NOT fbLocalTime.bValid THEN
+    GVL_Log.sNow := '--:--:--';
+ELSIF fbLocalTime.systemTime.wSecond <> nLastSec THEN
+    nLastSec := fbLocalTime.systemTime.wSecond;
+    // RIGHT(CONCAT('0', n), 2) is the zero-pad: '7' -> '07', '17' -> '17'.
+    sHH := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wHour)), 2);
+    sMM := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wMinute)), 2);
+    sSS := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wSecond)), 2);
+    GVL_Log.sNow := CONCAT(CONCAT(CONCAT(CONCAT(sHH, ':'), sMM), ':'), sSS);
 END_IF
 
 (* ==========================================

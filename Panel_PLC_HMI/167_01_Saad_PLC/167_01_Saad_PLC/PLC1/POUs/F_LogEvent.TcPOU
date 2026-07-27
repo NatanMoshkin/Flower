@@ -40,6 +40,7 @@ END_IF
 idx := GVL_Log.nWriteIdx MOD 256;
 GVL_Log.aLog[idx].eSev     := eSev;
 GVL_Log.aLog[idx].sSevText := TO_STRING(eSev);
+GVL_Log.aLog[idx].sTime    := GVL_Log.sNow;
 GVL_Log.aLog[idx].sSource  := sSource;
 GVL_Log.aLog[idx].sMsg     := sMsg;
 
@@ -51,6 +52,7 @@ FOR k := 19 TO 1 BY -1 DO
 END_FOR
 GVL_Log.aRecent[0].eSev     := eSev;
 GVL_Log.aRecent[0].sSevText := TO_STRING(eSev);
+GVL_Log.aRecent[0].sTime    := GVL_Log.sNow;
 GVL_Log.aRecent[0].sSource  := sSource;
 GVL_Log.aRecent[0].sMsg     := sMsg;
 

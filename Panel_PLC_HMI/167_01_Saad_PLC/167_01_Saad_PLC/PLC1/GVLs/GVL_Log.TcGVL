@@ -29,6 +29,15 @@ VAR_GLOBAL
     // aRecent[0] is the newest entry.
     aRecent     : ARRAY[0..19] OF ST_LogEntry;
 
+    // Wall-clock HH:MM:SS, refreshed once a second by MAIN from
+    // FB_LocalSystemTime, and copied into every entry by F_LogEvent.
+    // It lives here rather than inside F_LogEvent because a FUNCTION cannot
+    // own the FB instance FB_LocalSystemTime needs — functions are stateless,
+    // so the cyclic tick has to happen in a POU that has one.
+    // Reads '--:--:--' until the time source reports valid, so a panel with
+    // an unset RTC shows that plainly instead of a plausible wrong time.
+    sNow        : STRING(8) := '--:--:--';
+
     // RobotBridge writes this once on startup so the HMI can show the
     // Python-side logger configuration (log dir, level, retention, poll
     // rate). Read-only from HMI perspective — to change, edit config.yaml
