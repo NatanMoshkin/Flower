@@ -92,6 +92,15 @@ VAR
     nPendIdx : INT;
     nPendVal : INT;   // value actually sent; written to aShadow on ACK
 END_VAR
+VAR
+    // Endpoint actually dialled for the live session. sRemoteHost is only
+    // read at connect time, so without this a commissioner who edits the IP
+    // on the Robot page sees nothing happen until the socket happens to
+    // drop -- the field would look broken.
+    sDialledHost  : STRING;
+    nDialledPort  : UINT;
+    bDialledValid : BOOL;
+END_VAR
 VAR CONSTANT
     IO_IDLE      : INT := 0;
     IO_WAIT_SEND : INT := 1;
@@ -115,6 +124,25 @@ END_VAR
       <ST><![CDATA[// Disable request routes an active session through the Error/close path.
 IF NOT bEnable AND (eState = E_RobotConnState.Connecting OR eState = E_RobotConnState.Connected) THEN
     eState := E_RobotConnState.Error;
+END_IF
+
+// Endpoint retarget. The connect call reads sRemoteHost once, so a live
+// session has to be torn down for a new IP to be dialled. Routed through
+// Error, the same close-and-retry path the disable request uses, so the
+// socket is released properly rather than leaked.
+// Baselined on the first scan: without the guard the initial transition
+// from an empty shadow would look like an edit and force a pointless
+// reconnect at startup.
+IF NOT bDialledValid THEN
+    bDialledValid := TRUE;
+    sDialledHost  := sRemoteHost;
+    nDialledPort  := nRemotePort;
+ELSIF (sRemoteHost <> sDialledHost) OR (nRemotePort <> nDialledPort) THEN
+    sDialledHost := sRemoteHost;
+    nDialledPort := nRemotePort;
+    IF eState = E_RobotConnState.Connecting OR eState = E_RobotConnState.Connected THEN
+        eState := E_RobotConnState.Error;
+    END_IF
 END_IF
 
 CASE eState OF

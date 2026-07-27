@@ -13,13 +13,34 @@ VAR_GLOBAL
     // the FB's shadow-copy comparison and pushed to the robot.
     stParams : ST_RobotParams;
 
+    // Master enable for the TCP client. FALSE holds it disconnected.
+    // Deliberately NOT persistent: a link disabled for a bench session
+    // should come back enabled after a power cycle rather than leaving the
+    // robot silently unreachable with no obvious reason why.
+    bTcpEnable : BOOL := TRUE;
+END_VAR
+
+VAR_GLOBAL PERSISTENT
     // TCP client target. PLC dials the robot's server. Host is set by the
-    // commissioner (robot IP, e.g. '192.168.201.1'); port matches global.lua.
+    // commissioner (robot IP); port matches global.lua.
+    //
+    // PERSISTENT because the correct value DIFFERS BETWEEN INSTALLATIONS --
+    // that, not "does it reset on boot", is the test for whether something
+    // is configuration. As plain VAR_GLOBAL these were re-applied from the
+    // literals below on every Activate Configuration, download and reset,
+    // silently discarding whatever the commissioner had typed on the Robot
+    // page. Nothing reported an error: the write succeeded, the field really
+    // did change, and it really was reverted later.
+    //
+    // The declared values are the FACTORY DEFAULT, applied only on a
+    // first-ever boot or Reset Origin. FB_PersistentAutoSave flushes edits
+    // to disk ~2 s after the operator stops typing.
+    //
+    // Declared here rather than in GVL_HmiPersistent so the symbol paths
+    // GVL_Robot.sRobotHost / .nRobotPort are unchanged -- a GVL may hold
+    // both a volatile and a persistent block.
     sRobotHost : STRING := '192.168.201.1';
     nRobotPort : UINT := 6001;
-
-    // Master enable for the TCP client. FALSE holds it disconnected.
-    bTcpEnable : BOOL := TRUE;
 END_VAR
 ]]></Declaration>
   </GVL>

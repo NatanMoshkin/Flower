@@ -151,8 +151,10 @@ is retired; the DI[13] / DO[7] channels it freed now carry PB1 + LED1.
 - `DUTs/ST_RobotParams.TcDUT` — 11 INT tuning params + request flags
   (`bGetSync`, `bSetParam`/`sSetName`/`nSetVal`, `bTriggerNewBulb`, FB
   auto-clears each after ACK) + the two INTs `nStateOut` / `nRobotCmd`.
-- `GVL_Robot`: `stParams`, `sRobotHost` (default '192.168.201.1'),
-  `nRobotPort` (6001), `bTcpEnable`. Status mirror in `stRobot`:
+- `GVL_Robot`: `stParams`, `bTcpEnable`, plus a **`VAR_GLOBAL PERSISTENT`**
+  block holding `sRobotHost` (factory default '192.168.201.1') and
+  `nRobotPort` (6001) — editable from the Robot page; see the PERSISTENT
+  section for why those two persist and `bTcpEnable` does not. Status mirror in `stRobot`:
   `eConnState`/`sConnStateText`/`nPacketsRx`/`nPacketsTx`/
   `sLastMessage`/`sLastTxMessage`. `MAIN` calls `fbRobotTcp` each scan.
 - Connection state machine: Disconnected → Connecting → Connected → (any
@@ -380,6 +382,36 @@ exactly one of them, and the split is deliberate:
   They are operator config and persisting them is the point. Worth knowing
   that a bench flag left on now survives a reboot.
 
+**`GVL_Robot` has its own persistent block (2026-07-27).** `sRobotHost` /
+`nRobotPort` are commissioning values — the test for configuration is *"does
+the correct value differ between installations?"*, not *"does it reset on
+boot?"*. As plain `VAR_GLOBAL` they were re-applied from their literals on
+every Activate Configuration, download and reset, silently discarding
+whatever was typed on the Robot page, and **nothing reported an error**: the
+write succeeded, the field really did change, and it really was reverted.
+
+They are declared in a second block inside `GVL_Robot` rather than moved into
+`GVL_HmiPersistent`, so the symbol paths `GVL_Robot.sRobotHost` /
+`.nRobotPort` are unchanged — a GVL may hold both a volatile and a persistent
+block. `FB_PersistentAutoSave` watches them explicitly (plain `<>`; they are
+scalars, not structs). `bTcpEnable` stays volatile on purpose: a link
+disabled for a bench session should come back enabled rather than leaving the
+robot unreachable for no visible reason.
+
+`FB_RobotTcpClient` now tears down a live session when the endpoint changes.
+The connect call reads `sRemoteHost` once, so without that an edited IP would
+sit in the field doing nothing until the socket happened to drop — the field
+would look broken. The retarget routes through the same `Error`
+close-and-retry path the disable request uses, and is baselined on the first
+scan so it cannot force a pointless reconnect at startup.
+
+The VISU field is a clone of the page's own editable numeric field with the
+format set to `%s` and `InputBoxMin`/`InputBoxMax` **cleared** (numeric
+bounds are meaningless on a STRING). `InputType` stays `"Default"`, which
+derives the dialog from the bound variable's type — that is why a STRING gets
+the alphanumeric keypad and no new element type had to be authored in the
+IDE. Built by `scripts/add_robot_ip_field.py`.
+
 That hazard was previously masked purely by persistence being broken. The
 general rule: **`GVL_HmiPersistent` mixes tunables with runtime state, so
 any new field there needs a decision — carry across a power cycle, or clear
@@ -489,7 +521,7 @@ block (a new `.TcVIS` is invisible to the build without one):
 | `AutoMain` | title, step/error fields, START/STOP/RESET, 4 checkboxes, 5 timers | embedded in Main |
 | `PistonsManual` | 6 Piston frames (Sep/Push 1-3) | Main |
 | `GripperManual` | 2 Piston frames (`stGripSolL` / `stGripSolR`) | Main |
-| `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons | Main |
+| `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons, 11 tuning params, editable Robot IP | Main |
 | `Logs` | 20 newest entries (Sev/Source/Message), Enabled + Debug checkboxes, write counter | Main |
 | `Piston` | the reusable per-piston control, instanced via frames | — |
 

@@ -2,8 +2,9 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
   <POU Name="FB_PersistentAutoSave" Id="{3c7a1f52-9b84-4d16-a2e7-5f0c81d47b93}" SpecialFunc="None">
     <Declaration><![CDATA[(*
-   Flushes GVL_HmiPersistent to disk a short while after the operator stops
-   editing.
+   Flushes the project's PERSISTENT config to disk a short while after the
+   operator stops editing: all of GVL_HmiPersistent, plus GVL_Robot's
+   commissioning endpoint (sRobotHost / nRobotPort).
 
    WHY THIS EXISTS. VAR_GLOBAL PERSISTENT declares a durable storage CLASS.
    It does not mean "saved automatically". TwinCAT writes RAM out to
@@ -18,12 +19,14 @@
    keystroke would turn one edit of a 5-digit timeout into five writes. The
    FB waits for tQuietMs of no edits, so a burst collapses into one write.
 
-   SAFETY NOTE. Making persistence work also makes stMasterAutoCfg.bAutoMode
-   and .bContinuous survive a power cycle, and FB_MasterAutoCycle's IDLE
-   branch tests bContinuous as a LEVEL. MAIN's cold-boot block clears both on
-   the first scan; without it a machine powered down in Auto + Continuous
-   would start driving pistons on power-up. Do not remove one without the
-   other.
+   SAFETY NOTE. Making persistence work also makes the stMasterAutoCfg BOOLs
+   survive a power cycle. MAIN's cold-boot block clears bContinuous on the
+   first scan, because FB_MasterAutoCycle's IDLE branch tests it as a LEVEL
+   and it is the one start path with no external gate -- restoring it TRUE
+   would drive pistons within a scan of power-up. bAutoMode is deliberately
+   NOT cleared (operator decision): the panel returns to Automatic and IDLE
+   and still needs a real start trigger. Do not remove the cold-boot block
+   without also removing this flush.
 *)
 FUNCTION_BLOCK FB_PersistentAutoSave
 VAR_INPUT
@@ -56,6 +59,15 @@ VAR
     shSeenPiston  : ARRAY[1..8] OF ST_HmiPistonAutoCfg;
     shSavedMaster : ST_HmiMasterAutoCfg;
     shSeenMaster  : ST_HmiMasterAutoCfg;
+
+    // GVL_Robot's persistent commissioning endpoint. Lives in its own GVL
+    // rather than GVL_HmiPersistent so its symbol paths stay stable, so it
+    // has to be watched explicitly here. Scalars, so a plain <> works and
+    // no MEMCMP is needed.
+    shSavedHost : STRING;
+    shSeenHost  : STRING;
+    shSavedPort : UINT;
+    shSeenPort  : UINT;
 
     // Bound once in section 0. An array of refs is the one case where a
     // POINTER beats VAR_IN_OUT here -- the alternative is eight near-identical
@@ -94,6 +106,11 @@ IF NOT bInit THEN
     END_FOR
     shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
     shSeenMaster  := GVL_HmiPersistent.stMasterAutoCfg;
+
+    shSavedHost := GVL_Robot.sRobotHost;
+    shSeenHost  := GVL_Robot.sRobotHost;
+    shSavedPort := GVL_Robot.nRobotPort;
+    shSeenPort  := GVL_Robot.nRobotPort;
 END_IF
 
 (* ==========================================
@@ -125,6 +142,17 @@ IF MEMCMP(ADR(GVL_HmiPersistent.stMasterAutoCfg), ADR(shSeenMaster),
           SIZEOF(ST_HmiMasterAutoCfg)) <> 0 THEN
     bChanging := TRUE;
     shSeenMaster := GVL_HmiPersistent.stMasterAutoCfg;
+END_IF
+
+IF (GVL_Robot.sRobotHost <> shSavedHost)
+OR (GVL_Robot.nRobotPort <> shSavedPort) THEN
+    bDirty := TRUE;
+END_IF
+IF (GVL_Robot.sRobotHost <> shSeenHost)
+OR (GVL_Robot.nRobotPort <> shSeenPort) THEN
+    bChanging  := TRUE;
+    shSeenHost := GVL_Robot.sRobotHost;
+    shSeenPort := GVL_Robot.nRobotPort;
 END_IF
 
 (* ==========================================
@@ -174,6 +202,8 @@ IF fbTrigDone.Q THEN
             shSavedPiston[i] := apPiston[i]^;
         END_FOR
         shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
+        shSavedHost   := GVL_Robot.sRobotHost;
+        shSavedPort   := GVL_Robot.nRobotPort;
         nSaveCount    := nSaveCount + 1;
         F_LogEvent(eSev := E_LogSev.INFO, sSource := 'Persist',
                    sMsg := 'persistent data saved');
