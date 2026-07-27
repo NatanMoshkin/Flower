@@ -522,9 +522,28 @@ the panel's DI/DO. Behaviour is gated by `bAutoMode`:
 
 | PB | DI | LED (DO) | In Automatic | In Manual |
 |---|---|---|---|---|
-| PB1 | dIn[13] | dOut[7] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | Held → both grip pistons extend (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
-| PB2 | dIn[14] | dOut[8] | Ignored. | Held → all 3 SepSol pistons extend. |
-| PB3 | dIn[15] | dOut[9] | Ignored. | Held → all 3 PushSol pistons extend. |
+| PB1 | dIn[13] | dOut[7] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | **Momentary**: held → both grip pistons extend, released → they retract (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
+| PB2 | dIn[14] | dOut[8] | Ignored. | **Momentary**: held → all 3 SepSol pistons extend, released → they retract. |
+| PB3 | dIn[15] | dOut[9] | Ignored. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
+
+**PB jog is momentary; the HMI jog is not (2026-07-27).** Section 2 of
+`FB_SolSpringPiston_2Pos` retains the coil when no branch matches, so
+originally a PB press latched the piston extended and — the panel having no
+jog-retract button — the only way back was walking to the HMI. An
+`fbTrigJogRelease : F_TRIG` on `bJogExtend` now adds one release branch that
+drives the coil FALSE, the single exception to the retain rule.
+
+Its position in the ladder is load-bearing: **after** both jog branches, so a
+held `stHmi.bManJogExtend` keeps the coil energised and the one-scan pulse is
+ignored; **before** the `bTarget*` branches, so a latched HMI Extend
+selection cannot re-energise the coil the moment the operator lets go.
+
+The HMI jog deliberately keeps its latching behaviour — `bManJogRetract` sits
+right next to it on the Piston page, so there is no stranding problem there.
+Note the release branch is gated on Manual and MAIN forces `eMode` (line 108)
+*before* calling the piston FBs, so the pulse produced by a Manual→Auto
+switch is correctly ignored and the master cycle's INIT retract states take
+the pistons home instead.
 
 LEDs are dumb mirrors of the raw PB press state (`GVL_App.bLedPbN :=
 GVL_App.bPbN`) — a wiring / hardware-health diagnostic, not a status

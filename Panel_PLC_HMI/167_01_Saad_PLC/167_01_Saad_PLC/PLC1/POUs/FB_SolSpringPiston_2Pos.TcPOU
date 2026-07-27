@@ -29,7 +29,13 @@ VAR_INPUT
     (* External jog request (e.g. panel push-button). OR-merged with the
        HMI's stHmi.bManJogExtend inside so a physical PB and the HMI
        button can drive the same jog without stepping on each other.
-       Only takes effect while eMode = Manual (same gate as the HMI jog). *)
+       Only takes effect while eMode = Manual (same gate as the HMI jog).
+
+       MOMENTARY, unlike the HMI jog: holding energises the coil, RELEASING
+       de-energises it and the spring returns the piston. The panel has no
+       jog-retract button, so a latching PB would strand the piston extended
+       until someone walked to the HMI. The HMI jog keeps its latching
+       behaviour because bManJogRetract sits right next to it. *)
     bJogExtend        : BOOL;
 
     (* Physical Feedback (Proximity Switches) *)
@@ -57,6 +63,12 @@ VAR
     (* HMI Manual-Button Edge Detection *)
     fbTrigManExtend   : R_TRIG;
     fbTrigManRetract  : R_TRIG;
+
+    (* Falling edge of bJogExtend = the panel push-button was released.
+       Needed because Section 2 retains the coil when no branch matches, so
+       without an explicit release edge a momentary PB would latch the
+       piston extended with no panel-side way to bring it back. *)
+    fbTrigJogRelease  : F_TRIG;
 
     (* Effective sensor states = real OR HMI simulate. Recomputed every cycle in Section 0a. *)
     bSwitchExtended_eff  : BOOL;
@@ -154,6 +166,16 @@ IF stHmi.bSelectedExtend  AND bSwitchExtended_eff  THEN stHmi.bSelectedExtend  :
 IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract := FALSE; END_IF;
 
 (* ==========================================
+   1c. PANEL JOG RELEASE EDGE
+   Called unconditionally so the edge is never missed. MAIN gates bJogExtend
+   with bManualMode, so this also pulses on a Manual -> Auto switch; Section 2
+   gates the release branch on Manual, and MAIN forces eMode to Automatic
+   BEFORE calling this FB, so that pulse is correctly ignored and the master
+   cycle's INIT retract states take the piston home instead.
+   ========================================== *)
+fbTrigJogRelease(CLK := bJogExtend);
+
+(* ==========================================
    2. SOLENOID CONTROL — single coil, LATCH-and-RETAIN
    The coil is a continuous force against the spring. If it drops, the spring
    wins and the actuator retracts. So the coil must be LATCHED TRUE from the
@@ -161,6 +183,10 @@ IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract :
    the sensor fires (which is the double-solenoid pattern).
    Structure:
      - Jog branches first, gated by Manual mode.
+     - Then the panel-jog RELEASE edge, which is the one exception to the
+       retain rule: the PB is momentary, so letting go must drive the coil
+       FALSE instead of letting it latch. The HMI jog is NOT momentary --
+       it latches, because bManJogRetract exists to undo it.
      - Explicit Extend / Retract command branches drive the coil to a
        definite state.
      - The IF ladder has NO ELSE. When no branch matches, VAR_OUTPUT retain
@@ -183,6 +209,18 @@ IF (stHmi.bManJogExtend OR bJogExtend) AND stHmi.eMode = E_ControlMode.Manual TH
 
 // JOG RETRACT: while held in Manual, de-energise coil (spring retracts)
 ELSIF stHmi.bManJogRetract AND stHmi.eMode = E_ControlMode.Manual THEN
+    bOutSolenoid := FALSE;
+
+// PANEL JOG RELEASE: the PB is momentary, so letting go must send the piston
+// home rather than leaving the coil latched by the retain rule below.
+// Position in the ladder is deliberate:
+//   - AFTER both jog branches, so if the HMI jog-extend is still held the
+//     coil stays TRUE and this one-scan pulse is simply ignored;
+//   - BEFORE the bTarget branches, so a latched HMI Extend selection cannot
+//     re-energise the coil the instant the operator lets go. Section 1a
+//     already cleared bSelected* while the jog was held, so this only
+//     reinforces the same intent.
+ELSIF fbTrigJogRelease.Q AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := FALSE;
 
 // EXTEND commanded — energise coil (latched via retain when bTargetExtend clears)
