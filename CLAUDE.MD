@@ -409,21 +409,30 @@ Connection semantics:
 
 ## PANEL VISU: page inventory + the numeric-entry constraint (2026-07-26)
 
-Six classic VISU pages, all registered in `PLC1.plcproj` with a
+Seven classic VISU pages, all registered in `PLC1.plcproj` with a
 `<Compile Include>` + `<DependentUpon>VISU\VisualizationManager.TcVMO</...>`
 block (a new `.TcVIS` is invisible to the build without one):
 
 | Page | Contents | Reached from |
 |---|---|---|
-| `Main` | AutoMain embedded as a frame + 3 nav buttons | — |
-| `AutoMain` | title, step/error fields, START/STOP/RESET, 3 checkboxes | embedded in Main |
+| `Main` | AutoMain embedded as a frame + 4 nav buttons + plate lamps | — |
+| `AutoMain` | title, step/error fields, START/STOP/RESET, 4 checkboxes, 5 timers | embedded in Main |
 | `PistonsManual` | 6 Piston frames (Sep/Push 1-3) | Main |
 | `GripperManual` | 2 Piston frames (`stGripSolL` / `stGripSolR`) | Main |
 | `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons | Main |
+| `Logs` | 20 newest entries (Sev/Source/Message), Enabled + Debug checkboxes, write counter | Main |
 | `Piston` | the reusable per-piston control, instanced via frames | — |
 
 Each page's `<Visu Id>` GUID equals every `VisualElementOwningObjectGuid`
 inside it — hold that invariant when cloning a page.
+
+**A page name is an IEC identifier.** The compiler generates an FB and a
+`<Page>__inp__vis` type from it, so it must not collide with a standard
+function. The Logs page was first called `Log` and failed to compile with
+`Identifier expected instead of "Log"` — `LOG` is an IEC 61131-3 standard
+function (with `LN`, `EXP`, `ABS`, `SQRT`, `SEL`, `MUX`, `LEN`, `LEFT`,
+`MID`, `FIND`). The *displayed* label is unconstrained: the page is named
+`Logs` and its title and nav button both read "Log".
 
 **Cloning a page copies a second identity layer — fixed 2026-07-27.**
 Besides its elements, every page carries ~60 GUIDs naming the objects the
@@ -450,6 +459,30 @@ now enforces it, and `scripts/fix_visu_object_guids.py` re-issues a clone's
 copies (uuid5-derived, so idempotent — rewrite the **clone**, never the
 original).
 
+**`Logs` page (2026-07-27, `scripts/build_log_page.py`).** 69 elements: a
+20-row × 3-column grid over `GVL_Log.aRecent[0..19]` (`eSev` / `sSource` /
+`sMsg`), newest first — `F_LogEvent` shifts the slots down and writes
+`aRecent[0]` on every accepted call, so the page needs no PLC-side work and
+costs nothing per scan. Rows are display-only (asserted: no
+`InputBoxInputAction` on any of the 60). Chrome: `bLogEnabled` and
+`bDebugMode` checkboxes, an `nWriteIdx` counter, and a Main nav button; the
+nav button *to* it sits at x=63 on Main's y=417 row.
+
+**Known cosmetic issue: the Sev column shows numbers, not names.** It binds
+straight to the enum `aRecent[i].eSev`, on the reasoning that `E_LogSev`
+carries `{attribute 'to_string'}`. That was wrong — verified on the panel
+2026-07-27, the column renders `0`/`1`. `to_string` makes `TO_STRING()`
+available in ST; it does not make the classic VISU text output resolve an
+enum to its enumerator name. Which is exactly why every other page in this
+project binds a STRING mirror (`sStepText := TO_STRING(eStep)`) — that
+pattern is not only for FlowerPyHmi's benefit, as previously assumed here.
+
+Fix when it matters: add `sSevText : STRING(4)` to `ST_LogEntry` and set it
+in `F_LogEvent` beside `aRecent[0].eSev`, then rebind the column. Cheap
+(once per event, not per scan), but it widens `ST_LogEntry` — which
+`aLog[256]` and FlowerPyHmi's ring reader both depend on, so run
+`scripts/check_pyhmi_contract.py` after.
+
 **Numeric entry — resolved 2026-07-26.** The project originally had only two
 input mechanisms (`Visu_TapInput` → BOOL, and `ChangeVisuInputAction`), so
 there was nothing to clone for an editable number. The operator authored one
@@ -471,7 +504,8 @@ which is exactly why it could not be invented and had to come from the IDE.
 Build/verify scripts, all idempotent and all cloning proven blocks rather
 than authoring them: `scripts/build_grippermanual.py`,
 `scripts/build_robot_page.py`, `scripts/add_main_nav.py`,
-`scripts/add_nosensors_checkbox.py`, `scripts/fix_visu_object_guids.py`, and
+`scripts/add_nosensors_checkbox.py`, `scripts/build_log_page.py`,
+`scripts/fix_visu_object_guids.py`, and
 `scripts/validate_visu.py` (**run this after every VISU edit** — it asserts
 each element is a direct child of `VisualElementList` and that no GUID is
 shared between two pages, neither of which XML well-formedness gives you).

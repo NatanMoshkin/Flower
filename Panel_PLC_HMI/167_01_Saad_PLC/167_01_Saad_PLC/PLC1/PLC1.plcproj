@@ -127,6 +127,10 @@
       <SubType>Code</SubType>
       <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
+    <Compile Include="VISU\Logs.TcVIS">
+      <SubType>Code</SubType>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
+    </Compile>
     <Compile Include="VISU\Robot.TcVIS">
       <SubType>Code</SubType>
       <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
