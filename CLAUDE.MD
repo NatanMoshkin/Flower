@@ -424,6 +424,31 @@ block (a new `.TcVIS` is invisible to the build without one):
 Each page's `<Visu Id>` GUID equals every `VisualElementOwningObjectGuid`
 inside it — hold that invariant when cloning a page.
 
+**Cloning a page copies a second identity layer — fixed 2026-07-27.**
+Besides its elements, every page carries ~60 GUIDs naming the objects the
+compiler generates for it: `VisuRegDesc.FbGuid`, `InputsPou.FbGuid` (this one
+*becomes* `<Page>__inp__vis`), one GUID per generated method, the generated
+GVLs, `VisuRegisterGvl`, `DialogDut`. `GripperManual` was cloned from
+`PistonsManual` and duplicated all 61 of them; because the **first** `FbGuid`
+happens to equal `<Visu Id>`, the page-GUID rewrite fixed exactly one and the
+diff looked complete. Two visualizations then registered the same input POU
+and the build failed with
+
+```
+Unknown type: 'PistonsManual__inp__vis'
+```
+
+— naming `PistonsManual`, which had not been touched since `f8ad512`. The
+page rendered fine throughout, so only a build catches this.
+
+The invariant, confirmed against the pristine IDE-authored pages: **outside
+`<TypeList>`, no GUID is shared by any two `.TcVIS` files** — not one is
+project-global (`<TypeList>` is the exception; it references VisualElem
+plugin types that *are* identical everywhere). `scripts/validate_visu.py`
+now enforces it, and `scripts/fix_visu_object_guids.py` re-issues a clone's
+copies (uuid5-derived, so idempotent — rewrite the **clone**, never the
+original).
+
 **Numeric entry — resolved 2026-07-26.** The project originally had only two
 input mechanisms (`Visu_TapInput` → BOOL, and `ChangeVisuInputAction`), so
 there was nothing to clone for an editable number. The operator authored one
@@ -445,10 +470,10 @@ which is exactly why it could not be invented and had to come from the IDE.
 Build/verify scripts, all idempotent and all cloning proven blocks rather
 than authoring them: `scripts/build_grippermanual.py`,
 `scripts/build_robot_page.py`, `scripts/add_main_nav.py`,
-`scripts/add_nosensors_checkbox.py`, and `scripts/validate_visu.py`
-(**run this after every VISU edit** — it asserts each element is a direct
-child of `VisualElementList`, which is the check XML well-formedness does
-not give you).
+`scripts/add_nosensors_checkbox.py`, `scripts/fix_visu_object_guids.py`, and
+`scripts/validate_visu.py` (**run this after every VISU edit** — it asserts
+each element is a direct child of `VisualElementList` and that no GUID is
+shared between two pages, neither of which XML well-formedness gives you).
 
 Static label text lives in `GlobalTextList.TcGTLO`, keyed by each element's
 counter member `823443203L`. The scripts register their own entries; XAE

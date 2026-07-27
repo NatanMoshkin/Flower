@@ -125,6 +125,48 @@ def cross_page_guids():
             seen[guid] = p.stem
     print(f"\n=== cross-page ===\n  {len(seen)} distinct element GUIDs "
           f"across {len(list(VISU_DIR.glob('*.TcVIS')))} pages")
+    return problems + cross_page_object_guids()
+
+
+def cross_page_object_guids():
+    """NO GUID may be shared by two pages -- not just element GUIDs.
+
+    A page also carries ~60 GUIDs naming the objects the compiler will
+    generate for it: VisuRegDesc.FbGuid, InputsPou.FbGuid (which becomes
+    '<Page>__inp__vis'), one GUID per generated method, the generated GVLs,
+    VisuRegisterGvl, DialogDut. Cloning a page copies all of them; rewriting
+    only <Visu Id> fixes just the first, because it happens to equal the
+    page GUID.
+
+    The rest stay duplicated, two visualizations register the same generated
+    objects, and the build fails with "Unknown type: '<Original>__inp__vis'"
+    -- naming the ORIGINAL page, which was never edited. Checking only
+    VisualElementIdentification misses this entirely; that is exactly how it
+    survived a previous GUID cleanup.
+
+    Verified against the pristine pages: outside <TypeList>, there is not a
+    single GUID shared by even two of them. TypeList is excluded because it
+    references VisualElem plugin types, which ARE legitimately identical
+    everywhere. The null GUID is a "none" sentinel.
+    """
+    owners: dict[str, str] = {}
+    problems = []
+    for p in sorted(VISU_DIR.glob("*.TcVIS")):
+        body = re.sub(r"<TypeList>.*?</TypeList>", "",
+                      p.read_text(encoding="utf-8"), flags=re.DOTALL)
+        for guid in {g.lower() for g in re.findall(
+                r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+                r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", body)}:
+            if guid == "00000000-0000-0000-0000-000000000000":
+                continue
+            if guid in owners and owners[guid] != p.stem:
+                problems.append(
+                    f"object GUID {guid} shared by {owners[guid]} and "
+                    f"{p.stem} -- run scripts/fix_visu_object_guids.py "
+                    f"on the CLONE")
+            owners[guid] = p.stem
+    print(f"  {len(owners)} distinct object GUIDs, "
+          f"{len(problems)} shared between pages")
     return problems
 
 
