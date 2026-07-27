@@ -1,143 +1,110 @@
-# Flower — Robot TCP/IP bridge
+# Flower — RobotBridge (RETIRED, kept as protocol reference)
 
-Middleware that translates between the industrial robot (TCP/IP, ASCII
-`POS1\n` / `POS2\n` / `POS3\n` frames) and the TwinCAT PLC (ADS).
+> **This directory is not part of the machine.** Nothing here runs in
+> production, and most of it can no longer run at all. It is kept for two
+> reasons only: the vendor's reference client documents the robot's wire
+> protocol and parameter ranges, and the git history explains why the
+> architecture changed.
+>
+> **Do not plan from this directory.** The current design is in `CLAUDE.md`
+> (see *DECISION: 167_01 panel solution — TCP-only robot comms*).
 
-Runs as a long-lived Python process. No Beckhoff TF-supplement licenses
-are involved — ADS is built into TwinCAT and free, and `pyads` is MIT.
+## Why it was retired (2026-07-26)
 
-## Data flow
+RobotBridge existed to keep TCP/IP out of the PLC. The reasoning was that
+Beckhoff's TF6310 TCP/IP supplement is a paid licence, so a single-file Python
+process would own the socket and translate each direction into ADS reads and
+writes. That premise no longer holds:
 
-```
-   Robot ── TCP/IP ──▶  robot_bridge.py ── ADS ──▶  PLC (GVL_Robot.stRobot) ──▶  HMI "Robot" page
-```
+1. **TF6310 is installed and running on the CP6606.** It is the documented
+   exception to the avoid-paid-libraries rule, so the PLC can open its own
+   socket. `FB_RobotTcpClient` (native ST, `Tc2_TcpIp`) now dials the robot at
+   `GVL_Robot.sRobotHost:nRobotPort` directly.
+2. **The bridge could never have run on the target anyway.** The panel is a
+   CP6606 running Windows Embedded Compact 7 on ARM, which has no supported
+   CPython, and therefore no `pyads`. The bridge only ever ran on a laptop.
+3. **The protocol it implemented was never the robot's protocol.** The bridge
+   parses newline-terminated `POS1` / `POS2` / `POS3` frames. The real Dobot
+   emits nothing of the kind — there is no `POS` emission anywhere in the robot
+   source. The frames it sent back (`AUTO_STARTED`, `PUSH_DONE`,
+   `PISTONS_ERROR`, `HEARTBEAT`) are equally fictional.
 
-The PLC has no networking code. Everything the operator sees on the
-Robot HMI page (`bAtPos1/2/3`, `eConnState`, `nPacketsRx`, `sLastMessage`)
-is written into `GVL_Robot.stRobot` by this bridge.
+The engineering-side UI is now **FlowerPyHmi** (separate repo, talks ADS to the
+panel), which absorbed the only two jobs of the bridge that were real: draining
+the PLC log ring, and simulating the robot for bench tests.
 
-## Install
-
-Requires Python 3.9+.
-
-```
-pip install -r requirements.txt
-```
-
-On Linux, `pyads` needs the Beckhoff ADS client library. See the
-[pyads docs](https://pyads.readthedocs.io/en/latest/documentation/setup.html)
-— the shortest path is `sudo apt install libads-dev` on Debian/Ubuntu.
-On Windows the DLL ships with TwinCAT itself.
-
-## Configure
-
-```
-cp config.example.yaml config.yaml
-# edit config.yaml
-```
-
-Key fields:
-
-| Field                       | Meaning                                                                                             |
-|-----------------------------|-----------------------------------------------------------------------------------------------------|
-| `plc.ams_net_id`            | AMS Net ID of the TwinCAT runtime. `127.0.0.1.1.1` for local.                                       |
-| `plc.ams_port`              | 851 for PLC1 (default).                                                                             |
-| `plc.symbol_prefix`         | Root symbol path of the `ST_HmiRobot` instance. Keep as `GVL_Robot.stRobot` unless renamed in PLC.  |
-| `robot.role`                | `"server"` (bridge listens, robot dials in) or `"client"` (bridge dials the robot).                 |
-| `robot.host`                | Robot's IP; ignored when `role="server"`.                                                           |
-| `robot.port`                | TCP port. Same value applies to both roles.                                                         |
-| `robot.encoding`            | Character encoding of the robot's frames. Default `ascii`.                                          |
-| `reconnect.delay_seconds`   | Backoff between reconnect attempts.                                                                 |
-
-## Route setup (remote hosts only)
-
-If the bridge and TwinCAT are on the same machine, skip this — the
-local route is present out of the box (`ams_net_id = 127.0.0.1.1.1`).
-
-If they're on different machines, add a route on the TwinCAT engineering
-PC pointing at the bridge host's AMS Net ID (System Manager → Routes →
-Add Route). Then update `plc.ams_net_id` in `config.yaml`.
-
-## Run
+## What the machine actually does now
 
 ```
-python robot_bridge.py --config config.yaml
+CP6606 panel ── TCP (Tc2_TcpIp) ──▶ Dobot robot server :6001
+   FB_RobotTcpClient                (raw ASCII, no newline framing)
 ```
 
-Or, on Windows:
+| PLC → robot | Robot → PLC | Purpose |
+|---|---|---|
+| `GET_SYNC` | `SYNC:NAME=VALUE,...` | Pull all 11 tuning parameters |
+| `NAME:VALUE` | `OK: SET NAME` | Set one tuning parameter |
+| `New_Bulb:1` | `OK: SET New_Bulb` | Start a fresh bulb |
+| `STATE:<n>` | `CMD:<m>` | Push machine step, receive command |
 
-```
-start_bridge.bat
-```
+`STATE:<n>` carries the master-cycle step (or `30` for MANUAL) and doubles as
+the keep-alive. `CMD:<m>` is `0` = none, `1` = start cycle, `2` = reset error.
 
-For unattended operation, wrap `start_bridge.bat` in a Windows Scheduled
-Task set to "run whether user is logged on or not", or install it as a
-service with [NSSM](https://nssm.cc/).
+## What is still in use
 
-## GUI (recommended for exploration & smoke testing)
+Two files, and **only as documentation**. Neither is executed by anything.
 
-`bridge_gui.py` is a tkinter desktop app that ties everything together:
+| File | Why it is kept |
+|---|---|
+| `Client_working_example/tcp client.py` | The **vendor's own** PyQt5 GUI for the robot. It is the authoritative source for the 11 parameter names, **the order they appear in a `SYNC` reply**, and **their valid ranges** — it clamps to them, which is where the range table in `CLAUDE.md` comes from. `FB_RobotTcpClient`'s `ParamValue` / `ParamName` index mapping must match this file's order. A byte-identical copy lives in the robot repo at `Robot/167-01-Saad/`. |
+| `Client_working_example/dummy_server.py` | Emulates the Dobot's own Lua server (`src2.lua`) for `GET_SYNC` and `NAME:VALUE`. Useful as the closest available statement of what the robot end actually does. |
 
-- Live snapshot of `GVL_Robot.stRobot` via `pyads` (polled 5×/sec)
-- Start / stop the bridge process with a button
-- Play the robot: opens a TCP client to the bridge and sends `POS1` /
-  `POS2` / `POS3` / custom frames, with a hex + ASCII byte view of what
-  actually went on the wire
-- A "What is happening right now" panel that narrates the current state
-  — useful if TCP/IP is new to you (it explains what "listening" /
-  "connected" / "frame delimiter" mean as you interact)
+Note what the reference client does **not** do: it has no range enforcement on
+the PLC side, no `STATE`/`CMD` frames, and it clamps only in its own UI. That is
+why `FB_RobotTcpClient` re-clamps every parameter on the way out — the vendor
+GUI's limits protect the vendor GUI and nothing else.
 
-Launch:
+**For actual bench testing, use FlowerPyHmi's simulator instead**
+(`FlowerPyHmi/tools/dummy_server_tcp.py`). It handles the full current protocol
+including the `STATE` / `CMD` frames that `dummy_server.py` predates.
 
-```
-python bridge_gui.py --config config.yaml
-```
+## What is retired
 
-or double-click `start_gui.bat` on Windows.
+Everything else. Two of these would now **fail at runtime**, because they write
+`ST_HmiRobot` fields that were deleted from the PLC on 2026-07-26
+(`bAtPos1/2/3`, `bTx*`, `bRxResetError`). The struct today holds only
+`eConnState`, `sConnStateText`, `nPacketsRx`, `nPacketsTx`, `sLastMessage`,
+`sLastTxMessage`.
 
-## Smoke test
+| File | Status | Superseded by |
+|---|---|---|
+| `robot_bridge.py` | **Dead** — writes deleted PLC fields; parses `POS` frames the robot never sends. | `FB_RobotTcpClient` in the PLC |
+| `bridge_gui.py` | **Dead** — polls deleted PLC fields; drives the bridge subprocess. | FlowerPyHmi's Robot page |
+| `sim_robot.py` | Obsolete — sends `POS` frames to a bridge that no longer exists. | `FlowerPyHmi/tools/dummy_server_tcp.py` |
+| `sim_robot_server.py` | Obsolete — plays the robot server, expecting the retired `AUTO_STARTED` / `PUSH_DONE` / `PISTONS_ERROR` / `HEARTBEAT` frames. | `FlowerPyHmi/tools/dummy_server_tcp.py` |
+| `log_pump.py` | Obsolete — drained `GVL_Log` into the CSV logger. | `FlowerPyHmi/flower_py_hmi/plc_log.py` |
+| `csv_logger.py` | Obsolete — daily CSV `logging.Handler`. | `FlowerPyHmi/flower_py_hmi/logging_setup.py` (rotating files) |
+| `retention.py` | Obsolete — age/size caps on `logs/`. | `RotatingFileHandler` size + backup count |
+| `config.yaml`, `config.example.yaml` | Obsolete — endpoints and ADS route for the dead bridge. Robot endpoint now lives in `GVL_Robot` (persistent, editable on the panel's Robot page). | `GVL_Robot.sRobotHost` / `.nRobotPort` |
+| `start_bridge.bat`, `start_gui.bat` | Obsolete launchers. | — |
+| `logs/*.csv` | Old output from bridge runs in July 2026. | — |
+| `requirements.txt` | Obsolete — `pyads` + `pyyaml` for the bridge. | FlowerPyHmi's own `pyproject.toml` |
 
-1. Build + Activate the PLC so `GVL_Robot.stRobot` is visible in the
-   ADS symbol table.
-2. `python robot_bridge.py --config config.yaml` — logs should show
-   `ADS opened to 127.0.0.1.1.1:851` and (server mode) `listening on :2000`.
-3. On the HMI Robot page, `eConnState` should read `Connecting`.
-4. In another shell, run the companion sim script:
+### One live loose end this leaves in the PLC
 
-   ```
-   python sim_robot.py           # sends POS1, POS2, POS3, FOO with 1s gap
-   python sim_robot.py POS1 POS3 # custom sequence
-   ```
+`GVL_Log.stBridgeCfg` (`ST_LogBridgeCfg`: log dir, level, retention days/MB,
+poll ms) exists **solely** so `log_pump.py` could publish its configuration for
+an HMI to display. With the pump retired, nothing writes it — the struct reads
+as empty strings and zeros, and FlowerPyHmi's Logs page renders a blank "Log
+bridge config" block because of it. Removing `stBridgeCfg` from `GVL_Log`,
+`ST_LogBridgeCfg.TcDUT`, and the FlowerPyHmi Logs page is a tracked follow-up.
 
-   Expect on the HMI:
-   - `eConnState → Connected` as soon as the client attaches.
-   - `POS1` → `bAtPos1` lights green. `nPacketsRx = 1`, `sLastMessage = "POS1"`.
-   - `POS2` → POS1 clears, POS2 lights.
-   - `POS3` → POS2 clears, POS3 lights.
-   - `FOO` → no `bAtPos*` change; `sLastMessage = "FOO"`,
-     counter still increments (unknown-frame path).
+## Can this directory be deleted?
 
-5. When `sim_robot.py` exits: bridge logs the disconnect,
-   `eConnState → Disconnected`, then transitions back to `Connecting`
-   within `reconnect.delay_seconds`.
+Not yet, and not entirely. `Client_working_example/` is the only copy of the
+vendor protocol reference inside this repo, and `CLAUDE.md` cites it by file and
+line for the parameter range table. The rest could go — it is recoverable from
+git history — but it costs nothing to keep and it explains the four options that
+`docs/robot-integration-options.md` weighed before the TCP-only decision landed.
 
-Alternatives (if you don't want to use `sim_robot.py`):
-`nc 127.0.0.1 2000` on Linux/WSL/Git Bash, or a plain PowerShell
-`TcpClient` one-liner — see the docs' Operation → Smoke test tab.
-
-## Files
-
-| File                   | Role                                                             |
-|------------------------|------------------------------------------------------------------|
-| `robot_bridge.py`      | The bridge. Single file, no framework.                           |
-| `sim_robot.py`         | TCP client that sends POS frames for smoke testing.              |
-| `bridge_gui.py`        | Desktop GUI: monitor + tester with contextual TCP/IP tutorial.   |
-| `csv_logger.py`        | Daily CSV `logging.Handler` used by both PLC + Python events.    |
-| `log_pump.py`          | Background thread that drains the PLC's `GVL_Log` ring into logging. |
-| `retention.py`         | Enforces `retention_days` + `retention_mb` caps on `logs/`.      |
-| `logs/`                | Daily CSV output; **gitignored**.                                |
-| `config.example.yaml`  | Template; committed to git.                                      |
-| `config.yaml`          | Your real endpoints; **gitignored**.                             |
-| `requirements.txt`     | `pyads` + `pyyaml`.                                              |
-| `start_bridge.bat`     | Convenience Windows launcher for the bridge.                     |
-| `start_gui.bat`        | Convenience Windows launcher for the GUI.                        |
+If it is ever pruned, keep `Client_working_example/` and this README.

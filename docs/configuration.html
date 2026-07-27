@@ -59,18 +59,19 @@
 <header>
   <h1>Flower — Configuration Reference</h1>
   <div class="meta">
-    Branch <b>master</b> &middot; docs generated <b>2026-07-09</b>
+    Branch <b>master</b> &middot; docs updated <b>2026-07-27</b>
     &middot; <a href="index.html">← Doc index</a>
     &middot; <a href="operation.html">Operation guide →</a>
     &middot; <a href="open-issues.html">Open issues</a>
+    &middot; <a href="viewer.html?doc=../CLAUDE.md">CLAUDE.md (authoritative)</a>
   </div>
 </header>
 
 <nav class="tabs" id="tabs">
   <button class="active" data-tab="arch">Architecture</button>
   <button data-tab="plc">PLC (TwinCAT)</button>
-  <button data-tab="hmi">HMI (TcHmi)</button>
-  <button data-tab="bridge">Robot Bridge (Python)</button>
+  <button data-tab="visu">Panel VISU</button>
+  <button data-tab="robot">Robot (TCP)</button>
 </nav>
 
 <main>
@@ -80,68 +81,82 @@
 <!-- ============================================================ -->
 <section class="panel active" id="panel-arch">
   <h2>System architecture</h2>
-  <p>Single-panel PC hosts the whole stack. The TwinCAT runtime drives 6 <b>SOL-Spring</b> pneumatic pistons (single Extend coil, mechanical spring returns them) over EtherCAT; the TcHmi runtime serves the web HMI over WebSocket; and a small Python bridge (<code>RobotBridge/robot_bridge.py</code>) does bidirectional TCP/IP with the robot — receiving position frames and forwarding master-cycle events — translating each side into ADS reads/writes on the PLC.</p>
+  <p>One <b>CP6606 Panel PC</b> is the entire control system. It runs the TwinCAT PLC (eight <b>SOL-Spring</b> pneumatic pistons — single Extend coil, mechanical spring returns them — over EtherCAT), the operator interface as a <b>classic PLC visualization</b> rendered by the PLC runtime itself, and the robot comms in native ST. Nothing else has to be running for the machine to work.</p>
 
   <div class="mermaid-wrap">
     <pre class="mermaid">
 flowchart LR
-  subgraph Robot["Industrial robot (TCP server, :6001)"]
-    Rp["Accepts a TCP connection<br/>at 192.168.201.1:6001.<br/>Emits POS1/POS2/POS3<br/>Consumes AUTO_STARTED /<br/>PUSH_DONE / PISTONS_ERROR<br/>Emits RESET_ERROR"]
+  subgraph Robot["Dobot robot (TCP server, :6001)"]
+    Rp["Listens at 192.168.201.1:6001.<br/>Serves GET_SYNC / NAME:VALUE /<br/>New_Bulb. Replies to every<br/>STATE:n with CMD:m"]
   end
-  subgraph Bridge["Python bridge (client)"]
-    Py["robot_bridge.py<br/>socket + pyads<br/>config.yaml"]
-  end
-  subgraph PLC["TwinCAT PLC (PLC1, AMS 851)"]
-    GVLR["GVL_Robot.stRobot<br/>(ST_HmiRobot — Rx state<br/>+ Tx pulses)"]
-    GVLH["GVL_HMI.stSepSol1..3<br/>GVL_HMI.stPushSol1..3<br/>(ST_HmiPiston x6)<br/>GVL_HMI.stMasterAuto"]
-    GVLP["GVL_HmiPersistent<br/>(dwell / timeout cfg)"]
-    GVLA["GVL_App<br/>(sensor / valve aliases)"]
-    GVLIO["GVL_IO<br/>dIn[1..16] AT %I*<br/>dOut[1..16] AT %Q*"]
-    MAIN["MAIN<br/>fbSepSol1..3, fbPushSol1..3<br/>(FB_SolSpringPiston_2Pos)<br/>fbMasterAutoCycle"]
+  subgraph Panel["CP6606 Panel PC — TwinCAT PLC (PLC1, AMS 851)"]
+    FBT["fbRobotTcp<br/>(FB_RobotTcpClient, Tc2_TcpIp)<br/>dials out, keeps one socket"]
+    GVLR["GVL_Robot<br/>stParams (11 params + nStateOut<br/>+ nRobotCmd), stRobot (status)<br/>PERSISTENT: sRobotHost, nRobotPort"]
+    GVLH["GVL_HMI<br/>stSepSol1..3, stPushSol1..3,<br/>stGripSolL/R (ST_HmiPiston x8)<br/>stMasterAuto, plate sensors"]
+    GVLP["GVL_HmiPersistent<br/>stMasterAutoCfg (timers + flags)<br/>+ per-piston auto cfg"]
+    GVLL["GVL_Log<br/>aLog[0..255] ring + aRecent[0..19]<br/>RAM only — never written to disk"]
+    GVLA["GVL_App<br/>(sensor / valve / PB aliases)"]
+    GVLIO["GVL_IO<br/>dIn[1..24] AT %I*<br/>dOut[1..16] AT %Q*"]
+    MAIN["MAIN (PlcTask, 10 ms)<br/>fbMasterAutoCycle<br/>8x FB_SolSpringPiston_2Pos<br/>fbPersistentAutoSave"]
+    IOMAP["PRG_IoMap (IOmapTask, 5 ms)<br/>ReadInputs / WriteOutputs"]
+    VISU["Classic VISU — 7 .TcVIS pages<br/>Main, AutoMain, PistonsManual,<br/>GripperManual, Robot, Logs, Piston"]
     MAIN --> GVLH
-    MAIN --> GVLA
     MAIN --> GVLR
+    MAIN --> GVLL
     GVLP --> MAIN
-    GVLA -.-> GVLIO
+    GVLA --> MAIN
+    IOMAP --> GVLA
+    IOMAP --> GVLIO
+    GVLH --> VISU
+    GVLP --> VISU
+    GVLR --> VISU
+    GVLL --> VISU
+    GVLR --> FBT
   end
-  subgraph HMI["TcHmi runtime (:3003 WS / :1010 HTTP)"]
-    UCp["UC_Piston x6<br/>(Piston page)"]
-    UCr["UC_Robot<br/>(Robot page)"]
-    UCa["UC_MasterAutoCycle<br/>(AutoCycle page)"]
+  subgraph Laptop["Engineering laptop (optional)"]
+    PY["FlowerPyHmi<br/>FastAPI + pyads<br/>separate repo"]
   end
   subgraph EC["EtherCAT slice"]
-    IO["Digital IN / OUT<br/>(sensors, solenoid valves)"]
+    IO["Digital IN / OUT<br/>sensors, solenoid valves,<br/>3 push-buttons + LEDs, 2 lamps"]
   end
 
-  Py -- "TCP :6001 (bridge dials in)" --> Rp
-  Rp -- "POS/RESET_ERROR frames" --> Py
-  Py -- "AUTO_STARTED / PUSH_DONE / PISTONS_ERROR" --> Rp
-  Py -- "ADS write_by_name" --> GVLR
-  GVLR -- "ADS symbol subscription" --> UCr
-  GVLH -- "ADS symbol subscription" --> UCp
-  GVLH -- "stMasterAuto subscription" --> UCa
+  FBT -- "TCP :6001 (panel dials out)" --> Rp
+  Rp -- "SYNC / OK / CMD:m replies" --> FBT
+  PY -- "ADS batched read/write (AMS 851)" --> GVLH
   GVLIO -- "EtherCAT" --> IO
     </pre>
   </div>
 
   <div class="callout">
-    <b>Key design choice.</b> The PLC has zero networking code. The whole TCP/IP layer lives in <code>RobotBridge/</code> as a single-file Python service. This deliberately sidesteps Beckhoff's paid <b>TF6310 TCP/IP</b> supplement.
+    <b>Key design choice — reversed 2026-07-26.</b> The PLC now owns the socket. <code>FB_RobotTcpClient</code> is native ST on <code>Tc2_TcpIp</code>, and <b>TF6310 is installed and running on the CP6606</b>. This is the one documented exception to the project's avoid-paid-Beckhoff-supplements rule; see the memory note <code>feedback_avoid_licensed_beckhoff_libs</code>.
   </div>
 
   <div class="callout warn">
-    <b>Direction of the socket.</b> The <b>robot is the TCP server</b>, the bridge is the client and dials in at <code>192.168.201.1:6001</code>. This matches the reference client in <code>RobotBridge/Client_working_example/</code>. Older versions of these docs described the opposite — that arrangement is gone.
+    <b>What this replaced.</b> The Python bridge (<code>RobotBridge/</code>) is <b>retired</b> — it could never have run on the panel (Windows Embedded Compact 7 on ARM has no supported CPython, so no <code>pyads</code>), and the <code>POS1/POS2/POS3</code> protocol it implemented was never what the robot actually speaks. The discrete-I/O handshake (<code>STAND_SEQ_DO</code> / <code>STAND_SEQ_DI</code>) is retired too; the channels it freed now carry PB1 and its LED. See <a href="viewer.html?doc=../RobotBridge/README.md">RobotBridge/README.md</a>.
+  </div>
+
+  <div class="callout warn">
+    <b>Direction of the socket.</b> The <b>robot is the TCP server</b>; the panel is the client and dials in at <code>192.168.201.1:6001</code>. That endpoint is editable on the panel's Robot page and <b>persists</b> — it is a commissioning value, not a compile-time constant.
   </div>
 
   <h3>Ports &amp; endpoints</h3>
   <table class="kv-table">
     <tr><th>Endpoint</th><th>Port</th><th>Notes</th></tr>
-    <tr><td class="k">TwinCAT ADS (PLC1)</td><td class="v">AMS 851</td><td class="n">Default PLC1 port. Bridge and HMI both talk to this.</td></tr>
-    <tr><td class="k">TcHmi WebSocket</td><td class="v">3003</td><td class="n">HMI runtime, engineering server.</td></tr>
-    <tr><td class="k">TcHmi Auth</td><td class="v">13001</td><td class="n">Auth extension.</td></tr>
-    <tr><td class="k">TcHmi HTTPS (public)</td><td class="v">3443</td><td class="n">Public-facing HTTPS.</td></tr>
-    <tr><td class="k">Robot TCP (server)</td><td class="v">6001</td><td class="n">Committed in <code>config.example.yaml</code>. Robot listens at <code>192.168.201.1:6001</code>; bridge dials in.</td></tr>
+    <tr><td class="k">TwinCAT ADS (PLC1)</td><td class="v">AMS 851</td><td class="n">Default PLC1 port. FlowerPyHmi and TcXaeShell both talk to this.</td></tr>
+    <tr><td class="k">Robot TCP (robot is server)</td><td class="v">6001</td><td class="n">Factory default <code>192.168.201.1:6001</code>, held in <code>GVL_Robot.sRobotHost</code> / <code>.nRobotPort</code> (<b>PERSISTENT</b>) and editable on the Robot page.</td></tr>
+    <tr><td class="k">FlowerPyHmi web UI</td><td class="v">8000</td><td class="n">Engineering-side only, runs on a laptop. Not needed for production.</td></tr>
     <tr><td class="k">Docs (this server)</td><td class="v">8765</td><td class="n">Local <code>python -m http.server</code>, launched by <code>scripts/serve-docs.ps1</code>.</td></tr>
   </table>
+
+  <h3>Task structure</h3>
+  <table class="kv-table">
+    <tr><th>Task</th><th>Cycle</th><th>Priority</th><th>Runs</th></tr>
+    <tr><td class="k">IOmapTask</td><td class="v">5 ms</td><td class="v">15</td><td class="n"><code>PRG_IoMap</code> — pre-empts PlcTask, so MAIN always sees fresh sensor state and command writes reach the outputs within 5 ms.</td></tr>
+    <tr><td class="k">PlcTask</td><td class="v">10 ms</td><td class="v">20</td><td class="n"><code>MAIN</code> — the whole control body.</td></tr>
+  </table>
+  <div class="callout warn">
+    <b>Do not call <code>PRG_IoMap.ReadInputs</code> / <code>.WriteOutputs</code> from MAIN.</b> They are already driven by their own task; calling them again would double-execute the copy and break scan-order assumptions.
+  </div>
 </section>
 
 <!-- ============================================================ -->
@@ -157,71 +172,132 @@ flowchart LR
       <tr><th>Type</th><th>Purpose</th></tr>
       <tr><td class="k">E_ControlMode</td><td class="n">Enum: <code>Manual := 0</code>, <code>Automatic := 1</code>. Attributes: <code>qualified_only</code>, <code>strict</code>, <code>to_string</code>.</td></tr>
       <tr><td class="k">E_RobotConnState</td><td class="n">Enum: <code>Disconnected := 0</code>, <code>Connecting := 1</code>, <code>Connected := 2</code>, <code>Error := 3</code>.</td></tr>
-      <tr><td class="k">E_AutoStep</td><td class="n">Enum used by <code>FB_PistonAutoCycle</code> — a per-piston auto sequencer for bench-testing loops on one piston.</td></tr>
-      <tr><td class="k">E_MasterAutoStep</td><td class="n">Enum used by <code>FB_MasterAutoCycle</code>: IDLE, SEP_EXTENDING, WAIT_POS2, PUSH_EXTENDING, DWELL_PUSH, PUSH_RETRACTING, PUSH_RETRACTED_DWELL, SEP_RETRACTING, SEP_RETRACTED_DWELL, ERR.</td></tr>
+      <tr><td class="k">E_AutoStep</td><td class="n">Enum used by <code>FB_PistonAutoCycle</code> — a per-piston auto sequencer for bench-testing loops on one piston. <b>Not exposed on the panel</b>; reachable from FlowerPyHmi only.</td></tr>
+      <tr><td class="k">E_MasterAutoStep</td><td class="n">The 15-state master sequence plus two sentinels. IDLE=0, SEP_EXTENDING=1, PUSH_EXTENDING=3, DWELL_PUSH=4, PUSH_RETRACTING=5, PUSH_RETRACTED_DWELL=6, SEP_RETRACTING=7, SEP_RETRACTED_DWELL=8, INIT_PUSH_RETRACTING=10, INIT_SEP_RETRACTING=11, INIT_GRIP_RETRACTING=12, WAIT_PLATE=20, GRIP_EXTENDING=21, GRIP_RETRACTING=22, ERR=99. <b>MANUAL=30</b> is a sentinel never assigned to <code>eStep</code> — MAIN reports it to the robot while <code>bAutoMode=FALSE</code>. <code>WAIT_POS2=2</code> is declared but retired and unused.</td></tr>
       <tr><td class="k">ST_HmiPiston</td><td class="n">HMI contract for one piston. Contains <code>Name</code>, <code>eMode</code>, manual/jog/simulate command bits, and FB-written status/selected/effective bits.</td></tr>
-      <tr><td class="k">ST_HmiPistonAuto / …AutoCfg</td><td class="n">Runtime state and PERSISTENT tunables for one per-piston auto sequencer (Start/Stop/Reset, dwell / timeout).</td></tr>
-      <tr><td class="k">ST_HmiMasterAuto</td><td class="n">Runtime state for the full-machine sequence: eStep, sStepText, START/STOP/RESET buttons, <code>iErrorCode : INT</code>, elapsed time, cycles completed, plus 9 <code>bSimStep_*</code> checkboxes so a bench operator can shortcut any waiting step.</td></tr>
-      <tr><td class="k">ST_HmiMasterAutoCfg</td><td class="n">PERSISTENT master-cycle tunables: <code>uiPairCount</code> (1..3), <code>tDwellPushMs</code>, <code>tPushRetractedDwellMs</code>, <code>tSepRetractedDwellMs</code>, <code>tStepTimeoutMs</code>, <code>bContinuous</code>.</td></tr>
-      <tr><td class="k">ST_HmiRobot</td><td class="n">Bridge contract. Rx side: <code>Name</code>, <code>eConnState</code>, <code>sConnStateText</code>, <code>bAtPos1/2/3</code>, <code>nPacketsRx</code>, <code>sLastMessage</code>. Tx side: <code>bTxAutoStarted</code>, <code>bTxPushDone</code>, <code>bTxPistonsError</code> (PLC writes TRUE for one scan; bridge sends the frame and clears the flag), <code>bRxResetError</code> (bridge writes on RESET_ERROR frame; FB consumes), <code>nPacketsTx</code>, <code>sLastTxMessage</code>.</td></tr>
-      <tr><td class="k">ST_LogEntry / E_LogSev</td><td class="n">One row of the PLC's 256-slot ring log (see <code>GVL_Log</code>). The bridge's <code>log_pump.py</code> drains this ring into daily CSVs.</td></tr>
+      <tr><td class="k">ST_HmiPistonAuto / …AutoCfg</td><td class="n">Runtime state and PERSISTENT tunables for one per-piston auto sequencer (Start/Stop/Reset, dwell / timeout, <code>bNoSensors</code>).</td></tr>
+      <tr><td class="k">ST_HmiMasterAuto</td><td class="n">Runtime state for the full-machine sequence: <code>eStep</code>, <code>sStepText</code>, START/STOP/RESET buttons, <code>iErrorCode : INT</code>, <code>sErrorText</code>, elapsed time, cycles completed, plus the <code>bSimStep_*</code> checkboxes so a bench operator can shortcut any waiting step, and <code>bSimStartAssembly</code>.</td></tr>
+      <tr><td class="k">ST_HmiMasterAutoCfg</td><td class="n">PERSISTENT master-cycle tunables: <code>tDwellPushMs</code> (2000), <code>tPushRetractedDwellMs</code> (500), <code>tSepRetractedDwellMs</code> (500), <code>tStepTimeoutMs</code> (10000), <code>tPlateWaitTimeoutMs</code> (10000), <code>bNoSensors</code>, <code>bBypassPlateSensors</code>, <code>bContinuous</code>, <code>bAutoMode</code>. <b><code>uiPairCount</code> was removed 2026-07-12</b> — pair count is fixed at 3.</td></tr>
+      <tr><td class="k">ST_RobotParams</td><td class="n">The robot contract. 11 <code>INT</code> tuning parameters (percentages and milliseconds — see the Robot tab), request flags (<code>bGetSync</code>; <code>bSetParam</code>/<code>sSetName</code>/<code>nSetVal</code>; <code>bTriggerNewBulb</code> — the FB auto-clears each after ACK), plus the two INTs <code>nStateOut</code> and <code>nRobotCmd</code> that carry the STATE/CMD channel.</td></tr>
+      <tr><td class="k">ST_HmiRobot</td><td class="n">Link <b>status mirror</b>, written by <code>FB_RobotTcpClient</code>: <code>Name</code>, <code>eConnState</code>, <code>sConnStateText</code>, <code>nPacketsRx</code>, <code>nPacketsTx</code>, <code>sLastMessage</code>, <code>sLastTxMessage</code>. The old <code>bAtPos1/2/3</code>, <code>bTx*</code> and <code>bRxResetError</code> fields were <b>deleted 2026-07-26</b> along with the bridge protocol.</td></tr>
+      <tr><td class="k">ST_LogEntry / E_LogSev</td><td class="n">One row of the ring log: <code>sTime</code> (HH:MM:SS, stamped from <code>GVL_Log.sNow</code>), <code>eSev</code>, <code>sSevText</code>, <code>sSource</code>, <code>sMsg</code>. <code>sSevText</code> exists because the classic VISU <b>cannot</b> stringify an enum — <code>{attribute 'to_string'}</code> only enables <code>TO_STRING()</code> in ST.</td></tr>
+      <tr><td class="k">ST_LogBridgeCfg</td><td class="n"><b>Dead.</b> Existed so the retired <code>log_pump.py</code> could publish its logger config. Nothing writes it; it reads as empty strings and zeros. Removal is a tracked follow-up.</td></tr>
     </table>
   </div>
 
   <div class="card" data-c="plc">
     <h3>Function block — <code>FB_SolSpringPiston_2Pos</code></h3>
-    <p>One FB drives every piston instance (six today). <b>SOL-Spring</b> topology: a single Extend coil, mechanical spring returns the piston when the coil is de-energised. Two limit switches (Extended and Retracted) still exist on the DI side. Sections in scan order:</p>
+    <p>One FB drives every piston instance (<b>eight today</b>: SepSol1..3, PushSol1..3, GripSolL, GripSolR). <b>SOL-Spring</b> topology: a single Extend coil, mechanical spring returns the piston when the coil is de-energised. Two limit switches (Extended and Retracted) still exist on the DI side. Sections in scan order:</p>
     <ul class="compact">
       <li><b>0a — Effective sensor merge:</b> <code>bSwitchExtended_eff := bSwitchExtended OR stHmi.bSimulateExtended</code> (same for retracted).</li>
       <li><b>0 — HMI button latching:</b> R_TRIG on <code>bManCmdExtend</code> / <code>bManCmdRetract</code> selects the latched target. Independent IFs — retract wins on same-cycle collision.</li>
       <li><b>1 — Mode → target mapping:</b> Auto uses <code>bAutoCmd*</code> pins, Manual uses <code>bSelected*</code> latches, otherwise safe-default zeros.</li>
       <li><b>1a — Jog override:</b> while either <code>bManJog*</code> button is held, latched selections are cleared.</li>
       <li><b>1b — Target-reached reset:</b> once the piston arrives at a sensor, the corresponding latched selection is dropped.</li>
-      <li><b>2 — Coil drive ladder (latch &amp; retain):</b> Jog Extend energises the coil while held (Manual-mode gated); Jog Retract de-energises. Otherwise the coil is <b>latched</b> — once TRUE by an Extend target it stays TRUE until an explicit Retract target flips it. No ELSE branch: the mechanical spring, not the ladder, is what retracts the piston, so the coil must not drop simply because the target has been reached.</li>
+      <li><b>2 — Coil drive ladder (latch &amp; retain):</b> Jog Extend energises the coil while held (Manual-mode gated); Jog Retract de-energises. A <b>panel push-button release</b> branch (<code>F_TRIG</code> on the <code>bJogExtend</code> input) de-energises the coil so PB jog is momentary. Otherwise the coil is <b>latched</b> — once TRUE by an Extend target it stays TRUE until an explicit Retract target flips it. No ELSE branch: the mechanical spring, not the ladder, is what retracts the piston, so the coil must not drop simply because the target has been reached.</li>
       <li><b>3 — HMI status feedback:</b> mirrors effective sensor + coil state into <code>stHmi</code>. <code>bIsMoving := NOT bSwitchExtended_eff AND NOT bSwitchRetracted_eff</code>.</li>
     </ul>
     <div class="callout warn">
       <b>Latch semantics matter here.</b> A SOL-SOL piston keeps position after both coils de-energise. A SOL-Spring piston does not — if the coil drops mid-cycle the spring pulls the actuator back. The Section 2 ladder is written specifically to hold the coil high until the next command; do not "clean it up" by adding an ELSE branch that clears the coil at the target.
     </div>
+    <div class="callout warn">
+      <b>The PB-release branch's position in the ladder is load-bearing.</b> It sits <b>after</b> both jog branches, so a held HMI <code>bManJogExtend</code> keeps the coil energised and the one-scan release pulse is ignored; and <b>before</b> the <code>bTarget*</code> branches, so a latched HMI Extend selection cannot re-energise the coil the moment the operator lets go of the push-button. The HMI jog deliberately keeps its latching behaviour — Extend and Retract jog sit side by side on the Piston page, so there is no stranding problem there.
+    </div>
   </div>
 
   <div class="card" data-c="plc">
     <h3>Function block — <code>FB_MasterAutoCycle</code></h3>
-    <p>Coordinates 1..3 pairs of (SepSolN, PushSolN) pistons in parallel with the robot's Pos1/Pos2 signals. Ten-state machine. See the CLAUDE.md DECISION section for the full state table; summary:</p>
+    <p>Coordinates all <b>eight</b> pistons — 3 Sep, 3 Push, 2 Grip — through a <b>15-state</b> sequence gated by two plate sensors. Pair count is fixed at 3. Full state table in <code>CLAUDE.md</code>; summary:</p>
     <ul class="compact">
-      <li><b>IDLE.</b> Wait for operator START <b>or</b> <code>stRobot.bAtPos1</code> rising <b>or</b> <code>bSimStep_Idle</code>. On trigger: emit <code>AUTO_STARTED</code> to the robot.</li>
-      <li><b>SEP_EXTENDING → WAIT_POS2 → PUSH_EXTENDING → DWELL_PUSH → PUSH_RETRACTING</b> (emits <code>PUSH_DONE</code> on sensor-reached) <b>→ PUSH_RETRACTED_DWELL → SEP_RETRACTING → SEP_RETRACTED_DWELL → IDLE</b>.</li>
-      <li><b>ERR.</b> Latched. Emits <code>PISTONS_ERROR</code>. <code>iErrorCode</code> = step's fault code (1=SEP_EXTENDING timeout, 2=WAIT_POS2, 3=PUSH_EXTENDING, 4=PUSH_RETRACTING, 5=SEP_RETRACTING, 99=STOP-while-running). Reset on HMI <b>Reset</b> rising edge <b>or</b> <code>stRobot.bRxResetError</code> rising edge.</li>
+      <li><b>IDLE (0).</b> Wait for operator START <b>or</b> <code>bExtStartPulse</code> (MAIN's rising edge on the robot's <code>CMD:1</code>) <b>or</b> <code>bSimStep_Idle</code> / <code>bSimStartAssembly</code>. On start it goes to <b>INIT_PUSH_RETRACTING, not straight to SEP_EXTENDING</b>, so pistons left extended by a prior manual move are driven home first.</li>
+      <li><b>INIT_PUSH_RETRACTING (10) → INIT_SEP_RETRACTING (11) → INIT_GRIP_RETRACTING (12).</b> Drive everything home. Each auto-satisfies on the next scan when already home.</li>
+      <li><b>WAIT_PLATE (20).</b> Wait for <code>bPlateSenL AND bPlateSenR</code>. Uses its own <code>tPlateWaitTimeoutMs</code>, bounded by robot placement time. Sensors are latched at start only, not monitored past this step.</li>
+      <li><b>GRIP_EXTENDING (21) → SEP_EXTENDING (1) → PUSH_EXTENDING (3) → DWELL_PUSH (4) → PUSH_RETRACTING (5) → PUSH_RETRACTED_DWELL (6) → SEP_RETRACTING (7) → SEP_RETRACTED_DWELL (8) → GRIP_RETRACTING (22) → IDLE.</b> Grip stays extended from GRIP_EXTENDING right through SEP_RETRACTED_DWELL. The cycle counter increments in GRIP_RETRACTING.</li>
+      <li><b>ERR (99).</b> Latched. <code>iErrorCode</code> = the step's fault code (1, 3, 4, 5 for the four Sep/Push moves; 6, 7, 8 for the three INIT states; 9 = WAIT_PLATE timeout; 10, 11 for the two Grip states; 99 = STOP while running). Code 2 belonged to the retired <code>WAIT_POS2</code>. Reset on HMI RESET rising edge <b>or</b> the robot's <code>CMD:2</code>.</li>
     </ul>
-    <p>Coexists with the per-piston <code>FB_PistonAutoCycle</code> tiles via <code>OR</code>-merge on <code>bAutoCmd*</code> at each piston call site. While the master is running (non-IDLE, non-ERR), MAIN forces the enabled pistons into <code>Automatic</code> mode so the master's commands actually reach the coils; when it's IDLE or ERR, MAIN preserves the operator's manual choice.</p>
+    <p><b>Master sensorless mode</b> (<code>stCfg.bNoSensors</code>): the eight movement states ignore sensor feedback and advance when <code>tStepTimeoutMs</code> expires — the timeout doubles as the fixed step duration, so codes 1/3/4/5/6/7/8/10/11 cannot occur. <code>WAIT_PLATE</code> is deliberately <b>not</b> covered; skipping the plate gate is safety-relevant, so it needs its own explicit <code>bBypassPlateSensors</code> flag, which suppresses only the <b>timeout error</b> and keeps the wait.</p>
+    <div class="callout warn">
+      <b>Continuous cycling is disabled on the real machine (2026-07-27).</b> The panel checkbox was removed and <code>MAIN</code> forces <code>stMasterAutoCfg.bContinuous := FALSE</code> <b>every scan</b>. Forcing rather than merely deleting the control matters: a VISU page is only one of several writers — FlowerPyHmi has its own Continuous checkboxes and writes the field over ADS. Removing the panel checkbox alone would have hidden the control while leaving the behaviour reachable. The field is kept in the struct because the FB clears it in six places on ERR/STOP paths.
+    </div>
+    <p>Per-piston <code>FB_PistonAutoCycle</code> instances still exist and are <code>OR</code>-merged onto <code>bAutoCmd*</code> at each call site, but the panel exposes no per-piston auto tiles: in Auto the master owns all eight pistons, in Manual the master is held at IDLE.</p>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>Function block — <code>FB_PersistentAutoSave</code></h3>
+    <p>Called <b>last</b> in MAIN. Watches all nine structs in <code>GVL_HmiPersistent</code> plus the two <code>GVL_Robot</code> scalars, and flushes to <code>Port_851.bootdata</code> about <b>2 s after the operator stops editing</b>.</p>
+    <div class="callout warn">
+      <b>Why this exists.</b> <code>PERSISTENT</code> declares a durable storage <i>class</i>, not an automatic save. TwinCAT flushes RAM to bootdata on exactly three triggers: a clean PLC stop, an explicit <code>FB_WritePersistentData</code> call, or the IDE's "Save persistent data". Cutting power to a CP6606 is <b>not</b> a clean stop, and nothing called the FB — so every operator edit lived in RAM only and was lost on power-down, silently.
+    </div>
+    <ul class="compact">
+      <li><b>Two shadow sets</b> make "stopped editing" detectable at all. <code>shSaved</code> = what we believe reached disk, refreshed only after a <i>successful</i> write (so a failed write leaves it alone and the retry happens naturally). <code>shSeen</code> = what we saw last scan, refreshed every scan.</li>
+      <li>The quiet timer runs only while <code>dirty AND NOT changing</code>, so it restarts on every keystroke. Debounced rather than write-on-change because the panel boots from Compact Flash — one edit of a 5-digit timeout would otherwise be five writes.</li>
+      <li>Comparison is <code>MEMCMP</code> because IEC has no struct <code>&lt;&gt;</code>. Completion is the <b>falling edge of <code>BUSY</code></b> — <code>FB_WritePersistentData</code> has no <code>DONE</code> output.</li>
+      <li>Every flush logs to <code>GVL_Log</code> (visible on the Logs page); a failure logs at ERR severity rather than failing silently.</li>
+    </ul>
+    <div class="callout warn">
+      <b>The safety half of this fix — do not remove one without the other.</b> Making persistence work also makes the <code>stMasterAutoCfg</code> BOOLs survive a power cycle. <code>MAIN</code> section 0 is a cold-boot block that deals with that: <code>bContinuous</code> is cleared (and now forced every scan) because the FB's IDLE branch tests it as a <b>level</b>, so restoring it TRUE would drive pistons within one scan of power-up with nothing external gating it. <code>bAutoMode</code> is deliberately <b>kept</b> (operator decision, 2026-07-27) — the machine returns to Automatic at IDLE and still needs a real start trigger. The timers, <code>bNoSensors</code> and <code>bBypassPlateSensors</code> are not cleared either: they are operator config, and persisting them is the point. Be aware a bench flag left on now survives a reboot.
+    </div>
   </div>
 
   <div class="card" data-c="plc">
     <h3>GVLs (global variable lists)</h3>
     <table class="kv-table">
       <tr><th>GVL</th><th>Role</th></tr>
-      <tr><td class="k">GVL_IO</td><td class="n">The only hardware-mapped symbols: <code>dIn AT %I* : ARRAY[1..16] OF BOOL</code>, <code>dOut AT %Q* : ARRAY[1..16] OF BOOL</code>. All EtherCAT links terminate here.</td></tr>
-      <tr><td class="k">GVL_App</td><td class="n">Plain-BOOL aliases with descriptive names (<code>bSensorSepRetracted1</code>, <code>bValveSepExtend1</code>, ...). MAIN copies raw <code>GVL_IO.dIn[N]</code> into these at the top of the scan, and the reverse at the bottom.</td></tr>
-      <tr><td class="k">GVL_HMI</td><td class="n">Six <code>ST_HmiPiston</code> instances (stSepSol1/2/3, stPushSol1/2/3), the two per-piston auto tiles (<code>stSepSol1Auto</code>, <code>stPushSol1Auto</code>), and the master (<code>stMasterAuto</code>). <code>{attribute 'TcHmiSymbol.AddSymbol'}</code> pragma auto-registers them with the HMI symbol table.</td></tr>
-      <tr><td class="k">GVL_HmiPersistent</td><td class="n"><code>VAR_GLOBAL PERSISTENT</code>. Two per-piston auto configs plus <code>stMasterAutoCfg</code>. Operator-tuned dwell/timeout values survive Activate + PLC restart; values reset to struct defaults only on cold-boot.</td></tr>
-      <tr><td class="k">GVL_Robot</td><td class="n">One <code>ST_HmiRobot</code> instance <code>stRobot</code>. Auto-registered via the same pragma. Rx fields written by the Python bridge over ADS; Tx pulses written by <code>FB_MasterAutoCycle</code> and drained by the bridge.</td></tr>
-      <tr><td class="k">GVL_Log</td><td class="n">256-slot ring buffer of <code>ST_LogEntry</code>, plus write index. <code>F_LogEvent</code> pushes into it from anywhere in the PLC; the bridge's <code>log_pump.py</code> pulls entries out over ADS and writes daily CSVs.</td></tr>
+      <tr><td class="k">GVL_IO</td><td class="n">The only hardware-mapped symbols: <code>dIn AT %I* : ARRAY[1..24] OF BOOL</code>, <code>dOut AT %Q* : ARRAY[1..16] OF BOOL</code>. All EtherCAT links terminate here. <b>Never add new <code>AT %*</code> declarations elsewhere</b> — new IO goes through the <code>GVL_App</code> alias layer.</td></tr>
+      <tr><td class="k">GVL_App</td><td class="n">Plain-BOOL aliases with descriptive names (<code>bSensorSepRetracted1</code>, <code>bValveSepExtend1</code>, <code>bPb1..3</code>, <code>bLedPb1..3</code>, <code>bLedGreen</code>, <code>bLedRed</code>, <code>bPlateSenL/R</code>). <code>PRG_IoMap</code> — not MAIN — copies between these and <code>GVL_IO</code>.</td></tr>
+      <tr><td class="k">GVL_HMI</td><td class="n">Eight <code>ST_HmiPiston</code> instances (stSepSol1..3, stPushSol1..3, stGripSolL, stGripSolR), the per-piston auto structs, the master (<code>stMasterAuto</code>), and the plate-sensor mirrors <code>bPlateSenL</code> / <code>bPlateSenR</code>. Legacy name — it holds piston runtime state. Plain <code>VAR_GLOBAL</code>, so runtime state and momentary commands do <b>not</b> persist.</td></tr>
+      <tr><td class="k">GVL_HmiPersistent</td><td class="n"><code>VAR_GLOBAL PERSISTENT</code>. Per-piston auto configs plus <code>stMasterAutoCfg</code>. Flushed by <code>FB_PersistentAutoSave</code>. <b>It mixes tunables with runtime state, so any new field here needs a decision</b> — carry it across a power cycle, or clear it in MAIN's cold-boot block.</td></tr>
+      <tr><td class="k">GVL_Robot</td><td class="n">Two blocks. Volatile: <code>stParams</code> (<code>ST_RobotParams</code>), <code>stRobot</code> (status mirror), <code>bTcpEnable</code>. <b>Plus a second <code>VAR_GLOBAL PERSISTENT</code> block</b> holding <code>sRobotHost</code> ('192.168.201.1') and <code>nRobotPort</code> (6001) — a GVL may hold both, which keeps the symbol paths unchanged. <code>bTcpEnable</code> stays volatile on purpose: a link disabled for a bench session should come back enabled rather than leaving the robot unreachable for no visible reason.</td></tr>
+      <tr><td class="k">GVL_Log</td><td class="n"><code>aLog[0..255]</code> ring of <code>ST_LogEntry</code> + monotonic <code>nWriteIdx</code>, plus <code>aRecent[0..19]</code> newest-first mirror that the Logs page binds directly, <code>bLogEnabled</code>, <code>bDebugMode</code>, and <code>sNow</code> (HH:MM:SS, refreshed once a second by MAIN from <code>FB_LocalSystemTime</code>). <code>F_LogEvent</code> writes both rings.</td></tr>
     </table>
+    <div class="callout warn">
+      <b>The panel log is RAM-only.</b> There is <b>no file I/O anywhere in the PLC</b> — no <code>FB_FileOpen</code>/<code>FB_FilePuts</code>, and no <code>ADSLOGSTR</code>, so nothing reaches the TwinCAT system event log either. <code>GVL_Log</code> is plain <code>VAR_GLOBAL</code> (not persistent), so every entry is lost on power cycle, PLC reset or download, and only the last 256 events are kept. Permanent records require FlowerPyHmi, which drains the ring into rotating files on a laptop.
+    </div>
+    <div class="callout">
+      <b>Where the HMI contract lives.</b> Four GVLs carry the <code>{attribute 'TcHmiSymbol.AddSymbol'}</code> pragma — <code>GVL_HMI</code>, <code>GVL_HmiPersistent</code>, <code>GVL_Log</code>, <code>GVL_Robot</code>. That pragma is the searchable marker for the whole PLC↔HMI contract; grep for it under <code>PLC1/GVLs/</code>. Put new HMI-facing symbols in the GVL whose <b>concern</b> they match — do not consolidate into <code>GVL_HMI</code>. After changing any of them, run <code>python scripts/check_pyhmi_contract.py</code>, because FlowerPyHmi is a separate repo and nothing keeps its symbol list in step automatically.
+    </div>
+  </div>
+
+  <div class="card" data-c="plc">
+    <h3>Physical IO channel map</h3>
+    <p><b>Rewired 2026-07-27</b> to match the physical terminals. Mapping lives in <code>PRG_IoMap.TcPOU</code>.</p>
+    <table class="kv-table">
+      <tr><th>Actuator / signal</th><th>DI (Retract)</th><th>DI (Extend)</th><th>DO</th></tr>
+      <tr><td class="k">SepSol1 / 2 / 3</td><td class="v">1 / 3 / 5</td><td class="v">2 / 4 / 6</td><td class="v">1 / 2 / 3</td></tr>
+      <tr><td class="k">PushSol1 / 2 / 3</td><td class="v">7 / 9 / 11</td><td class="v">8 / 10 / 12</td><td class="v">4 / 5 / 6</td></tr>
+      <tr><td class="k">PB1 (grip jog / cycle-start bypass)</td><td class="v">13</td><td class="v">—</td><td class="v">7 (LED1)</td></tr>
+      <tr><td class="k">PB2 (Sep jog)</td><td class="v">14</td><td class="v">—</td><td class="v">8 (LED2)</td></tr>
+      <tr><td class="k">PB3 (Push jog)</td><td class="v">15</td><td class="v">—</td><td class="v">9 (LED3)</td></tr>
+      <tr><td class="k">free (terminal-boundary gap)</td><td class="v">16</td><td class="v">—</td><td class="v">—</td></tr>
+      <tr><td class="k">GripSolL / GripSolR</td><td class="v">17 / 19</td><td class="v">18 / 20</td><td class="v">10 / 11</td></tr>
+      <tr><td class="k">PlateSenL / PlateSenR</td><td class="v">21 / 22</td><td class="v">—</td><td class="v">—</td></tr>
+      <tr><td class="k">LED_GREEN / LED_RED (machine status)</td><td class="v">—</td><td class="v">—</td><td class="v">12 / 13</td></tr>
+      <tr><td class="k">free</td><td class="v">23..24</td><td class="v">—</td><td class="v">14..16</td></tr>
+    </table>
+    <p><code>dIn[13]</code> and <code>dOut[7]</code> are the channels freed by retiring the robot's discrete-I/O handshake. <code>dIn[16]</code> is a deliberate gap: it closes out the second 8-channel input terminal so the grip sensors start on a terminal boundary.</p>
+    <p>Tag convention: <code>&lt;Device&gt;Sol&lt;N&gt;</code> = a single Extend coil (SOL-Spring, spring retracts). Retract <i>sensors</i> still exist on the DI side — retracted-position feedback is useful even without a retract coil.</p>
+    <div class="callout">
+      <b>Push-button behaviour is gated by <code>bAutoMode</code>.</b> In Automatic, PB1's rising edge starts a cycle and PB2/PB3 are ignored. In Manual, all three are <b>momentary jog</b>: held → extend, released → retract (PB1 = both Grip, PB2 = all 3 Sep, PB3 = all 3 Push). The three PB LEDs are dumb mirrors of the raw press state — a wiring/health diagnostic, not a status indicator. The two <b>status lamps</b> on <code>dOut[12..13]</code> are the real indicators: RED while latched in ERR; GREEN steady in Auto+IDLE, blinking (400 ms) in Auto+cycling, off in Manual or ERR. Green is off in ERR so the two lamps cannot contradict each other.
+    </div>
   </div>
 
   <div class="card" data-c="plc">
     <h3>MAIN scan structure</h3>
-    <p>Scan order in <code>PLC1/POUs/MAIN.TcPOU</code>:</p>
+    <p>Scan order in <code>PLC1/POUs/MAIN.TcPOU</code>. <b>MAIN no longer touches <code>GVL_IO</code></b> — <code>PRG_IoMap</code> owns that on its own faster task.</p>
     <ol class="compact">
-      <li><b>READ INPUTS.</b> Copy <code>GVL_IO.dIn[N]</code> to <code>GVL_App.bSensor*</code>. Wired for SepSol1 (<code>dIn[1..2]</code>) and PushSol1 (<code>dIn[7..8]</code>); SepSol2/3 + PushSol2/3 lines are commented placeholders (<code>dIn[??]</code>) pending channel assignment.</li>
-      <li><b>Call <code>fbMasterAutoCycle</code>.</b> Reads sensor <code>bIs*</code> from all six piston structs, reads Pos1/Pos2 from <code>stRobot</code>, writes Tx pulses back into <code>stRobot</code>. Called first so its <code>bSepCmd*[N]</code> / <code>bPushCmd*[N]</code> outputs feed forward this scan.</li>
-      <li><b>Mode-forcing block.</b> When <code>fbMasterAutoCycle.bAnyRunning</code> is TRUE, forces <code>stSep/PushSolN.eMode := Automatic</code> for indices ≤ <code>uiPairCount</code>. Otherwise no-op (operator's manual choice is preserved).</li>
-      <li><b>Call <code>fbSepSol1Auto</code> and <code>fbPushSol1Auto</code>.</b> Per-piston tiles for bench-testing loops on one piston.</li>
-      <li><b>Call six piston FBs.</b> <code>fbSepSol1..3</code>, <code>fbPushSol1..3</code>. Each <code>bAutoCmd*</code> is an <code>OR</code>-merge of the corresponding per-piston auto FB (where present) and the master's array output — e.g. <code>fbSepSol1Auto.bCmdExtend OR fbMasterAutoCycle.bSepCmdExtend[1]</code>.</li>
-      <li><b>WRITE OUTPUTS.</b> Copy <code>GVL_App.bValve*</code> to <code>GVL_IO.dOut[N]</code>. Layout is fully assigned on DO: <code>dOut[1..3]</code> = SepSol1..3 Extend coils, <code>dOut[4..6]</code> = PushSol1..3 Extend coils, <code>dOut[7..8]</code> are freed (previously PushSol1's two SOL-SOL coils; now unused, kept assigned to <code>FALSE</code>).</li>
+      <li><b>Section 0 — cold boot + forcing.</b> A one-shot cold-boot block, plus <code>stMasterAutoCfg.bContinuous := FALSE</code> forced <b>every</b> scan. <code>bAutoMode</code> is deliberately not touched.</li>
+      <li><b>Section 0a — clock tick.</b> Refresh <code>GVL_Log.sNow</code> from <code>FB_LocalSystemTime</code> (<code>dwCycle := 1</code>), rebuilding the string only when the second rolls over. It lives in a GVL rather than inside <code>F_LogEvent</code> because <b>a FUNCTION cannot own an FB instance</b> — functions are stateless, so the cyclic tick has to happen in a POU that has one. Reads <code>'--:--:--'</code> until the time source reports valid, so an unset panel RTC looks like an unset clock rather than events at 00:00:03.</li>
+      <li><b>Call <code>fbRobotTcp</code>.</b> One socket, dialled out to <code>sRobotHost:nRobotPort</code>. Writes the status mirror and <code>nRobotCmd</code>; reads <code>nStateOut</code> and the 11 params.</li>
+      <li><b>R_TRIG on <code>stParams.nRobotCmd</code>.</b> MAIN owns the edge detection: <code>= 1</code> feeds a one-scan <code>bExtStartPulse</code> into the master cycle, <code>= 2</code> drives <code>stMasterAuto.bReset</code>.</li>
+      <li><b>Call <code>fbMasterAutoCycle</code>.</b> Reads <code>bIs*</code> from all eight piston structs and the two plate sensors. Called before the piston FBs so its command arrays feed forward this scan.</li>
+      <li><b>Global Auto/Manual hard interlock.</b> <code>bAutoMode</code> is driven unconditionally each scan onto <b>both</b> <code>eMode</code> and <code>bMode</code> of all eight pistons. <code>FB_SolSpringPiston_2Pos</code> edge-syncs the two, so forcing only one would let a stray toggle propagate for a scan; forcing both closes that gap.</li>
+      <li><b>Compute <code>nStateOut</code>.</b> Immediately after the master cycle, so any transition this scan is visible to the robot on the next STATE push. <code>TO_INT(eStep)</code> in Auto; the <code>MANUAL = 30</code> sentinel while <code>bAutoMode = FALSE</code>.</li>
+      <li><b>Call eight piston FBs.</b> Each <code>bAutoCmd*</code> is an <code>OR</code>-merge of the per-piston auto FB and the master's array output. The panel push-buttons feed the separate <code>bJogExtend</code> <code>VAR_INPUT</code>, so MAIN never mutates the HMI-owned <code>stHmi.bManJogExtend</code> field.</li>
+      <li><b>Status lamps.</b> <code>bLedRed := (eStep = ERR)</code>; <code>bLedGreen</code> steady / blinking / off per the table above. The blink source is a self-resetting <code>TON</code> <b>toggling a BOOL</b>, not <code>TON.Q</code> directly — a bare TON pulses for a single scan per period, which would be invisible rather than a blink.</li>
+      <li><b>Call <code>fbPersistentAutoSave</code> last.</b> Debounced flush of everything persistent.</li>
     </ol>
-    <div class="callout warn">
-      <b>Soft-only pistons.</b> The DO side is fully assigned. The DI side is still partial — SepSol2/3 and PushSol2/3 have no sensor channels wired, so their "Extended" / "Retracted" indicators light up only via the operator's Simulate checkboxes. See <a href="open-issues.html">Open issues</a> for the channel table.
+    <div class="callout">
+      <b>Mode-forcing replaced the old "put all pistons to Auto on Start" checkbox.</b> A single machine-wide <code>bAutoMode</code> is now the sole source of truth for every piston's mode — "no option to double control". In Auto the master cycle owns all eight pistons; in Manual it is held IDLE and the operator jogs.
     </div>
   </div>
 
@@ -239,212 +315,174 @@ flowchart LR
 <!-- ============================================================ -->
 <!-- HMI                                                          -->
 <!-- ============================================================ -->
-<section class="panel" id="panel-hmi">
-  <h2>HMI — TcHmi runtime</h2>
-  <p><b>Retired 2026-07-26.</b> The TwinCAT web HMI (<code>Flower_PLC_HMI/Flower_HMI/</code>) and the dev PLC solution alongside it were deleted from the repo; the engineering-side UI is now <code>FlowerPyHmi</code>, a separate repo at <code>167_01_Saad_Flower/FlowerPyHmi</code> that talks ADS to the panel. Recover the old project from git history if ever needed.</p>
+<section class="panel" id="panel-visu">
+  <h2>Panel VISU — classic PLC visualization</h2>
+  <p>The operator interface is a <b>classic TwinCAT visualization</b> rendered by the PLC runtime on the CP6606 itself. Seven <code>.TcVIS</code> pages under <code>PLC1/VISU/</code>.</p>
+
+  <div class="callout warn">
+    <b>The TwinCAT web HMI is gone.</b> <code>Flower_PLC_HMI/</code> — the dev PLC solution and the TcHmi web HMI <code>Flower_HMI/</code> — was <b>deleted 2026-07-26</b>. There is no mirror solution to keep in sync any more, so PLC edits land in one place only. The engineering-side UI is now <b>FlowerPyHmi</b> (separate repo at <code>167_01_Saad_Flower/FlowerPyHmi</code>, ADS over the network). Everything below is about the panel's own VISU, which is a completely different technology from TcHmi: numeric-ID XML serialization, no JSON schemas, no symbol ACLs.
+  </div>
 
   <div class="card" data-c="hmi">
     <h3>Pages</h3>
+    <p>Each page must be registered in <code>PLC1.plcproj</code> with a <code>&lt;Compile Include&gt;</code> plus a <code>&lt;DependentUpon&gt;VISU\VisualizationManager.TcVMO&lt;/…&gt;</code> block — <b>a new <code>.TcVIS</code> is invisible to the build without one.</b></p>
     <table class="kv-table">
-      <tr><th>Page</th><th>Purpose</th></tr>
-      <tr><td class="k">StartPage.content</td><td class="n">Stock landing page.</td></tr>
-      <tr><td class="k">Piston.content</td><td class="n">1100×730 grid: 3 columns × 2 rows of <code>UC_Piston</code> instances. Left column SepSol1/PushSol1, middle SepSol2/PushSol2, right SepSol3/PushSol3. Each UC bound to its respective <code>%s%ADS.PLC1.GVL_HMI.st*%/s%</code> symbol.</td></tr>
-      <tr><td class="k">Robot.content</td><td class="n">Single <code>UC_Robot</code> instance bound to <code>%s%ADS.PLC1.GVL_Robot.stRobot%/s%</code>. Room reserved for future comms (Modbus, second robot, etc.).</td></tr>
-      <tr><td class="k">AutoCycle.content</td><td class="n">Hosts one <code>UC_MasterAutoCycle</code> bound to <code>stMasterAuto</code>, <code>stMasterAutoCfg</code>, and <code>stRobot</code>. This is where the full-machine cycle is driven and where a bench operator can advance any waiting step via the per-step Sim checkboxes.</td></tr>
-      <tr><td class="k">Events.content</td><td class="n">Stock event/alarm log.</td></tr>
-      <tr><td class="k">Settings.content</td><td class="n">Stock locale / theme picker.</td></tr>
+      <tr><th>Page</th><th>Contents</th><th>Reached from</th></tr>
+      <tr><td class="k">Main</td><td class="n">Home. AutoMain embedded as a frame (spans x &minus;4…684) + 4 nav buttons + the two plate lamps in the 110 px strip at x=724, bound to <code>GVL_HMI.bPlateSenL</code> / <code>bPlateSenR</code>.</td><td class="n">—</td></tr>
+      <tr><td class="k">AutoMain</td><td class="n">Title, step/error fields, START/STOP/RESET, <b>3 checkboxes</b> (Auto Mode, No sensors, Bypass plate sensors), 5 editable timers.</td><td class="n">embedded in Main</td></tr>
+      <tr><td class="k">PistonsManual</td><td class="n">6 Piston frames — Sep/Push 1-3.</td><td class="n">Main</td></tr>
+      <tr><td class="k">GripperManual</td><td class="n">2 Piston frames — <code>stGripSolL</code> / <code>stGripSolR</code>.</td><td class="n">Main</td></tr>
+      <tr><td class="k">Robot</td><td class="n">Conn state, Rx/Tx counts, last Rx/Tx, <code>nStateOut</code>, <code>nRobotCmd</code>, Get Sync + New Bulb buttons, 11 editable tuning params, editable Robot IP.</td><td class="n">Main</td></tr>
+      <tr><td class="k">Logs</td><td class="n">20 newest entries (Sev / Time / Message), Enabled + Debug checkboxes, write counter. 69 elements; rows are display-only.</td><td class="n">Main</td></tr>
+      <tr><td class="k">Piston</td><td class="n">The reusable per-piston control, instanced via frames.</td><td class="n">—</td></tr>
     </table>
+    <p>The <b>Continuous checkbox was removed</b> from AutoMain on 2026-07-27 (the remaining three shifted up 40 px to close the gap). The Logs page costs nothing per scan: <code>F_LogEvent</code> already maintains the newest-first <code>aRecent</code> mirror, so the 20&times;3 grid binds straight to it.</p>
   </div>
 
   <div class="card" data-c="hmi">
-    <h3>UserControl — <code>UC_Piston</code></h3>
-    <p>337×340 card. Two parameters: <code>piston : PLC1.ST_HmiPiston</code>, <code>bModeAuto : BOOL</code>.</p>
+    <h3>Editing rule — clone, never author</h3>
+    <div class="callout warn">
+      <b>Do not hand-write elements into a <code>.TcVIS</code>.</b> These files use numeric-ID serialization, and <b>XAE silently drops elements it cannot parse</b> — the file still parses as XML, the build still succeeds, and the element simply is not there. Every element in this project was produced by <b>cloning a proven block</b> from an existing page and retargeting it. After any edit, open the page in TcXaeShell and confirm the element renders before activating.
+    </div>
+    <p>Run <code>python scripts/validate_visu.py</code> after <b>every</b> VISU edit. It asserts two things XML well-formedness does not give you: that each element is a direct child of <code>VisualElementList</code>, and that no GUID is shared between two pages.</p>
+
+    <h3>Two identity layers, and the trap in the second</h3>
     <ul class="compact">
-      <li><b>Title Textblock</b> bound to <code>%pp%piston::Name%/pp%</code>.</li>
-      <li><b>MOVING</b> indicator, colored green while either coil is energized.</li>
-      <li><b>Extend row</b>: sensor indicator (left) + EXTEND button (state-symbol <code>bManCmdExtend</code>) + JOG button (state-symbol <code>bManJogExtend</code>) + solenoid indicator (right).</li>
-      <li><b>Retract row</b>: mirror layout.</li>
-      <li><b>Man/Auto ToggleSwitch</b>: bidirectional trigger syncs local <code>bModeAuto</code> BOOL ↔ <code>piston::eMode</code> enum.</li>
+      <li>Each page's <code>&lt;Visu Id&gt;</code> GUID equals every <code>VisualElementOwningObjectGuid</code> inside it. Hold that invariant when cloning a page.</li>
+      <li><b>Besides its elements, every page carries ~60 more GUIDs</b> naming the objects the compiler generates for it: <code>VisuRegDesc.FbGuid</code>, <code>InputsPou.FbGuid</code> (this one <i>becomes</i> <code>&lt;Page&gt;__inp__vis</code>), one per generated method, the generated GVLs, <code>VisuRegisterGvl</code>, <code>DialogDut</code>.</li>
     </ul>
+    <p>This one bit real work. <code>GripperManual</code> was cloned from <code>PistonsManual</code> and duplicated all 61 of them. Because the <b>first</b> <code>FbGuid</code> happens to equal <code>&lt;Visu Id&gt;</code>, the page-GUID rewrite fixed exactly one and the diff looked complete. Two visualizations then registered the same input POU and the build failed with <code>Unknown type: 'PistonsManual__inp__vis'</code> — <b>naming a file that had not been touched in weeks.</b> The page rendered fine throughout; only a build catches this. Fix with <code>scripts/fix_visu_object_guids.py</code>, which re-issues a clone's copies (uuid5-derived, so idempotent) — rewrite the <b>clone</b>, never the original.</p>
+    <p><b>The invariant, confirmed against the pristine IDE-authored pages:</b> outside <code>&lt;TypeList&gt;</code>, no GUID is shared by any two <code>.TcVIS</code> files. (<code>&lt;TypeList&gt;</code> is the exception — it references VisualElem plugin types that <i>are</i> identical everywhere.)</p>
   </div>
 
   <div class="card" data-c="hmi">
-    <h3>UserControl — <code>UC_Robot</code></h3>
-    <p>337×340 card. One parameter: <code>robot : PLC1.ST_HmiRobot</code>. Now shows both Rx and Tx state.</p>
-    <ul class="compact">
-      <li><b>Title Textblock</b> bound to <code>%pp%robot::Name%/pp%</code>.</li>
-      <li><b>Connection state rectangle</b> — colored by trigger on <code>%pp%robot::eConnState%/pp%</code>: green (Connected), yellow (Connecting), red (Error), grey (Disconnected). Text overlay bound to <code>%pp%robot::sConnStateText%/pp%</code>.</li>
-      <li><b>AT POS 1 / 2 / 3</b> indicator rectangles — green when the corresponding <code>bAtPosN</code> is TRUE.</li>
-      <li><b>Packets Rx / Tx</b> — Textblocks bound to <code>%pp%robot::nPacketsRx%/pp%</code> and <code>%pp%robot::nPacketsTx%/pp%</code>.</li>
-      <li><b>Last Rx / Tx</b> — monospace Textblocks bound to <code>%pp%robot::sLastMessage%/pp%</code> and <code>%pp%robot::sLastTxMessage%/pp%</code>.</li>
-    </ul>
+    <h3>A page name is an IEC identifier</h3>
+    <p>The compiler generates an FB and a <code>&lt;Page&gt;__inp__vis</code> type from the page name, so it must not collide with a standard function. The Logs page was first called <code>Log</code> and failed to compile with <code>Identifier expected instead of "Log"</code> — <b><code>LOG</code> is an IEC 61131-3 standard function</b>, as are <code>LN</code>, <code>EXP</code>, <code>ABS</code>, <code>SQRT</code>, <code>SEL</code>, <code>MUX</code>, <code>LEN</code>, <code>LEFT</code>, <code>MID</code> and <code>FIND</code>. The <i>displayed</i> label is unconstrained: the page is named <code>Logs</code> while its title and nav button both read "Log".</p>
   </div>
 
   <div class="card" data-c="hmi">
-    <h3>UserControl — <code>UC_MasterAutoCycle</code></h3>
-    <p>505×540 card. Four parameters: <code>auto : PLC1.ST_HmiMasterAuto</code>, <code>cfg : PLC1.ST_HmiMasterAutoCfg</code>, <code>robot : PLC1.ST_HmiRobot</code>, <code>title : STRING</code>.</p>
-    <ul class="compact">
-      <li><b>Step banner</b> — text bound to <code>%pp%auto::sStepText%/pp%</code>; background color driven by a trigger on <code>%pp%auto::iErrorCode%/pp%</code> (red when non-zero, otherwise green/grey for running/idle).</li>
-      <li><b>Elapsed time</b> and <b>cycles completed</b> counters.</li>
-      <li><b>START / STOP / RESET</b> momentary buttons wired to <code>bStart</code> / <code>bStop</code> / <code>bReset</code>. RESET also resets <code>iErrorCode</code>.</li>
-      <li><b>Pair count</b> spinner (<code>uiPairCount</code>, 1..3), <b>Continuous</b> checkbox, and four numeric inputs for the dwell / timeout values in <code>ST_HmiMasterAutoCfg</code>.</li>
-      <li><b>Nine per-step Sim checkboxes</b> matching the <code>bSimStep_*</code> fields — rising-edge triggers that shortcut the current step's wait condition. The FB auto-clears each on consumption.</li>
-      <li><b>Two robot-sim checkboxes</b> — <code>%pp%robot::bAtPos1%/pp%</code> and <code>%pp%robot::bAtPos2%/pp%</code> bound TwoWay so a bench operator can drive the cycle without a live robot.</li>
-    </ul>
-  </div>
-
-  <div class="card" data-c="hmi">
-    <h3>Two-schema model — where each symbol is defined</h3>
-    <p>TwinCAT HMI uses two schema files that must agree for a symbol to be visible AND writable:</p>
-    <table class="kv-table">
-      <tr><th>File</th><th>Role</th></tr>
-      <tr><td class="k">Properties/tchmi.project.Schema.json</td><td class="n"><b>Project schema.</b> Type definitions used by the designer / IntelliSense. Contains <code>PLC1.E_ControlMode</code>, <code>PLC1.E_RobotConnState</code>, <code>PLC1.ST_HmiPiston</code>, <code>PLC1.ST_HmiRobot</code>.</td></tr>
-      <tr><td class="k">Server/TcHmiSrv/TcHmiSrv.Config.default.json</td><td class="n"><b>Server schema.</b> ADS-side type definitions (<code>ADS-PLC1.*</code>), SYMBOLS map (<code>ADS.PLC1.GVL_HMI.stSepSol1</code>, ..., <code>ADS.PLC1.GVL_Robot.stRobot</code>), and USERGROUPS ACL grants (each symbol must be listed in <code>USERGROUPS.__SystemUsers.SYMBOLS</code> with access value <code>3</code> = R/W).</td></tr>
-    </table>
-    <div class="callout warn" style="margin-top:6px">
-      <b>Gotcha.</b> Forgetting the USERGROUPS.__SystemUsers.SYMBOLS grant is the #1 cause of <code>SYMBOL_NOT_AUTHORIZED</code> errors that survive "Activate Configuration". Adding the SYMBOLS map entry alone isn't enough.
+    <h3>The classic VISU cannot stringify an enum</h3>
+    <div class="callout warn">
+      Treat this as settled. <code>{attribute 'to_string'}</code> on an enum makes <code>TO_STRING()</code> available <b>in ST only</b> — it does not teach the visualization anything. Binding <code>aRecent[i].eSev</code> to a text output renders <code>0</code>/<code>1</code>/<code>2</code>/<code>3</code>. This was assumed the other way round and shipped wrong twice before being fixed on 2026-07-27.
+    </div>
+    <p>That is why every page here carries a <b>STRING mirror</b> next to its enum: <code>sStepText</code> beside <code>eStep</code>, <code>sErrorText</code>, <code>sConnStateText</code>, and <code>ST_LogEntry.sSevText</code> beside <code>eSev</code>. <code>sSevText</code> is <code>STRING(8)</code> rather than an exactly-sized <code>STRING(4)</code> so a future severity name cannot truncate silently.</p>
+    <p>The Logs page's middle column shows <b>Time, not Source</b> (changed 2026-07-27). <code>ST_LogEntry</code> used to carry no timestamp on the reasoning that "Python assigns wall-clock time when it drains the ring" — true, but that only ever covered FlowerPyHmi; the panel has no drainer, so the page had no way to show <i>when</i>. <code>sSource</code> is untouched in the struct and still reaches FlowerPyHmi; only the panel column changed. Layout is now Sev 20-80, Time 84-174, Message 178-780.</p>
+    <div class="callout warn">
+      <b>The timestamps are only as good as the panel RTC.</b> If <code>FB_LocalSystemTime</code> reports invalid, <code>sNow</code> reads <code>'--:--:--'</code> rather than a plausible wrong time — an unset clock should look unset.
     </div>
   </div>
 
   <div class="card" data-c="hmi">
-    <h3>Localization</h3>
-    <p><code>Localization/en.localization</code> + <code>de.localization</code>. Current keys: <code>L_StartPage</code>, <code>L_Piston</code>, <code>L_Robot</code>, <code>L_Events</code>, <code>L_Localization</code>, <code>L_Theme</code>, <code>L_Settings</code>. Both files must be kept in sync when adding a new key.</p>
+    <h3>Numeric entry — the one element that had to come from the IDE</h3>
+    <p>The project originally had only two input mechanisms (<code>Visu_TapInput</code> → BOOL, and <code>ChangeVisuInputAction</code>), so there was nothing to clone for an editable number. The operator authored <b>one</b> template in TcXaeShell (<code>GenElemInst_229</code> on the Robot page), and all 16 editable fields are clones of it.</p>
+    <p>The template is a plain <code>VisuFbElemTextfield</code> whose <code>OnMouseClick</code> carries an <code>InputBoxInputAction</code>; <code>UseTextOutputVariable=true</code> means it writes back through the normal displayed-variable member. <b>So a display field and an edit field differ only by that action block</b> — which is exactly why it could not be invented and had to come from the IDE.</p>
+    <ul class="compact">
+      <li><b>Robot page</b> — 11 params at x 420-770, bound to <code>GVL_Robot.stParams.&lt;NAME&gt;</code> (absolute paths: it is a standalone page). Each carries <code>InputBoxMin</code>/<code>InputBoxMax</code> at the vendor range.</li>
+      <li><b>AutoMain</b> — 5 timers at x 500-780, bound to <code>stCfg.&lt;name&gt;</code> (<b>interface-relative</b>: AutoMain is embedded as a frame in Main and declares <code>stCfg : ST_HmiMasterAutoCfg</code>, so absolute paths would be wrong here).</li>
+      <li><b>Robot IP</b> — a clone of the same field with format <code>%s</code> and <code>InputBoxMin</code>/<code>InputBoxMax</code> <b>cleared</b> (numeric bounds are meaningless on a STRING). <code>InputType</code> stays <code>"Default"</code>, which derives the dialog from the bound variable's type — that is why a STRING gets the alphanumeric keypad and no new element type had to be authored.</li>
+    </ul>
+    <div class="callout">
+      <b>Per-control limits only protect the control they are set on.</b> The 11 params are bounded on the panel, but FlowerPyHmi, any future ADS client, and the <code>bSetParam</code> escape hatch all bypass them — which is why <code>FB_RobotTcpClient</code> clamps again on the way out (see the Robot tab).
+    </div>
+  </div>
+
+  <div class="card" data-c="hmi">
+    <h3>Labels and build scripts</h3>
+    <p>Static label text lives in <code>GlobalTextList.TcGTLO</code>, keyed by each element's counter member. The build scripts register their own entries; XAE also adds missing ones on first open.</p>
+    <p>All idempotent, all cloning proven blocks rather than authoring them: <code>build_grippermanual.py</code>, <code>build_robot_page.py</code>, <code>build_log_page.py</code>, <code>add_main_nav.py</code>, <code>add_main_plate_status.py</code>, <code>add_nosensors_checkbox.py</code>, <code>add_robot_params.py</code>, <code>add_robot_ip_field.py</code>, <code>remove_continuous_checkbox.py</code>, <code>fix_logs_sev_column.py</code>, <code>fix_logs_time_column.py</code>, <code>fix_visu_object_guids.py</code>, and <code>validate_visu.py</code>.</p>
   </div>
 </section>
 
 <!-- ============================================================ -->
 <!-- BRIDGE                                                       -->
 <!-- ============================================================ -->
-<section class="panel" id="panel-bridge">
-  <h2>Robot Bridge — Python + pyads</h2>
-  <p>Location: <code>RobotBridge/</code> at the repo root. Single-file Python service, no framework. Runs as a long-lived process (foreground console, Scheduled Task, or NSSM service).</p>
+<section class="panel" id="panel-robot">
+  <h2>Robot — TCP from the PLC (<code>FB_RobotTcpClient</code>)</h2>
+  <p>Native ST in <code>PLC1/POUs/FB_RobotTcpClient.TcPOU</code>, using <code>Tc2_TcpIp</code> (ships with TF6310, installed on the CP6606). Dials the robot's server at <code>GVL_Robot.sRobotHost:nRobotPort</code> and keeps one persistent socket. <code>MAIN</code> calls it every scan.</p>
 
-  <div class="mermaid-wrap">
-    <pre class="mermaid">
-sequenceDiagram
-  participant Robot as Robot (server, :6001)
-  participant Bridge as robot_bridge.py (client)
-  participant PLC as PLC (GVL_Robot.stRobot)
-  participant HMI as HMI (Robot &amp; AutoCycle pages)
-
-  Note over Bridge: startup — load config.yaml, open ADS
-  Bridge->>PLC: eConnState = Connecting
-  Bridge->>Robot: TCP connect 192.168.201.1:6001
-  Robot-->>Bridge: SYN-ACK, socket up
-  Bridge->>PLC: eConnState = Connected
-
-  loop main loop (2 s socket timeout)
-    alt inbound frame arrives
-      Robot->>Bridge: "POS2\n"
-      Bridge->>PLC: nPacketsRx++, sLastMessage="POS2", bAtPos2=T
-      PLC-->>HMI: (subscription) POS2 indicator lights
-    else RESET_ERROR frame
-      Robot->>Bridge: "RESET_ERROR\n"
-      Bridge->>PLC: bRxResetError = TRUE
-      Note over PLC: FB_MasterAutoCycle rising-edge<br/>consumes flag, exits ERR
-    else recv times out (no data)
-      Bridge->>Bridge: idle for socket_timeout
-    end
-
-    Bridge->>PLC: read bTxAutoStarted / bTxPushDone / bTxPistonsError
-    alt any Tx flag = TRUE
-      Bridge->>Robot: "AUTO_STARTED\n" (or PUSH_DONE / PISTONS_ERROR)
-      Bridge->>PLC: nPacketsTx++, sLastTxMessage="AUTO_STARTED", clear the flag
-    end
-
-    opt idle &gt; heartbeat_idle_seconds
-      Bridge->>Robot: "HEARTBEAT" bytes (drop-detector, no reply expected)
-    end
-  end
-
-  Robot--xBridge: connection dropped
-  Bridge->>PLC: eConnState = Disconnected
-  Note over Bridge: sleep reconnect.delay_seconds, redial
-    </pre>
+  <div class="callout warn">
+    <b>This replaced the Python bridge.</b> <code>RobotBridge/</code> is retired: it could never have run on the panel (WinCE 7 on ARM has no supported CPython, so no <code>pyads</code>), and the <code>POS1</code>/<code>POS2</code>/<code>POS3</code> protocol it implemented was never what the robot speaks. The discrete-I/O handshake is retired too. See <a href="viewer.html?doc=../RobotBridge/README.md">RobotBridge/README.md</a> for what is still kept there and why.
   </div>
 
   <div class="card" data-c="bridge">
-    <h3>Files</h3>
+    <h3>Wire protocol</h3>
+    <p><b>Raw ASCII, NO newline framing.</b> One send → one reply. Matches the vendor's reference client and dummy server, plus the STATE/CMD frames added for this machine.</p>
     <table class="kv-table">
-      <tr><th>File</th><th>Role</th></tr>
-      <tr><td class="k">robot_bridge.py</td><td class="n">The bridge. Single file. Sections: <code>ConnState</code> mirror, <code>Config</code> loader, <code>PlcRobotSymbol</code> ADS reader/writer (Rx state + Tx pulse polling + RESET_ERROR handling), <code>LineAccumulator</code> byte-to-line parser, <code>parse_position</code> / <code>is_reset_error</code>, socket helpers, <code>run_once</code>, <code>main</code>.</td></tr>
-      <tr><td class="k">bridge_gui.py</td><td class="n">tkinter desktop app that combines <b>bridge process control</b> + <b>PLC state view</b> + a <b>robot simulator</b>. Launch via <code>start_gui.bat</code> or <code>python bridge_gui.py --config config.yaml</code>. Includes a plain-English "what is happening right now" panel for learning TCP/IP.</td></tr>
-      <tr><td class="k">sim_robot.py</td><td class="n">Scripted TCP client that emits POS frames. Assumes the bridge is running in server mode — with the current client-mode default it is used only in dev setups where you flip <code>robot.role</code> back to <code>server</code>. For the shipped client-mode config, use the GUI's robot-simulator panel or a small TCP-server helper.</td></tr>
-      <tr><td class="k">csv_logger.py, log_pump.py, retention.py</td><td class="n">PLC log pump. <code>log_pump</code> polls <code>GVL_Log.nWriteIdx</code> over ADS, drains new entries, hands them to <code>csv_logger</code>; <code>retention</code> caps daily-CSV storage by age + size.</td></tr>
-      <tr><td class="k">config.example.yaml</td><td class="n">Template. Commit; copy to <code>config.yaml</code> and edit real endpoints.</td></tr>
-      <tr><td class="k">config.yaml</td><td class="n"><b>Gitignored.</b> Real endpoints. Not in version control.</td></tr>
-      <tr><td class="k">requirements.txt</td><td class="n"><code>pyads</code>, <code>pyyaml</code>. Both permissively licensed. GUI uses only stdlib (tkinter).</td></tr>
-      <tr><td class="k">start_bridge.bat / start_gui.bat</td><td class="n">Windows convenience launchers for the headless bridge and the GUI.</td></tr>
-      <tr><td class="k">Client_working_example/</td><td class="n">Reference TCP client used to derive the socket-timeout / keepalive / heartbeat design. Do not modify — kept for archaeological reference.</td></tr>
-      <tr><td class="k">README.md</td><td class="n">Install + configure + smoke test.</td></tr>
+      <tr><th>PLC → robot</th><th>Robot → PLC</th><th>Purpose</th></tr>
+      <tr><td class="k">GET_SYNC</td><td class="v">SYNC:NAME=VALUE,...</td><td class="n">Pull all 11 tuning params</td></tr>
+      <tr><td class="k">NAME:VALUE</td><td class="v">OK: SET NAME</td><td class="n">Set one tuning param</td></tr>
+      <tr><td class="k">New_Bulb:1</td><td class="v">OK: SET New_Bulb</td><td class="n">Start a fresh bulb</td></tr>
+      <tr><td class="k">STATE:&lt;n&gt;</td><td class="v">CMD:&lt;m&gt;</td><td class="n">State push + command receive</td></tr>
     </table>
-  </div>
-
-  <div class="card" data-c="bridge">
-    <h3><code>config.yaml</code> keys</h3>
-    <table class="kv-table">
-      <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
-      <tr><td class="k">plc.ams_net_id</td><td class="v">"127.0.0.1.1.1"</td><td class="n">AMS Net ID of the TwinCAT runtime. Local runtime uses this default. Remote hosts need a route.</td></tr>
-      <tr><td class="k">plc.ams_port</td><td class="v">851</td><td class="n">PLC1's ADS port.</td></tr>
-      <tr><td class="k">plc.symbol_prefix</td><td class="v">"GVL_Robot.stRobot"</td><td class="n">Root path of the <code>ST_HmiRobot</code> instance the bridge reads/writes.</td></tr>
-      <tr><td class="k">robot.role</td><td class="v">"client"</td><td class="n"><b>Committed default.</b> Robot is the TCP server; bridge dials in. Set to <code>"server"</code> only if you flip the direction for dev/sim purposes.</td></tr>
-      <tr><td class="k">robot.host</td><td class="v">"192.168.201.1"</td><td class="n">Robot's IP. Used in client mode.</td></tr>
-      <tr><td class="k">robot.port</td><td class="v">6001</td><td class="n">TCP port on the robot.</td></tr>
-      <tr><td class="k">robot.encoding</td><td class="v">"ascii"</td><td class="n">Character encoding of the robot's frames.</td></tr>
-      <tr><td class="k">robot.socket_timeout</td><td class="v">2</td><td class="n">Seconds the socket blocks on <code>connect</code>/<code>recv</code>/<code>send</code> before raising. Matches the reference client.</td></tr>
-      <tr><td class="k">robot.heartbeat_idle_seconds</td><td class="v">5</td><td class="n">After this many seconds without inbound data, the bridge writes <code>heartbeat_payload</code> bytes to catch a half-open connection. <code>0</code> disables. No reply is expected.</td></tr>
-      <tr><td class="k">robot.heartbeat_payload</td><td class="v">"HEARTBEAT"</td><td class="n">The bytes sent as the drop-detector probe.</td></tr>
-      <tr><td class="k">reconnect.delay_seconds</td><td class="v">2</td><td class="n">Backoff between reconnect attempts.</td></tr>
-      <tr><td class="k">logger.dir</td><td class="v">"./logs"</td><td class="n">Where the PLC-log pump writes daily CSVs.</td></tr>
-      <tr><td class="k">logger.retention_days / retention_mb</td><td class="v">30 / 500</td><td class="n">Older or larger files are deleted. Retention runs once at startup and once per hour after.</td></tr>
-      <tr><td class="k">logger.level</td><td class="v">"INFO"</td><td class="n">Minimum severity written. Operator can raise/lower without restart via <code>GVL_Log.bDebugMode</code>.</td></tr>
-      <tr><td class="k">logger.plc_ring_poll_ms</td><td class="v">500</td><td class="n">How often the pump reads <code>GVL_Log.nWriteIdx</code>. Lower = tighter latency, higher = fewer ADS reads.</td></tr>
-    </table>
-  </div>
-
-  <div class="card" data-c="bridge">
-    <h3>Wire format</h3>
-    <p>ASCII, line-terminated by <code>\n</code>. Case-insensitive. Trailing <code>\r</code> is stripped. Frame tokens are commissioning-tunable — the constants live in <code>PlcRobotSymbol.TX_FRAMES</code> and the parser in <code>parse_position</code> / <code>is_reset_error</code>.</p>
-    <p><b>Robot → Bridge → PLC (inbound):</b></p>
-    <table class="kv-table">
-      <tr><th>Frame</th><th>Effect on <code>GVL_Robot.stRobot</code></th></tr>
-      <tr><td class="k">POS1\n</td><td class="n"><code>bAtPos1 = TRUE</code>, <code>bAtPos2 = FALSE</code>, <code>bAtPos3 = FALSE</code>. <code>nPacketsRx++</code>, <code>sLastMessage="POS1"</code>.</td></tr>
-      <tr><td class="k">POS2\n</td><td class="n">Same, but Pos2 latched. FB_MasterAutoCycle's WAIT_POS2 state exits on Pos2 rising.</td></tr>
-      <tr><td class="k">POS3\n</td><td class="n">Same, but Pos3 latched.</td></tr>
-      <tr><td class="k">RESET_ERROR\n</td><td class="n"><code>bRxResetError = TRUE</code> (one-scan pulse — FB consumes on rising edge, clears the flag). Master cycle exits ERR back to IDLE.</td></tr>
-      <tr><td class="k">anything else</td><td class="n"><code>nPacketsRx++</code>, <code>sLastMessage</code> updates, but no state change. Useful for surfacing malformed frames on the HMI.</td></tr>
-    </table>
-    <p><b>PLC → Bridge → Robot (outbound Tx pulses, drained once per main-loop iteration):</b></p>
-    <table class="kv-table">
-      <tr><th>PLC flag</th><th>Frame sent</th><th>Trigger</th></tr>
-      <tr><td class="k">bTxAutoStarted</td><td class="v">AUTO_STARTED\n</td><td class="n">Master cycle leaves IDLE (operator START or Pos1 rising).</td></tr>
-      <tr><td class="k">bTxPushDone</td><td class="v">PUSH_DONE\n</td><td class="n">Master cycle completes PUSH_RETRACTING (all enabled push pistons at Retracted).</td></tr>
-      <tr><td class="k">bTxPistonsError</td><td class="v">PISTONS_ERROR\n</td><td class="n">Master cycle enters ERR (iErrorCode set to the step's fault code).</td></tr>
-    </table>
-    <div class="callout">
-      <b>No queue, no lost pulses.</b> If the bridge is disconnected when the PLC pulses a Tx flag, the flag stays TRUE. On next reconnect the bridge's poll picks it up, sends the frame, and clears it. The operator's view (<code>nPacketsTx</code>, <code>sLastTxMessage</code>) advances only on actual send.
-    </div>
-    <div class="callout">
-      <b>"In position" semantics.</b> Position bits are <b>latched</b>: <code>bAtPos2</code> stays TRUE until the robot sends a different <code>POSn</code> frame. The bridge does not clear on timeout.
-    </div>
-  </div>
-
-  <div class="card" data-c="bridge">
-    <h3>Failure handling</h3>
     <ul class="compact">
-      <li><b>Robot refuses connection:</b> bridge catches the exception, sets <code>eConnState = Error</code>, sleeps <code>reconnect.delay_seconds</code>, retries.</li>
-      <li><b>Robot unreachable / socket timeout on connect:</b> same recovery path.</li>
-      <li><b>Connection drops mid-session:</b> <code>recv()</code> returns <code>b""</code> or the socket raises. Bridge closes, sets <code>eConnState = Disconnected</code>, sleeps, redials. <code>SO_KEEPALIVE</code> is enabled so a half-open TCP (peer power loss, cable pulled) is eventually detected by the OS.</li>
-      <li><b>Half-open TCP faster than OS keepalive:</b> the idle-probe heartbeat catches it. After <code>heartbeat_idle_seconds</code> with no inbound data, the bridge tries to send <code>heartbeat_payload</code>. If <code>send()</code> raises, the recovery path fires; no reply is required.</li>
-      <li><b>ADS write fails:</b> logged as exception, top-level supervisor catches it, sets <code>eConnState = Error</code>, sleeps, retries.</li>
-      <li><b>Bridge process itself dies:</b> HMI keeps showing the last-written <code>eConnState</code> — no PLC-side watchdog in v1.</li>
+      <li><code>STATE:&lt;n&gt;</code> — <code>n</code> is the <code>INT</code> value of <code>E_MasterAutoStep</code>, or <code>MANUAL = 30</code> when <code>bAutoMode = FALSE</code>. Sent on every change of <code>nStateOut</code> <b>and</b> every <code>IDLE_STATE_MS</code> (default 1000 ms) as keep-alive. This replaced the old bare <code>HEARTBEAT</code> frame — it serves the "is the socket alive?" role while also carrying real information. The robot derives "PLC is running" from <code>n ≠ 0</code>.</li>
+      <li><code>CMD:&lt;m&gt;</code> — <code>0</code> = none, <code>1</code> = start cycle, <code>2</code> = reset error. Written into <code>stParams.nRobotCmd</code>; <b>MAIN</b> owns the <code>R_TRIG</code> and feeds pulses into <code>FB_MasterAutoCycle.bExtStartPulse</code> or the HMI's <code>bReset</code>. The robot is responsible for zeroing it after the next state push acknowledges the command.</li>
+    </ul>
+    <p>The retired <code>POS1/POS2/POS3</code> + <code>AUTO_STARTED</code> / <code>PUSH_DONE</code> / <code>PISTONS_ERROR</code> frames are gone, as is <code>WAIT_POS2</code> — the Dobot's <code>PerformStandSequence</code> moves the arm clear of the stand <i>before</i> it issues <code>CMD:1</code>, so no intermediate "robot moved away" wait is needed.</p>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Connection state machine</h3>
+    <p>Disconnected → Connecting → Connected → (any socket error) close + reconnect after 3 s, forever while <code>bTcpEnable = TRUE</code>. 2-second timeout on connect / send / recv, per <code>Tc2_TcpIp</code>. An empty <code>sSrvNetId</code> targets the local TF6310 server.</p>
+    <p>Status is mirrored into <code>GVL_Robot.stRobot</code>: <code>eConnState</code>, <code>sConnStateText</code>, <code>nPacketsRx</code>, <code>nPacketsTx</code>, <code>sLastMessage</code>, <code>sLastTxMessage</code>.</p>
+    <div class="callout">
+      <b>Changing the endpoint tears down the live session.</b> The connect call reads <code>sRemoteHost</code> once, so without that an edited IP would sit in the field doing nothing until the socket happened to drop — the field would look broken. The retarget routes through the same <code>Error</code> close-and-retry path the disable request uses, and is baselined on the first scan so it cannot force a pointless reconnect at startup.
+    </div>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>The 11 tuning parameters</h3>
+    <p>Units are <b>percentages</b> for the four speeds and <b>milliseconds</b> for the waits — traced to the robot repo's <code>global.lua</code>, where <code>Init()</code> calls <code>VelJ(J_SPEED)</code> / <code>VelL(L_SPEED)</code> ("Joint Speed %" / "Linear Speed %") plus <code>SpeedFactor(FACTOR_SPEED)</code> with <code>FACTOR_SPEED = 80</code> scaling everything globally. <code>WAX_SPEED</code> / <code>WATER_SPEED</code> feed the <code>v=</code> velocity-ratio option of <code>MovL</code>.</p>
+    <p>Ranges are authoritative because <b>the vendor's own GUI clamps to them</b> (<code>RobotBridge/Client_working_example/tcp client.py</code>):</p>
+    <table class="kv-table">
+      <tr><th>Param</th><th>Range</th><th>Unit</th></tr>
+      <tr><td class="k">J_SPEED, L_SPEED</td><td class="v">1–100</td><td class="n">%</td></tr>
+      <tr><td class="k">WAX_SPEED, WATER_SPEED</td><td class="v">0–100</td><td class="n">%</td></tr>
+      <tr><td class="k">REPEATS</td><td class="v">1–10</td><td class="n">count</td></tr>
+      <tr><td class="k">START_WAIT, WATER_WAIT, STAND_WAIT, END_WAIT, WAX_WAIT_TIME_OUT</td><td class="v">10–10000</td><td class="n">ms</td></tr>
+      <tr><td class="k">WAX_WAIT_TIME_IN</td><td class="v">0–10000</td><td class="n">ms</td></tr>
+    </table>
+    <div class="callout">
+      <b>The PLC clamps every writer.</b> <code>ClampParam</code> / <code>ParamMin</code> / <code>ParamMax</code> bound the panel, FlowerPyHmi over ADS, any future ADS client, and the <code>bSetParam</code> escape hatch (via <code>ParamIndex</code> reverse lookup; unknown names pass through unclamped, which is the point of an escape hatch). Nothing else in the stack enforces them — <code>src2.lua</code> assigns <code>tonumber()</code> straight through with no clamp.
+    </div>
+    <p>Two design points worth not undoing:</p>
+    <ul class="compact">
+      <li>The clamp <b>writes the bounded value back into <code>stParams</code></b>. This is not cosmetic: the shadow is updated to the value that was <i>sent</i>, so leaving an out-of-range number in the field would keep it permanently different from its shadow and the FB would re-send on every idle scan — <b>a silent packet storm</b>. Writing back converges, and the panel then shows what the robot actually got.</li>
+      <li>Clamping applies <b>only on the way out</b>, never to values arriving in a <code>SYNC</code> reply. Rewriting a robot-sourced value would push our table back at the robot, and if the table were ever wrong the two ends would fight.</li>
     </ul>
   </div>
 
   <div class="card" data-c="bridge">
-    <h3>Licensing rationale</h3>
-    <p>Beckhoff's native <code>Tc2_TcpIp</code> library requires the paid <b>TF6310</b> supplement + install on the runtime target. Same for <code>Tc3_IoT_Communicator</code> (TF6701 MQTT) and OPC UA server (TF6100). Deliberately avoided in this project.</p>
-    <p>ADS is built into TwinCAT (both runtime and client DLL are free), and <code>pyads</code> is MIT-licensed. The bridge is therefore royalty-free on both sides. See the memory note <code>feedback_avoid_licensed_beckhoff_libs</code> for the durable version of this decision.</p>
+    <h3>Read/write params — the shadow-copy push</h3>
+    <p>The params used to be read-only in practice: <code>GET_SYNC</code> pulled values in, but the only way to push one back was the <code>bSetParam</code>/<code>sSetName</code>/<code>nSetVal</code> triple, which <i>nothing</i> ever set. An operator editing <code>stParams.J_SPEED</code> saw the value change, nothing was sent, and the next reconnect's <code>GET_SYNC</code> silently reverted it.</p>
+    <p>The FB now keeps <code>aShadow : ARRAY[1..11] OF INT</code>, re-baselined by <code>SetShadowAll</code> after every <code>GET_SYNC</code> round-trip. Any live field that diverges from its shadow slot is an operator edit and is pushed as <code>NAME:VALUE</code>, one param per round-trip. <code>HandleReply</code> banks the value that was <i>sent</i> (<code>nPendVal</code>), so an edit made mid-round-trip is re-sent rather than swallowed. <code>bShadowValid</code> gates detection until the first SYNC lands, so the compiled-in defaults are never mistaken for edits.</p>
+    <div class="callout warn">
+      <b><code>ParamValue</code> / <code>ParamName</code> index order must match the robot's <code>SYNC_ORDER</code>.</b> That order is documented by the vendor reference client. Get it wrong and values land in the wrong fields with no error anywhere.
+    </div>
+    <h3><code>IO_IDLE</code> priority order — asserted by the tests</h3>
+    <ol class="compact">
+      <li><b>Post-connect one-shot <code>GET_SYNC</code></b> — a <code>STATE</code> reply can carry <code>CMD:1</code>, and a cycle must not start on unsynced params.</li>
+      <li><b><code>STATE</code> on change</b> — <code>CMD</code> frames ride back on <code>STATE</code> replies, so a write burst must not starve start/reset.</li>
+      <li>Explicit <code>bSetParam</code> / <code>bTriggerNewBulb</code> / <code>bGetSync</code>.</li>
+      <li>Detected edits.</li>
+      <li><code>STATE</code> keep-alive.</li>
+    </ol>
+    <p><code>scripts/test_param_shadow_logic.py</code> ports the sequencer to Python and runs it against the protocol (9 cases: no startup echo, edit pushed, all three speeds, state preemption, CMD during write burst, mid-flight re-edit, escape hatch, re-sync baseline, malformed SYNC). It validates the <b>algorithm</b>, not the ST build — a TwinCAT compile is still required.</p>
+    <div class="callout warn">
+      <b>Known limitation.</b> <code>stParams</code> is both setpoint and actual, so an edit made while the link is down is overwritten by the reconnect's <code>GET_SYNC</code>. Separating desired-from-actual needs a second struct — deferred.
+    </div>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Bench testing without a robot</h3>
+    <p>Use <code>FlowerPyHmi/tools/dummy_server_tcp.py --allow-commands</code>. It implements the full current protocol including the <code>STATE</code> / <code>CMD</code> frames. Point the panel at the laptop by editing the IP on the Robot page — no rebuild needed, and the value persists.</p>
+    <p><code>RobotBridge/Client_working_example/dummy_server.py</code> predates the STATE/CMD frames and only covers <code>GET_SYNC</code> / <code>NAME:VALUE</code>; keep it as a statement of the vendor's own server semantics, not as a test tool.</p>
+  </div>
+
+  <div class="card" data-c="bridge">
+    <h3>Licensing rationale — revised</h3>
+    <p>The project's standing rule is to avoid paid Beckhoff supplements: TF6100 (OPC UA server) and TF6701 (MQTT / <code>Tc3_IoT_Communicator</code>) remain off-limits.</p>
+    <p><b>TF6310 is the documented exception.</b> It is installed and running on the CP6606, which makes <code>Tc2_TcpIp</code> free to use here and lets the PLC own the socket directly. That is what made the Python bridge unnecessary — and since the bridge could not have run on the panel anyway, avoiding TF6310 would have meant permanently depending on a laptop being plugged in. See the memory note <code>feedback_avoid_licensed_beckhoff_libs</code> for the durable version of the rule and this exception.</p>
   </div>
 </section>
 
@@ -461,12 +499,22 @@ sequenceDiagram
     panels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + t));
     location.hash = '#' + t;
   });
+  // Mermaid MUST initialize before any tab switch. It measures rendered text to
+  // lay the diagram out, and it cannot measure inside a display:none container --
+  // the result is a collapsed viewBox="-8 -8 16 16" and a silent empty box, plus
+  // "translate(undefined, NaN)" errors in the console. Deep-linking to a non-
+  // Architecture tab (e.g. configuration.html#plc) used to hide the diagram's
+  // panel first and broke it exactly that way.
+  if (window.mermaid) mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { fontSize: '12px' } });
   if (location.hash) {
     const t = location.hash.slice(1);
     const btn = tabs.querySelector('button[data-tab="'+t+'"]');
-    if (btn) btn.click();
+    if (btn) {
+      // Let mermaid finish its initial pass (it renders asynchronously) before
+      // hiding whichever panel it is drawing into.
+      if (window.mermaid) setTimeout(() => btn.click(), 0); else btn.click();
+    }
   }
-  if (window.mermaid) mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { fontSize: '12px' } });
 </script>
 
 </body>

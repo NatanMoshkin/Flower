@@ -62,66 +62,85 @@
 <header>
   <h1>Flower — Documentation Index</h1>
   <div class="sub">
-    Pneumatic pin-separator / pin-pusher test rig: <b>TwinCAT PLC</b> (6 SOL-Spring pistons, coordinated by <code>FB_MasterAutoCycle</code>) + <b>TwinCAT HMI</b> + <b>Python-ADS robot bridge</b> for bidirectional TCP/IP with the industrial robot.<br>
+    Bulb-flower assembly stand: a <b>CP6606 panel PC</b> running the TwinCAT PLC (8 SOL-Spring pistons, coordinated by <code>FB_MasterAutoCycle</code>) <i>and</i> the operator's classic PLC visualization, talking <b>TCP/IP directly</b> to a Dobot robot.<br>
     Repo: <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
-    &middot; Docs generated <b>2026-07-09</b>
+    &middot; Docs updated <b>2026-07-27</b>
   </div>
   <div class="stats">
-    <div class="stat"><div class="n">6</div><div class="l">Pistons</div></div>
-    <div class="stat"><div class="n">3</div><div class="l">HMI pages</div></div>
-    <div class="stat"><div class="n">3</div><div class="l">Robot positions</div></div>
-    <div class="stat"><div class="n">1</div><div class="l">Open issue</div></div>
+    <div class="stat"><div class="n">8</div><div class="l">Pistons</div></div>
+    <div class="stat"><div class="n">7</div><div class="l">Panel VISU pages</div></div>
+    <div class="stat"><div class="n">15</div><div class="l">Cycle states</div></div>
+    <div class="stat"><div class="n">11</div><div class="l">Robot params</div></div>
   </div>
 </header>
 
 <main>
 
 <div class="tldr">
-  <b>What this project is.</b> A 6-piston pneumatic test rig driven by a TwinCAT PLC and controlled from a TcHmi web HMI. Each piston is a <b>SOL-Spring two-position actuator</b> — a single Extend coil, mechanical spring returns it — driven by one instance of <code>FB_SolSpringPiston_2Pos</code>. <code>FB_MasterAutoCycle</code> coordinates up to three pairs of (Sep, Push) pistons in parallel with the robot's Pos1/Pos2 signals. The rig exchanges <b>"in position 1/2/3"</b> plus <b>AUTO_STARTED / PUSH_DONE / PISTONS_ERROR</b> / <b>RESET_ERROR</b> frames with the robot over TCP/IP — the robot is the <b>TCP server</b>, the socket layer lives in a <b>Python bridge</b> (<code>RobotBridge/robot_bridge.py</code>) that dials in and translates each direction into ADS reads/writes, deliberately avoiding Beckhoff's paid TF6310 TCP/IP supplement.
+  <b>What this project is.</b> An assembly stand for pin-based bulb-flower components. One <b>CP6606 Panel PC</b> is the entire control system: it runs the TwinCAT PLC, the operator interface (classic PLC visualization, seven <code>.TcVIS</code> pages), and the robot comms. Eight pistons — 3&nbsp;Sep, 3&nbsp;Push, 2&nbsp;Grip — are each a <b>SOL-Spring two-position actuator</b> (single Extend coil, mechanical spring returns it) driven by one instance of <code>FB_SolSpringPiston_2Pos</code>. <code>FB_MasterAutoCycle</code> runs a 15-state sequence over all eight, gated by two plate sensors. A single machine-wide <code>bAutoMode</code> is the sole source of truth for every piston's mode — there is no per-piston mode selection.
+  <br><br>
+  <b>Robot comms are TCP-only, from the PLC itself.</b> <code>FB_RobotTcpClient</code> (native ST on <code>Tc2_TcpIp</code>) dials the robot's server at <code>192.168.201.1:6001</code> and exchanges <code>STATE:&lt;n&gt;</code> / <code>CMD:&lt;m&gt;</code> frames plus the 11 tuning parameters. <b>TF6310 is installed on the CP6606</b> — the documented exception to the avoid-paid-libraries rule. The former Python bridge (<code>RobotBridge/</code>) and the discrete-I/O handshake are both <b>retired</b>; so is the TwinCAT web HMI (<code>Flower_PLC_HMI/</code>, deleted 2026-07-26). The engineering-side UI is now <b>FlowerPyHmi</b>, a separate repo that talks ADS to the panel from a laptop.
 </div>
 
 <section class="cat">
+  <h2><span class="dot ops"></span>For operators</h2>
+  <p class="desc">Start here if you run the machine rather than build it.</p>
+  <div class="grid">
+    <a class="card" data-c="ops" href="viewer.html?doc=operator-manual.md">
+      <div class="title">Operator's Manual <span class="kind" style="background:var(--accent2)">MD</span></div>
+      <div class="desc">Panel navigation, startup, running a cycle, the 3 push-buttons, the 2 status lamps, all 12 error codes, E-Stop recovery, and what persists across a power cycle.</div>
+      <div class="path">docs/operator-manual.md</div>
+    </a>
+  </div>
+</section>
+
+<section class="cat">
   <h2><span class="dot config"></span>Configuration</h2>
-  <p class="desc">What the system is and how each part is wired: architecture diagram, PLC structure, HMI pages and bindings, and the Python bridge that talks to the robot.</p>
+  <p class="desc">What the system is and how each part is wired: architecture, PLC structure, the panel VISU pages, and the robot TCP protocol.</p>
   <div class="grid">
     <a class="card" data-c="config" href="configuration.html">
       <div class="title">Configuration reference <span class="kind">HTML</span></div>
-      <div class="desc">4 tabs: Architecture, PLC (TwinCAT), HMI (TcHmi), Robot Bridge (Python). Includes the data-flow diagram, DUT/FB/GVL breakdown, symbol-mapping table, and <code>config.yaml</code> keys.</div>
+      <div class="desc">4 tabs: Architecture, PLC (TwinCAT), Panel VISU, Robot (TCP). Data-flow diagram, DUT/FB/GVL breakdown, IO channel map, and the wire protocol.</div>
       <div class="path">docs/configuration.html</div>
     </a>
-    <a class="card" data-c="config" href="viewer.html?doc=../RobotBridge/README.md">
-      <div class="title">Robot Bridge README <span class="kind" style="background:var(--accent2)">MD</span></div>
-      <div class="desc">Python-side README: install (<code>pip install -r requirements.txt</code>), YAML config, ADS route setup for remote hosts, smoke test with <code>nc</code>.</div>
-      <div class="path">RobotBridge/README.md</div>
-    </a>
     <a class="card" data-c="config" href="viewer.html?doc=../CLAUDE.md">
-      <div class="title">CLAUDE.md (project TODOs) <span class="kind" style="background:var(--accent2)">MD</span></div>
-      <div class="desc">Source of truth for open issues and outstanding work. Read this before starting any task.</div>
+      <div class="title">CLAUDE.md — decisions &amp; TODOs <span class="kind" style="background:var(--accent2)">MD</span></div>
+      <div class="desc"><b>The source of truth</b> for open issues, architectural decisions, and outstanding work. Read this before starting any task; these HTML pages are a rendering of it, not a replacement.</div>
       <div class="path">CLAUDE.md</div>
+    </a>
+    <a class="card" data-c="config" href="viewer.html?doc=../RobotBridge/README.md">
+      <div class="title">RobotBridge — retired <span class="kind" style="background:var(--warn)">MD</span></div>
+      <div class="desc">The Python bridge is <b>no longer part of the machine</b>. This README records why, what two files are still kept as vendor protocol reference, and what each retired file was superseded by.</div>
+      <div class="path">RobotBridge/README.md</div>
     </a>
   </div>
 </section>
 
 <section class="cat">
   <h2><span class="dot ops"></span>Operation &amp; Installation</h2>
-  <p class="desc">How to install, start, verify, and recover the whole stack. Includes the end-to-end smoke test that goes robot → bridge → PLC → HMI.</p>
+  <p class="desc">How to build, activate, start, verify, and recover the panel.</p>
   <div class="grid">
     <a class="card" data-c="ops" href="operation.html">
       <div class="title">Operation &amp; install guide <span class="kind">HTML</span></div>
-      <div class="desc">4 tabs: Install (Python deps, ADS routes, PLC + HMI build/publish), Startup order, Smoke test (<code>nc POS1</code>), Recovery (bridge died, PLC restart, HMI cache).</div>
+      <div class="desc">4 tabs: Install (PLC build/activate, TF6310, panel bring-up), Startup order, Smoke test (robot TCP + piston moves), Recovery (link down, persistent data, symbol table).</div>
       <div class="path">docs/operation.html</div>
     </a>
   </div>
 </section>
 
 <section class="cat">
-  <h2><span class="dot issues"></span>Open issues &amp; deferred decisions</h2>
-  <p class="desc">Deliberately deferred design choices and unassigned hardware bindings. Read this before making changes so you don't step on a live decision.</p>
+  <h2><span class="dot issues"></span>Open issues &amp; history</h2>
+  <p class="desc">What is still open, and what the record shows about decisions already made.</p>
   <div class="grid">
     <a class="card" data-c="issues" href="open-issues.html">
       <div class="title">Open issues <span class="kind" style="background:var(--danger)">HTML</span></div>
-      <div class="desc">1 open item: DI channel assignment for SepSol2/3 + PushSol2/3 (Extend coils are already on <code>dOut[2..3]</code> and <code>dOut[5..6]</code>; only the Extended/Retracted position sensors are still Simulate-only). The robot-role decision landed as robot=server / bridge=client and is now archived.</div>
+      <div class="desc">Current open items and a list of what closed recently. Mirrors <code>CLAUDE.md</code>, which is authoritative if the two ever disagree.</div>
       <div class="path">docs/open-issues.html</div>
+    </a>
+    <a class="card" data-c="issues" href="viewer.html?doc=robot-integration-options.md">
+      <div class="title">Robot integration options <span class="kind" style="background:var(--warn)">MD</span></div>
+      <div class="desc"><b>Historic.</b> The four options weighed in July 2026 before the TCP-only decision landed. Kept for archaeology — it does <b>not</b> describe current behaviour, so don't plan from it.</div>
+      <div class="path">docs/robot-integration-options.md</div>
     </a>
   </div>
 </section>

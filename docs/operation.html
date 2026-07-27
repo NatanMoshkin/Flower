@@ -56,7 +56,7 @@
 <header>
   <h1>Flower — Operation &amp; Install Guide</h1>
   <div class="meta">
-    Branch <b>master</b> &middot; docs generated <b>2026-07-09</b>
+    Branch <b>master</b> &middot; docs updated <b>2026-07-27</b>
     &middot; <a href="index.html">← Doc index</a>
     &middot; <a href="configuration.html">← Configuration</a>
     &middot; <a href="open-issues.html">Open issues</a>
@@ -77,124 +77,92 @@
 <!-- ============================================================ -->
 <section class="panel active" id="panel-install">
   <h2>Install</h2>
-  <p>First-time setup on a fresh panel PC. Everything is local by default — the docs, HMI, PLC runtime, and Python bridge all target <code>127.0.0.1</code>. Only the robot lives at a real IP.</p>
+  <p>First-time setup. In production the <b>CP6606 panel is the entire control system</b> — PLC runtime, operator VISU and robot comms all on one ARM device. Nothing else needs to be running. A developer laptop is needed only to build and activate, and optionally to run FlowerPyHmi.</p>
 
   <div class="card">
     <h3>Prerequisites</h3>
     <ul class="compact">
-      <li><b>TwinCAT 3.1</b> (build 4026 or newer) with the TcXaeShell IDE.</li>
-      <li><b>TE2000 TwinCAT HMI Engineering</b> — free for engineering use.</li>
-      <li><b>Python 3.9+</b> on PATH. Verify with <code>python --version</code>.</li>
-      <li><b>Git.</b> Clone with <code>git clone https://github.com/NatanMoshkin/Flower.git</code>.</li>
+      <li><b>TwinCAT 3.1</b> (build 4026 or newer) with the TcXaeShell IDE, on the engineering laptop.</li>
+      <li><b>TF6310 TCP/IP</b> — installed and licensed <b>on the CP6606</b>. Required: <code>FB_RobotTcpClient</code> uses <code>Tc2_TcpIp</code>.</li>
+      <li><b>Python 3.9+</b> on the laptop — only for the <code>scripts/</code> helpers and FlowerPyHmi. Not needed on the panel, and not installable there.</li>
+      <li><b>Git.</b></li>
     </ul>
     <div class="callout warn">
-      <b>No paid Beckhoff supplements are required.</b> Notably, TF6310 TCP/IP is <b>not</b> installed and <b>must not</b> be referenced from PLC1 — the robot channel is handled by the Python bridge instead.
+      <b>This reverses the old rule.</b> Earlier versions of this guide said TF6310 was not installed and must not be referenced. That is no longer true and has not been since 2026-07-26 — TF6310 is the <b>one documented exception</b> to the avoid-paid-supplements rule, and the PLC now owns the robot socket directly. TF6100 (OPC UA) and TF6701 (MQTT) are still off-limits.
+    </div>
+    <div class="callout">
+      <b>TE2000 TwinCAT HMI Engineering is no longer needed.</b> The web HMI was deleted 2026-07-26. The operator UI is the classic PLC visualization, which is authored inside the PLC project in TcXaeShell.
     </div>
   </div>
 
   <div class="card">
     <h3>1. PLC — build &amp; activate</h3>
     <ol class="compact">
-      <li>Open <code>Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC.sln</code> in TcXaeShell.</li>
+      <li>Open <code>Panel_PLC_HMI/167_01_Saad_PLC/167_01_Saad_PLC.sln</code> in TcXaeShell. <b>This is the only PLC solution</b> — the former dev mirror <code>Flower_PLC_HMI/</code> was deleted, so there is nothing to keep in sync.</li>
       <li><b>Build → Build Solution</b>. Zero errors expected.</li>
       <li><b>TwinCAT → Activate Configuration</b>. Restart the runtime in Run mode when prompted.</li>
-      <li>Verify: <b>PLC → Login</b>, then in the online view confirm <code>GVL_Robot.stRobot</code> is present and <code>stRobot.Name = "Robot"</code>.</li>
+      <li>Verify: <b>PLC → Login</b>, then confirm <code>GVL_Robot.stRobot</code> is present and <code>GVL_Robot.sRobotHost</code> holds the expected address.</li>
     </ol>
+    <div class="callout warn">
+      <b>If the project appears unloaded in Solution Explorer</b> — POUs missing from the tree, no Login button on the toolbar — suspect a stripped <code>.tsproj</code> commit. Check <code>git diff</code> for a massive line reduction in <code>.tsproj</code>; that file is IDE-owned and must not be hand-edited.
+    </div>
   </div>
 
   <div class="card">
-    <h3>2. HMI — build &amp; publish</h3>
+    <h3>2. Panel VISU — nothing separate to publish</h3>
+    <p>The seven <code>.TcVIS</code> pages are part of the PLC project and deploy with it. There is no separate build or publish step, no web server, and no login.</p>
     <ol class="compact">
-      <li>Right-click the HMI project → <b>Build</b>.</li>
-      <li>Right-click → <b>Publish</b> → Local Engineering Server. Note the URL (usually <code>http://127.0.0.1:1010/</code> for engineering, <code>http://127.0.0.1:3003/</code> for the runtime WebSocket).</li>
-      <li>Open the browser at the engineering URL. Log in as <code>__SystemUser</code> (passwordless in the default config).</li>
-      <li>Confirm the navigation menu shows: StartPage, Piston, <b>Robot</b>, Events, Settings.</li>
+      <li>Confirm each page is registered in <code>PLC1.plcproj</code> with a <code>&lt;Compile Include&gt;</code> + <code>&lt;DependentUpon&gt;</code> block. <b>An unregistered <code>.TcVIS</code> is invisible to the build.</b></li>
+      <li>Run <code>python scripts/validate_visu.py</code> — asserts element parentage and that no GUID is shared between pages.</li>
+      <li>Open each page in TcXaeShell and confirm every element renders. XAE <b>silently drops</b> elements it cannot parse, so this visual check is the only reliable gate.</li>
     </ol>
+    <div class="callout warn">
+      <b>Build error naming a <code>.TcVIS</code> you never touched?</b> That file is usually the victim, not the cause — a cloned page duplicated its generated-object GUIDs. See <code>Unknown type: '&lt;Page&gt;__inp__vis'</code> in the Configuration reference's Panel VISU tab, and fix with <code>scripts/fix_visu_object_guids.py</code> on the <b>clone</b>.
+    </div>
   </div>
 
   <div class="card">
-    <h3>3. Python bridge — install dependencies</h3>
-    <pre>cd RobotBridge
-pip install -r requirements.txt</pre>
-    <p>Installs <code>pyads</code> and <code>pyyaml</code>. On Windows the ADS client DLL ships with TwinCAT — no extra install. On Linux, install <code>libads</code> per the <a href="https://pyads.readthedocs.io/en/latest/documentation/setup.html">pyads setup docs</a>.</p>
+    <h3>3. Robot endpoint — no config file</h3>
+    <p>The robot's address lives in the PLC as <code>GVL_Robot.sRobotHost</code> / <code>.nRobotPort</code> (factory default <code>192.168.201.1:6001</code>), declared in a <code>VAR_GLOBAL PERSISTENT</code> block and <b>editable on the panel's Robot page</b>. There is no YAML, no <code>config.yaml</code>, and no service to restart.</p>
+    <div class="callout warn">
+      <b>Why they must be persistent.</b> The test for configuration is "does the correct value differ between installations?", not "does it reset on boot?". As plain <code>VAR_GLOBAL</code> they were re-applied from their literals on every Activate, download and reset, silently discarding whatever was typed on the Robot page — and <b>nothing reported an error</b>: the write succeeded, the field really did change, and it really was reverted.
+    </div>
+    <p><code>bTcpEnable</code> is deliberately <b>not</b> persistent: a link disabled for a bench session comes back enabled after a restart, so the robot can never be left unreachable for no visible reason.</p>
   </div>
 
   <div class="card">
-    <h3>4. Python bridge — create <code>config.yaml</code></h3>
-    <pre>cd RobotBridge
-cp config.example.yaml config.yaml
-# edit config.yaml — set robot.host + robot.port + robot.role</pre>
-    <p>Defaults (server mode, port 2000, placeholder IP) are enough to run the smoke test with <code>nc</code>. Real robot integration requires editing <code>host</code> / <code>port</code> to match the robot controller and picking a <code>role</code>.</p>
-  </div>
-
-  <div class="card">
-    <h3>5. ADS route (remote hosts only)</h3>
-    <p>Skip this step if the bridge runs on the same PC as TwinCAT — the local route <code>127.0.0.1.1.1</code> is present out of the box.</p>
-    <p>If the bridge runs on a different machine:</p>
+    <h3>4. CP6606 panel bring-up</h3>
+    <p>The <b>CP6606-0001-0020</b> is one ARM Cortex A8 device under Windows Embedded Compact 7, running the TwinCAT PLC runtime and the operator VISU on its 7-inch 800×480 touchscreen. There is no browser and no <code>TcHmiSrv</code> on it. The operator UI is Beckhoff's <b>TC3 PLC HMI</b>, rendering the visualizations authored inside the PLC project.</p>
     <ol class="compact">
-      <li>On the TwinCAT engineering PC: <b>System Manager → Routes → Add Route</b>.</li>
-      <li>Point at the bridge host's AMS Net ID (usually <code>&lt;host-ip&gt;.1.1</code>).</li>
-      <li>Update <code>plc.ams_net_id</code> in <code>RobotBridge/config.yaml</code> accordingly.</li>
+      <li><b>Add an ADS route to the panel</b> — TcXaeShell → SYSTEM → Routes → Add Route → search the LAN, pick the CP6606, log in with the panel's user (default: no password on Beckhoff CE). Routes must be present on <b>both</b> sides.</li>
+      <li><b>Set the target system</b> — the TwinCAT toolbar's target dropdown → pick the CP6606's AMS Net ID.</li>
+      <li><b>Enable the SVG→BMP setting</b> — Solution Explorer under PLC1 → double-click <code>Visualization Manager</code> → <i>Settings</i> → check "<i>Automatically convert SVG to BMP</i>". The CE renderer does not support SVG; set this even if you ship no SVG icons today.</li>
+      <li><b>Confirm TF6310 is installed and running on the panel</b>, otherwise <code>Tc2_TcpIp</code> resolves at build time but the socket never opens at runtime.</li>
+      <li><b>Build + Activate Configuration</b> — writes boot files to <code>\Hard Disk\TwinCAT\3.1\Boot\</code>. Confirm the PLC comes up in Run mode.</li>
+      <li><b>Configure Startup Manager on the panel</b> — CE desktop → Start → <code>StartMan</code> → <i>Startup Options</i> → <i>Autostart</i> → add: Type <code>Application</code>, Delay <code>30 s</code> (waits for the runtime to reach Run), Command <code>\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe</code>.</li>
+      <li><b>Reboot.</b> After the delay <code>Tc3PlcHmi.exe</code> should come up fullscreen on <code>Main</code>, with touch navigation to the subpages working.</li>
+      <li><b>Set the panel's clock.</b> Log timestamps come from the panel RTC; if it is unset the Logs page reads <code>--:--:--</code>.</li>
     </ol>
+    <div class="callout warn">
+      <b><code>Tc3PlcHmi.ini</code> has moved between TwinCAT builds.</b> <code>C:\TwinCAT\3.1\Components\Plc\Tc3PlcHmi</code> (builds &lt; 4022) → <code>C:\TwinCAT\3.1\Boot\Plc</code> (4022–4025) → <code>C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\Plc\Tc3PlcHmi</code> (4026+). Check the panel's build first (TwinCAT tray → About).
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>5. FlowerPyHmi (optional, engineering only)</h3>
+    <p>Separate repo at <code>167_01_Saad_Flower/FlowerPyHmi</code>. Runs on any developer laptop and talks ADS to the panel. <b>Not required for production.</b></p>
+    <pre>cd FlowerPyHmi
+python -m venv .venv &amp;&amp; .venv\Scripts\pip install -e .
+# set plc.ams_net_id in config.yaml to the panel's AMS Net ID
+.venv\Scripts\python run.py        # serves http://127.0.0.1:8000</pre>
+    <div class="callout warn">
+      <b>It is not a submodule, so nothing keeps its symbol contract in step.</b> After changing any HMI-facing GVL or DUT in the PLC, run <code>python scripts/check_pyhmi_contract.py</code> from the Flower repo.
+    </div>
   </div>
 
   <div class="card">
     <h3>6. Docs (this site)</h3>
-    <p>Double-click <code>scripts\serve-docs.bat</code>. Serves the repo root on <code>http://127.0.0.1:8765</code> and opens the browser at <code>/docs/index.html</code>. Leave the console window open while browsing; Ctrl+C to stop.</p>
-  </div>
-
-  <div class="card">
-    <h3>7. CP6606 panel bring-up (TC3 PLC HMI)</h3>
-    <p>The <b>CP6606-0001-0020</b> is the whole control system in production: one ARM Cortex A8 device under Windows Embedded Compact 7, running both the TwinCAT PLC runtime and a native operator HMI on its 7-inch 800×480 touchscreen. There is no browser and no <code>TcHmiSrv</code> on the panel — the operator UI is Beckhoff's <b>TC3 PLC HMI</b> (visualizations authored inside the PLC project). The engineering-side UI is <code>FlowerPyHmi</code> (a separate repo, talks ADS to the panel) and runs on the developer's laptop. The former TwinCAT web HMI <code>Flower_HMI</code> was retired 2026-07-26.</p>
-
-    <div class="callout">
-      <b>Design first, then deploy.</b> Build the six <code>*.TcVISU</code> files in TcXaeShell (right-click <code>PLC1 → Add → Visualization</code>) — see the next card for the per-page design guide. The <code>.TcVISU</code> file format is TcXaeShell-generated XML; hand-authoring is not recommended.
-    </div>
-
-    <h4 style="color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 6px 0;">Deployment steps</h4>
-    <ol class="compact">
-      <li><b>Add an ADS route to the panel</b> — TcXaeShell → SYSTEM → Routes → Add Route → search the LAN, pick the CP6606, log in with the panel's user (default: no password on Beckhoff CE). Routes must be present on BOTH sides.</li>
-      <li><b>Set the target system</b> — the TwinCAT toolbar's target dropdown → pick the CP6606's AMS Net ID. Solution now deploys to the panel instead of localhost.</li>
-      <li><b>Enable the SVG→BMP setting</b> — In the Solution Explorer under PLC1, double-click <code>Visualization Manager</code> → tab <i>Settings</i> → check "<i>Automatically convert SVG to BMP</i>". The CE renderer does not support SVG; this is a required setting even if you don't ship any SVG icons today.</li>
-      <li><b>Build + Activate Configuration</b> — writes boot files to <code>\Hard Disk\TwinCAT\3.1\Boot\</code> on the panel. Confirm the PLC comes up in Run mode.</li>
-      <li><b>Configure Startup Manager on the panel</b> — on the CE desktop: Start → <code>StartMan</code> → <i>Startup Options</i> tab → <i>Autostart</i> → add an entry with:
-        <ul class="compact" style="margin-top:4px">
-          <li>Type: <code>Application</code></li>
-          <li>Delay: <code>30 s</code> (waits for TwinCAT runtime to be Run first)</li>
-          <li>Command: <code>\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe</code></li>
-        </ul>
-      </li>
-      <li><b>Reboot the panel.</b> After the delay, <code>Tc3PlcHmi.exe</code> should come up fullscreen with your <code>VISU_Home</code> visible. Touch-driven navigation to the subpages should work.</li>
-    </ol>
-
-    <div class="callout warn" style="margin-top:12px">
-      <b><code>Tc3PlcHmi.ini</code> location has moved.</b> The config-file path changed between TwinCAT builds: <code>C:\TwinCAT\3.1\Components\Plc\Tc3PlcHmi</code> (builds &lt; 4022) → <code>C:\TwinCAT\3.1\Boot\Plc</code> (4022 to 4025) → <code>C:\ProgramData\Beckhoff\TwinCAT\3.1\Boot\Plc\Tc3PlcHmi</code> (4026+). If you ever need to hand-edit the INI, check your panel's TC build first (see the TwinCAT tray → About).
-    </div>
-  </div>
-
-  <div class="card">
-    <h3>8. PLC HMI design (six VISUs to build in TcXaeShell)</h3>
-    <p>All six visualization pages target <b>800×480</b> to match the CP6606 screen. Build them in this order — the shared <code>VISU_Piston</code> tile is referenced by <code>VISU_Pistons</code>, so create it first. Every subpage carries a "← Home" button in the top-left that navigates back to <code>VISU_Home</code> (Element property → <i>Inputconfiguration</i> → mouse down action → <i>Change shown visualization</i>).</p>
-
-    <ul class="compact">
-      <li><b><code>VISU_Piston</code></b> — reusable tile, size <b>~260×220</b>. Interface parameter: <code>piston : ST_HmiPiston</code>. Elements:
-        <ul class="compact">
-          <li>Label bound to <code>piston.Name</code> (top)</li>
-          <li>Two coloured rectangles for the sensor indicators; color expression → green if <code>piston.bIsExtended</code>/<code>piston.bIsRetracted</code>, grey otherwise</li>
-          <li>Two buttons "EXTEND" and "RETRACT" with <i>Toggle</i> disabled and <i>Tap</i> configured to write <code>piston.bManCmdExtend</code>/<code>bManCmdRetract</code> (TRUE on mouse-down, FALSE on mouse-up — matches the web UC's momentary semantics)</li>
-          <li>Small mode label bound to <code>piston.eMode</code> using a textlist ("Manual" / "Automatic")</li>
-        </ul>
-      </li>
-      <li><b><code>VISU_Pistons</code></b> — <b>800×480</b>. Six <code>Frame</code> elements referencing <code>VISU_Piston</code> in a 3×2 grid; pass <code>GVL_HMI.stSepSol1</code>..<code>stSepSol3</code>, <code>stPushSol1</code>..<code>stPushSol3</code> to each. Plus one "← Home" button.</li>
-      <li><b><code>VISU_Robot</code></b> — <b>800×480</b>. Wide banner rectangle at top; color expression on <code>GVL_Robot.stRobot.eConnState</code> (0=grey, 1=yellow, 2=green, 3=red). Text overlay bound to <code>stRobot.sConnStateText</code>. Three "AT POS N" indicator rectangles bound to <code>bAtPos1/2/3</code>. Packet counter (<code>nPacketsRx</code>) and last message (<code>sLastMessage</code>) as text fields. "← Home" button.</li>
-      <li><b><code>VISU_AutoCycle</code></b> — <b>800×480</b>. Step banner (color expression on <code>GVL_HMI.stSepSol1Auto.eStep</code>, same rules as the web UC). Four buttons Start/Stop/Reset/Ack wired to <code>stSepSol1Auto.bStart/bStop/bReset/bAck</code>. "Continuous" checkbox bound to <code>GVL_HmiPersistent.stSepSol1AutoCfg.bContinuous</code>. Four numeric inputs for <code>tDwellExtendedMs</code> / <code>tDwellRetractedMs</code> / <code>tTimeoutExtendMs</code> / <code>tTimeoutRetractMs</code>. Error text field bound to <code>stSepSol1Auto.sErrorText</code>. "← Home" button.</li>
-      <li><b><code>VISU_Diagnostics</code></b> — <b>800×480</b>. One ToggleSwitch bound to <code>GVL_Log.bDebugMode</code>. Optional: one text field showing the last log entry (<code>GVL_Log.aLog[(GVL_Log.nWriteIdx - 1) MOD 256].sMsg</code>). "← Home" button.</li>
-      <li><b><code>VISU_Home</code></b> — <b>800×480</b>. Four large touch buttons in a 2×2 grid: "Pistons" / "Robot" / "Auto" / "Diagnostics", each configured with <i>Inputconfiguration</i> → mouse down → <i>Change shown visualization</i> → target the corresponding VISU. Aim for 400×240 per button so they're easily hit on the 7-inch touchscreen.</li>
-    </ul>
-
-    <div class="callout" style="margin-top:6px">
-      <b>What this design deliberately drops vs the web HMI</b> (all acceptable on the panel): no JOG buttons on the piston tile, no localization (English only for v1), no simulation checkboxes (operators shouldn't fake sensors on the panel — that's an engineering task, done via the web HMI or a Watch window). Add them back if the operators ask.
-    </div>
+    <p>Double-click <code>scripts\serve-docs.bat</code>. Serves the repo root on <code>http://127.0.0.1:8765</code> and opens <code>/docs/index.html</code>. Leave the console open while browsing; Ctrl+C to stop. The markdown viewer needs HTTP — browsers block <code>fetch()</code> under <code>file://</code>.</p>
   </div>
 </section>
 
@@ -203,46 +171,37 @@ cp config.example.yaml config.yaml
 <!-- ============================================================ -->
 <section class="panel" id="panel-startup">
   <h2>Startup order</h2>
-  <p>After a cold boot, bring the stack up in this order:</p>
+  <p>In production there is only one thing to start: the panel. Everything below is verification.</p>
 
   <div class="card">
     <h3>Daily startup checklist</h3>
     <ol class="compact">
-      <li><b>TwinCAT runtime → Run mode.</b> Usually automatic on boot. Verify with the TwinCAT icon in the tray (green = Run).</li>
-      <li><b>Robot controller.</b> Power it up first — it's the TCP <b>server</b>, so it must be listening at <code>192.168.201.1:6001</code> before the bridge tries to dial in. In a bench setup with no real robot, run any TCP server on that port (the bridge GUI's simulator panel does this for you).</li>
-      <li><b>HMI server.</b> The published TcHmiSrv runs as a Windows service; confirm <code>http://127.0.0.1:3003</code> is reachable.</li>
-      <li><b>Python bridge.</b> Double-click <code>RobotBridge\start_bridge.bat</code>, or start it as a Scheduled Task / NSSM service. Logs should show:
-        <pre>YYYY-MM-DD HH:MM:SS  INFO     loaded config: role=client host=192.168.201.1 port=6001 ams=127.0.0.1.1.1
-YYYY-MM-DD HH:MM:SS  INFO     ADS opened to 127.0.0.1.1.1:851
-YYYY-MM-DD HH:MM:SS  INFO     connecting to 192.168.201.1:6001
-YYYY-MM-DD HH:MM:SS  INFO     connected</pre>
-      </li>
-      <li><b>Browser.</b> Open the HMI. Go to the Robot page — connection indicator should be yellow (<code>Connecting</code>) briefly, then green (<code>Connected</code>).</li>
-      <li><b>Master cycle.</b> Optionally open the AutoCycle page. On operator START (or on the first <code>POS1</code> from the robot), the FB emits <code>AUTO_STARTED</code>, forces the enabled pistons into Automatic, and drives through the ten-state sequence.</li>
+      <li><b>Power on the cabinet.</b> The TwinCAT runtime and <code>Tc3PlcHmi.exe</code> both autostart; the panel should land on <code>Main</code>.</li>
+      <li><b>Check the status lamps.</b> Green steady = Automatic and IDLE. Green off with red lit = latched error. Green off with red off = Manual.</li>
+      <li><b>Main screen</b> — step reads <code>IDLE</code>, error code <code>0</code>, error text empty.</li>
+      <li><b>Plate lamps</b> — the <code>L</code> / <code>R</code> indicators should match the physical state of the stand.</li>
+      <li><b>Pistons Manual + Gripper Manual</b> — every piston's indicators consistent with its physical state (all retracted at power-on).</li>
+      <li><b>Robot page</b> — state <code>Connected</code>, Rx <b>and</b> Tx counters both advancing (the keep-alive runs about once a second).</li>
+      <li><b>Enable the robot</b> on the Dobot pendant.</li>
     </ol>
-  </div>
-
-  <div class="card">
-    <h3>What each state means on the HMI Robot page</h3>
-    <table class="kv-table">
-      <tr><th>State</th><th>Color</th><th>Meaning</th></tr>
-      <tr><td class="k">Disconnected</td><td class="v">Grey</td><td class="n">Bridge is in the reconnect-delay sleep between dial attempts, or has just started and hasn't dialed yet.</td></tr>
-      <tr><td class="k">Connecting</td><td class="v">Yellow</td><td class="n">Bridge is calling <code>connect()</code> against <code>192.168.201.1:6001</code>. Usually flashes by if the robot is reachable.</td></tr>
-      <tr><td class="k">Connected</td><td class="v">Green</td><td class="n">Socket up. Bridge is receiving frames and polling Tx flags.</td></tr>
-      <tr><td class="k">Error</td><td class="v">Red</td><td class="n">Bridge caught an exception (ADS write failed, socket error, bad config). Check the bridge console for the traceback.</td></tr>
-    </table>
     <div class="callout warn">
-      <b>State can go stale.</b> If the bridge process dies, the HMI keeps showing the last-written state indefinitely — v1 has no PLC-side watchdog. If <code>Connected</code> is shown but <code>nPacketsRx</code> hasn't moved in minutes, check the bridge is alive.
+      <b>Automatic survives a power cycle by design.</b> The machine comes back in the mode it was left in, at IDLE, still needing a real start trigger — but a robot that is already running can request a cycle immediately after power-up. That is the intended production behaviour (resume without re-arming the panel). Continuous cycling never survives: it is forced off every scan.
+    </div>
+    <div class="callout">
+      <b>Check the two bypass flags before a production run.</b> <code>No sensors (timed steps)</code> and <code>Bypass plate sensors</code> are persistent, so a bench flag left on yesterday is still on today.
     </div>
   </div>
 
   <div class="card">
-    <h3>Unattended startup (auto-run the bridge)</h3>
-    <p>Two options:</p>
-    <ul class="compact">
-      <li><b>Windows Scheduled Task.</b> Task Scheduler → Create Basic Task → Trigger "At log on" → Action "Start a program" → <code>RobotBridge\start_bridge.bat</code>. Set "Run whether user is logged on or not" so it survives RDP disconnects.</li>
-      <li><b>NSSM service.</b> <code>nssm install FlowerRobotBridge</code>, point at <code>python.exe</code> with args <code>robot_bridge.py --config config.yaml</code>, set the working directory to <code>RobotBridge\</code>. Survives reboots and runs headlessly.</li>
-    </ul>
+    <h3>What each state on the Robot page means</h3>
+    <table class="kv-table">
+      <tr><th>State</th><th>Meaning</th><th>What to do</th></tr>
+      <tr><td class="k">Disconnected</td><td class="n">No socket. Either <code>bTcpEnable</code> is FALSE or the last attempt failed.</td><td class="n">Wait 3 s — it re-dials automatically. If it stays here, check the IP field and the network.</td></tr>
+      <tr><td class="k">Connecting</td><td class="n">Dialling out; 2-second timeout.</td><td class="n">Normal for a moment. Persistent = wrong address, or the robot's server is not listening.</td></tr>
+      <tr><td class="k">Connected</td><td class="n">Socket up. Counters advancing.</td><td class="n">Nothing.</td></tr>
+      <tr><td class="k">Error</td><td class="n">Socket error, or a requested endpoint change / disable is being applied.</td><td class="n">Transient — it routes through the close-and-retry path. Persistent = investigate the link.</td></tr>
+    </table>
+    <p>Tx advancing while Rx stays flat means the robot is receiving but not replying — look at <code>Last Tx</code> to see what the panel last sent.</p>
   </div>
 </section>
 
@@ -250,119 +209,60 @@ YYYY-MM-DD HH:MM:SS  INFO     connected</pre>
 <!-- SMOKE TEST                                                   -->
 <!-- ============================================================ -->
 <section class="panel" id="panel-smoke">
-  <h2>Smoke test — robot ↔ bridge ↔ PLC ↔ HMI</h2>
-  <p>End-to-end verification without a real robot. In production the robot is the <b>TCP server</b> and the bridge is the <b>client</b>; for the smoke test we flip that around and let the GUI's simulator play a client against a server-mode bridge. Two options:</p>
-  <ul class="compact" style="margin-bottom:14px">
-    <li><b>GUI (recommended)</b> — <code>RobotBridge\start_gui.bat</code>. One window with three panels — bridge process, PLC live state, and a robot-simulator client that opens a TCP connection to the bridge and lets you send POS / RESET_ERROR frames button-by-button. Every send shows the exact bytes on the wire.</li>
-    <li><b>Manual PowerShell TCP server</b> — keeps the shipped client-mode bridge unchanged; the PowerShell script hosts a listener on <code>:6001</code> that the bridge dials into. Good for CI or headless boxes. See the "Manual" card below.</li>
-  </ul>
+  <h2>Smoke test</h2>
 
   <div class="card">
-    <h3>Option A — the GUI (bridge_gui.py) — full walk-through</h3>
-    <p>A single-window tkinter desktop app that ties three things together — no extra dependencies beyond what the bridge already needs (<code>pyads</code>, <code>pyyaml</code>).</p>
-    <ul class="compact">
-      <li><b>Bridge process panel</b> — Start / Stop <code>robot_bridge.py</code> as a subprocess. Live stdout tail. Bridge PID + colored LED.</li>
-      <li><b>PLC live state panel</b> — reads <code>GVL_Robot.stRobot</code> via <code>pyads</code> 5× per second and shows: connection state (colored banner), three AT POS N LEDs, packet counters (Rx + Tx), last messages (Rx + Tx).</li>
-      <li><b>Robot simulator panel</b> — opens a TCP <b>client</b> to the bridge and sends <code>POS1</code> / <code>POS2</code> / <code>POS3</code> / <code>RESET_ERROR</code> / custom-frame at the click of a button. Every send shows the exact bytes that left the process, hex + ASCII, so you can see the framing (each frame ends in <code>0x0A</code> = <code>\n</code>).</li>
-      <li><b>Event log</b> — merged feed of GUI events + bridge stdout + PLC state changes. Colored per source.</li>
-      <li><b>"What is happening right now"</b> panel — describes the current step in plain English: what "listening" means, what a client does, why the position bits latch, what an ADS write does.</li>
-    </ul>
+    <h3>A. Robot link, against a simulated robot</h3>
+    <p>Use FlowerPyHmi's simulator on the laptop — it implements the full current protocol including <code>STATE</code> / <code>CMD</code>:</p>
+    <pre>cd FlowerPyHmi
+.venv\Scripts\python tools\dummy_server_tcp.py --allow-commands</pre>
+    <ol class="compact">
+      <li>On the panel's <b>Robot</b> page, set the IP to the laptop's address. The change takes effect immediately — the PLC tears down the live session and re-dials.</li>
+      <li>Expect state → <code>Connecting</code> → <code>Connected</code>, and both counters to start advancing within about a second.</li>
+      <li>Press <b>Get Sync</b>. The simulator logs <code>GET_SYNC</code>; the 11 parameter fields fill in from its reply.</li>
+      <li>Edit one parameter — say <code>J_SPEED</code>. The panel pushes <code>J_SPEED:&lt;value&gt;</code> on the next round-trip, one parameter at a time.</li>
+      <li>Enter an <b>out-of-range</b> value. It is clamped to the vendor range, the clamped number is what gets sent, <b>and the field updates to show it</b>. If the field kept the out-of-range number it would differ from its shadow forever and the FB would re-send every idle scan — a silent packet storm.</li>
+      <li>Have the simulator send <code>CMD:1</code>. In Automatic at IDLE, a cycle starts. Send <code>CMD:2</code> while latched in ERR — the error clears.</li>
+      <li>Press <b>New Bulb</b>. The simulator logs <code>New_Bulb:1</code>.</li>
+    </ol>
     <div class="callout warn">
-      <b>Flip <code>role</code> before running.</b> The GUI's simulator is a TCP client. To make it work, temporarily edit <code>config.yaml</code>:
-      <pre style="margin-top:6px">robot:
-  role: "server"     # was "client"
-  port: 6001</pre>
-      When the walkthrough is done, revert to <code>role: "client"</code>. The shipped default matches production (robot is the server), but the GUI's tutorial-friendly path is the mirror direction.
+      <b>Do not use <code>RobotBridge/</code> for this.</b> <code>sim_robot.py</code> and <code>sim_robot_server.py</code> speak the retired <code>POS</code> / <code>AUTO_STARTED</code> protocol, and <code>robot_bridge.py</code> / <code>bridge_gui.py</code> write PLC fields that no longer exist — they would fail at runtime.
     </div>
-    <p>Launch:</p>
-    <pre>python RobotBridge/bridge_gui.py --config RobotBridge/config.yaml
+  </div>
 
-# or double-click on Windows:
-RobotBridge\start_gui.bat</pre>
-    <p>Recommended step-by-step:</p>
+  <div class="card">
+    <h3>B. Protocol-level check without a PLC</h3>
+    <p>The state sequencer is ported to Python, so the priority chain can be tested without a TwinCAT compile:</p>
+    <pre>python scripts/test_param_shadow_logic.py</pre>
+    <p>Nine cases: no startup echo, edit pushed, all three speeds, state preemption, CMD during a write burst, mid-flight re-edit, escape hatch, re-sync baseline, malformed SYNC. It validates the <b>algorithm</b>, not the ST build — a TwinCAT compile is still required.</p>
+  </div>
+
+  <div class="card">
+    <h3>C. Piston moves, independent of the robot</h3>
     <ol class="compact">
-      <li><b>Bridge panel → Start bridge.</b> Log shows <code>listening on :6001</code>. PLC live state shows <code>eConnState = Connecting</code> (yellow).</li>
-      <li><b>Simulator panel → Connect</b> to <code>127.0.0.1:6001</code>. The panel goes to "connected"; PLC panel flips to <code>Connected</code> (green).</li>
-      <li><b>Simulator → POS1.</b> Byte view shows <code>50 4F 53 31 0A</code>. PLC panel: <code>bAtPos1 = TRUE</code>, <code>nPacketsRx = 1</code>, <code>sLastMessage = "POS1"</code>. Master AutoCycle can now trigger on Pos1 rising if it's IDLE.</li>
-      <li><b>Simulator → POS2.</b> Same, but <code>bAtPos2</code> latches (POS1 clears). If the master is in WAIT_POS2, it advances to PUSH_EXTENDING.</li>
-      <li><b>AutoCycle page in browser → START.</b> Bridge log shows outbound send: <code>tx: 'AUTO_STARTED'</code>. Simulator panel doesn't currently display inbound frames from the bridge, but PLC panel's <code>nPacketsTx</code> increments and <code>sLastTxMessage</code> updates.</li>
-      <li><b>Complete the cycle</b> either by pressing the per-step Sim checkboxes on the AutoCycle page (fastest) or by ticking each piston's Simulate ✓ Extended/Retracted to satisfy the sensor AND. Watch <code>tx: 'PUSH_DONE'</code> land on PUSH_RETRACTING complete.</li>
-      <li><b>Force an error</b>: with no sims and no real sensors, wait for the step timeout. Bridge log shows <code>tx: 'PISTONS_ERROR'</code>, PLC <code>iErrorCode</code> non-zero.</li>
-      <li><b>Simulator → RESET_ERROR.</b> Byte view shows the frame. PLC <code>bRxResetError</code> pulses; FB consumes it and drops back to IDLE.</li>
+      <li>Untick <b>Auto Mode</b> on the Main screen. The master cycle is now held at IDLE.</li>
+      <li><b>Pistons Manual</b> → Extend on SepSol1. Confirm the coil indicator lights and the Extended sensor arrives.</li>
+      <li>Hold <b>PB2</b> — all three Sep pistons extend. Release — they retract. Repeat with <b>PB3</b> (Push) and <b>PB1</b> (both Grip).</li>
+      <li>Confirm each push-button's LED lights while pressed. The LEDs are dumb press mirrors, so this is a wiring check.</li>
+      <li>Tick <b>Auto Mode</b>, press <b>START</b>, and watch the step walk the 15-state sequence. The three <code>INIT_*</code> states should satisfy immediately if everything is already home.</li>
+      <li>Confirm the green lamp blinks while cycling and returns to steady at IDLE, and that the cycle counter incremented.</li>
     </ol>
+    <div class="callout">
+      <b>No plate on the stand?</b> The cycle will sit in <code>WAIT_PLATE</code> and raise error 9 after <code>tPlateWaitTimeoutMs</code>. Tick <b>Bypass plate sensors</b> to turn that timeout into a fixed dwell and let the cycle continue — but untick it before production.
+    </div>
   </div>
 
   <div class="card">
-    <h3>Option B — manual PowerShell TCP server</h3>
-    <p>Same underlying protocol, no GUI. Uses only .NET stdlib. Run this <b>before</b> the bridge so the bridge has something to dial into.</p>
-    <pre>$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, 6001)
-$listener.Start()
-Write-Host "listening on :6001"
-$client = $listener.AcceptTcpClient()
-Write-Host "bridge connected"
-$stream = $client.GetStream()
-$w = [System.IO.StreamWriter]::new($stream)
-$w.NewLine = "`n"; $w.AutoFlush = $true
-
-$w.WriteLine("POS1"); Start-Sleep 1
-$w.WriteLine("POS2"); Start-Sleep 1
-$w.WriteLine("POS3"); Start-Sleep 1
-$w.WriteLine("RESET_ERROR")
-Start-Sleep 3
-$client.Close(); $listener.Stop()</pre>
-    <p>Point <code>config.yaml → robot.host</code> at <code>127.0.0.1</code> for a local run, or the machine's LAN IP for a two-box test.</p>
-  </div>
-
-  <div class="card">
-    <h3>Prep</h3>
+    <h3>D. Persistence</h3>
     <ol class="compact">
-      <li>PLC in Run mode with the latest build activated.</li>
-      <li>HMI running; browser open on the Robot page.</li>
-      <li>Something acting as the robot's TCP <b>server</b> on <code>:6001</code> — either the GUI's simulator panel or the PowerShell one-liner above.</li>
-      <li>Bridge running in client mode (<code>robot.role: "client"</code>, <code>host: "192.168.201.1"</code> or wherever your server is, <code>port: 6001</code>). Start via <code>start_bridge.bat</code> or <code>python robot_bridge.py --config config.yaml</code>.</li>
-      <li>Bridge console shows <code>connected</code>.</li>
-      <li>HMI Robot page shows: <b>eConnState = Connected</b> (green), all AT POS N grey.</li>
+      <li>Change a timer on the Main screen — say <code>Dwell PUSH</code> to 1500.</li>
+      <li><b>Wait about 3 seconds.</b> The flush is debounced ~2 s after the last keystroke.</li>
+      <li>Check the <b>Log</b> page — a flush entry should appear. A failure logs at ERR severity.</li>
+      <li>Power-cycle the panel. The value should come back as 1500.</li>
     </ol>
-  </div>
-
-  <div class="card">
-    <h3>Expected HMI behavior</h3>
-    <ul class="checklist">
-      <li>Robot page's connection indicator flips <b>green</b> (Connected) as soon as the bridge dials in.</li>
-      <li>After <code>POS1</code>: <b>AT POS 1 lights green</b>. <code>nPacketsRx = 1</code>. <code>sLastMessage = "POS1"</code>.</li>
-      <li>After <code>POS2</code>: POS 1 clears, <b>POS 2 lights</b>. <code>nPacketsRx = 2</code>.</li>
-      <li>After <code>POS3</code>: POS 2 clears, <b>POS 3 lights</b>. <code>nPacketsRx = 3</code>.</li>
-      <li>Master cycle START on the AutoCycle page: <code>nPacketsTx = 1</code>, <code>sLastTxMessage = "AUTO_STARTED"</code>.</li>
-      <li>After the simulated cycle completes: <code>sLastTxMessage = "PUSH_DONE"</code>, <code>nCyclesCompleted</code> increments.</li>
-      <li><b>Bridge disconnect scenario:</b> stop the simulator's TCP server. Bridge logs the drop; HMI <code>eConnState → Disconnected</code> (grey). <code>reconnect.delay_seconds</code> later, bridge redials. If the server is back up: green again. If not: it cycles Connecting → Error → Disconnected → Connecting until it succeeds.</li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <h3>Verify from Python (no HMI needed)</h3>
-    <p>If the HMI isn't up yet, you can still confirm the whole chain by reading <code>GVL_Robot.stRobot</code> directly via <code>pyads</code>. Handy for CI / smoke-test scripts:</p>
-    <pre>python -c "
-import pyads
-plc = pyads.Connection('127.0.0.1.1.1', 851); plc.open()
-for f, t in [('bAtPos1', pyads.PLCTYPE_BOOL), ('bAtPos2', pyads.PLCTYPE_BOOL),
-             ('bAtPos3', pyads.PLCTYPE_BOOL), ('nPacketsRx', pyads.PLCTYPE_UDINT),
-             ('nPacketsTx', pyads.PLCTYPE_UDINT),
-             ('sLastMessage', pyads.PLCTYPE_STRING),
-             ('sLastTxMessage', pyads.PLCTYPE_STRING)]:
-    print(f, '=', plc.read_by_name(f'GVL_Robot.stRobot.{f}', t))
-plc.close()
-"</pre>
-  </div>
-
-  <div class="card">
-    <h3>Piston smoke test (independent of the robot)</h3>
-    <p>Even without the bridge running, the pneumatic pistons are fully operable from the HMI:</p>
-    <ol class="compact">
-      <li>Go to the Piston page. Six UCs in a 3×2 grid.</li>
-      <li>For SepSol1 or PushSol1 (wired to real IO), press EXTEND. Solenoid indicator turns green, coil energizes and <b>stays energized</b> (SOL-Spring latch). Retract by pressing RETRACT — coil drops, spring returns the piston.</li>
-      <li>Press-and-hold JOG next to EXTEND — coil energizes only while the button is held; releasing lets the spring pull the piston back.</li>
-      <li>For SepSol2/3 + PushSol2/3 (soft coil, no DI yet), the coil write reaches <code>dOut[2..3]</code> and <code>dOut[5..6]</code> — the DI sensor indicators just don't light up until real switches are wired. See <a href="open-issues.html">Open issues</a>.</li>
-    </ol>
+    <div class="callout warn">
+      <b>If you power off within ~2 s of typing, the edit is lost</b> — that is the debounce, not a bug. Watch for the log entry before cutting power.
+    </div>
   </div>
 </section>
 
@@ -371,105 +271,53 @@ plc.close()
 <!-- ============================================================ -->
 <section class="panel" id="panel-recovery">
   <h2>Recovery</h2>
-  <p>What to do when something has stopped working.</p>
 
   <div class="card">
-    <h3>Symptom: HMI Robot page frozen on stale state</h3>
-    <p>Typically means the bridge process died. Position indicators + connection state reflect the last successful write.</p>
+    <h3>Robot link will not come up</h3>
     <ol class="compact">
-      <li>Check the bridge console window — is it closed / exited?</li>
-      <li>Restart via <code>start_bridge.bat</code>. Watch for exceptions on startup.</li>
-      <li>If the exception is <code>ADSError: 1861 (target port not found)</code> — the TwinCAT runtime is not in Run mode. Restart it.</li>
-      <li>If <code>ConnectionRefusedError</code> in client mode — the robot's TCP server is down or unreachable.</li>
+      <li><b>Robot page → check the IP field.</b> It persists, so it may hold a bench address someone typed last week.</li>
+      <li>Confirm the robot's server is actually listening on port 6001 — the <b>robot is the server</b>, the panel dials out.</li>
+      <li>Confirm <b>TF6310 is running on the panel</b>. Without it, <code>Tc2_TcpIp</code> builds fine but the socket never opens.</li>
+      <li>Check <code>bTcpEnable</code>. It is not persistent, so a restart re-enables it.</li>
+      <li><code>Last Tx</code> / <code>Last Rx</code> on the Robot page are the fastest diagnostic — they show the actual frames.</li>
     </ol>
   </div>
 
   <div class="card">
-    <h3>Symptom: HMI shows <code>HMI_ADS_E_INVALID_SYMBOL</code> for stRobot fields</h3>
-    <p>The PLC symbol table doesn't yet know about the new struct fields. Fix:</p>
-    <ol class="compact">
-      <li>In TcXaeShell: <b>PLC → Login</b>, then <b>TwinCAT → Activate Configuration</b>. An Online Change is <b>not sufficient</b> for new struct members — the symbol table cache needs a full activate.</li>
-      <li>If still failing after Activate, restart TcXaeShell — the IDE has a symbol-table cache of its own.</li>
-      <li>Force-refresh the browser (Ctrl+F5) to bypass the HMI's client cache.</li>
-    </ol>
+    <h3>A persistent value reverted</h3>
+    <ul class="compact">
+      <li><b>Within ~2 s of the edit?</b> The debounced flush had not fired. Expected.</li>
+      <li><b>After an Activate Configuration or download?</b> Expected for anything <i>not</i> declared persistent. If it is a robot endpoint, confirm it is still in <code>GVL_Robot</code>'s <code>PERSISTENT</code> block.</li>
+      <li><b>Was it Continuous?</b> That one never persists — it is forced off every scan, deliberately.</li>
+      <li><b>Did a struct change shape?</b> Adding or removing a field can invalidate the stored bootdata. Re-enter the values.</li>
+      <li>Check the Log page for a failed-flush ERR entry.</li>
+    </ul>
   </div>
 
   <div class="card">
-    <h3>Symptom: <code>SYMBOL_NOT_AUTHORIZED</code> on stRobot</h3>
-    <p>The symbol is in the SYMBOLS map but not in the USERGROUPS ACL. Fix:</p>
-    <ol class="compact">
-      <li>Open <code>Server/TcHmiSrv/TcHmiSrv.Config.default.json</code>.</li>
-      <li>Under <code>USERGROUPS.__SystemUsers.SYMBOLS</code>, verify <code>"ADS.PLC1.GVL_Robot.stRobot": 3</code> is present.</li>
-      <li>Rebuild + republish the HMI project.</li>
-    </ol>
+    <h3>The panel log is empty</h3>
+    <p>Expected after any restart — <b>the log is RAM-only</b>. There is no file I/O in the PLC and <code>GVL_Log</code> is not persistent, so every entry is lost on power cycle, PLC reset or download, and only the last 256 events are kept internally. Connect FlowerPyHmi if you need a durable record; it drains the ring into rotating files on the laptop.</p>
+    <p>Also check that <code>Enabled</code> is ticked on the Logs page — it is a global mute.</p>
   </div>
 
   <div class="card">
-    <h3>Symptom: HMI page shows old content after edit</h3>
-    <p>TcHmi caches <code>.content</code> and <code>.usercontrol</code> in the browser aggressively.</p>
-    <ol class="compact">
-      <li>Hard reload: Ctrl+F5, or open DevTools and check "Disable cache" while devtools is open.</li>
-      <li>If a UserControl was renamed, also check <code>tchmiconfig.json</code>'s <code>userControls</code> list.</li>
-      <li>If a localization key was added, both <code>en.localization</code> and <code>de.localization</code> must have it — otherwise the runtime falls back to the literal key text.</li>
-    </ol>
+    <h3>FlowerPyHmi shows stale, missing or empty data</h3>
+    <ul class="compact">
+      <li><b><code>HMI_ADS_E_INVALID_SYMBOL</code> / symbol-not-found for a field that exists in the PLC source</b> — the symbol table is stale. An <b>Online Change</b> is not always enough; a full <b>Activate Configuration</b> rebuilds it, and occasionally an IDE restart is the only fix.</li>
+      <li><b>A field reads fine individually but breaks a batch read</b> — one malformed symbol-info entry fails the whole sum-up transaction, taking down every symbol in the poll cycle, not just that one. Currently known for <code>GVL_Log.aRecent[i].sTime</code>; needs a full Activate on the panel.</li>
+      <li><b>Everything lags or the page freezes</b> — see the <code>pyads_Batch_Read_Diagnostics</code> skill. Run <code>python tools/ads_diagnose.py</code> from the FlowerPyHmi repo first; a healthy batch on a fresh connection while the running server crawls means the server's aged connection is the problem, not the symbol list.</li>
+      <li><b>A Continuous checkbox reverts when ticked</b> — correct behaviour. The PLC forces the field FALSE every scan.</li>
+    </ul>
   </div>
 
   <div class="card">
-    <h3>Symptom: PLC won't build after external file edit</h3>
-    <p>Common when edits happen outside TcXaeShell (e.g. via Claude Code or git).</p>
-    <ol class="compact">
-      <li>Confirm every new file has a matching <code>&lt;Compile Include="..."/&gt;</code> in <code>PLC1/PLC1.plcproj</code>.</li>
-      <li>Confirm every TcPOU / TcDUT / TcGVL has a unique GUID in its <code>Id="{...}"</code> attribute.</li>
-      <li>If the project appears empty in the Solution Explorer after opening, look for a stripped <code>.tsproj</code> — never commit hand-edited <code>.tsproj</code> files. Restore from git if needed.</li>
-    </ol>
+    <h3>A VISU element vanished after an edit</h3>
+    <p>XAE silently dropped it. The file still parses, the build still succeeds, the element is simply gone. Run <code>python scripts/validate_visu.py</code>, then re-derive the element by <b>cloning a proven block</b> rather than hand-authoring one. Never hand-edit <code>.TcVIS</code> XML.</p>
   </div>
 
   <div class="card">
-    <h3>Symptom: HMI console shows <code>E_TRIGGER_CONDITION_INVALID</code> (code 5200/0x1450)</h3>
-    <p>Full text: <i>"Condition definition is invalid because it contains no expressions and no following actions."</i> The event target usually points at a specific property binding, e.g. <code>%pp%RobotHost::robot::eConnState%/pp%</code>.</p>
-    <p><b>Cause.</b> A trigger's <code>Condition</code> action was authored with an <code>elseIf</code> part. TcHmi only supports <code>if</code> and <code>else</code>. The <code>elseIf</code> key is silently ignored — the part is seen as having no expression and no action, and the whole condition is refused at parse time.</p>
-    <p><b>Fix.</b> Nest a fresh <code>Condition</code> inside the outer <code>else</code>'s <code>then</code> array, one level per additional branch:</p>
-    <pre>parts: [
-  { if: [state == A], then: [action A] },
-  { else: [
-      { objectType: "Condition", parts: [
-          { if: [state == B], then: [action B] },
-          { else: [
-              { objectType: "Condition", parts: [
-                  { if: [state == C], then: [action C] },
-                  { else: [action D] } ] } ] } ] } ] }
-]</pre>
-    <p>Verbose but the only supported shape for n-way state → color mapping without introducing a user function. The Flower <code>UC_Robot.usercontrol</code> uses this nesting for its 4-state <code>eConnState</code> color trigger — copy that pattern.</p>
-  </div>
-
-  <div class="card">
-    <h3>Symptom: CP6606 boots to CE desktop, no HMI shown</h3>
-    <p>The Beckhoff Startup Manager didn't fire the PLC HMI Client, or the PLC isn't in Run mode when the client starts.</p>
-    <ol class="compact">
-      <li>On the panel, tap Start → <code>StartMan</code> → verify the Autostart entry exists with the correct path <code>\Hard Disk\TwinCAT\3.1\Components\Plc\Tc3PlcHmi\Tc3PlcHmi.exe</code>.</li>
-      <li>Increase the delay to 45–60 s if the PLC needs longer to reach Run mode.</li>
-      <li>Manually double-click <code>Tc3PlcHmi.exe</code> from the CE file explorer. If it opens a "no visualization found" or "cannot connect to PLC" message, the PLC isn't running or the config INI is wrong.</li>
-      <li>From TcXaeShell (on the developer laptop, connected via ADS route), check the CP6606's PLC state — it must be Run for the client to have anything to render.</li>
-    </ol>
-  </div>
-
-  <div class="card">
-    <h3>Symptom: CP6606 HMI shows blank / missing images</h3>
-    <p>The CE renderer requires BMP; SVG isn't rendered.</p>
-    <ol class="compact">
-      <li>In TcXaeShell → PLC1 → Visualization Manager → Settings tab → check "<i>Automatically convert SVG to BMP</i>".</li>
-      <li>Rebuild + Activate. The panel needs a fresh boot-file deployment.</li>
-      <li>If images still don't appear, verify the source files are actually in the project (right-click Image Pool → Properties) — missing image references silently render as blanks.</li>
-    </ol>
-  </div>
-
-  <div class="card">
-    <h3>Symptom: docs viewer shows a fetch error</h3>
-    <p><code>viewer.html</code> uses <code>fetch()</code> to load the .md source, which browsers block under <code>file://</code>.</p>
-    <ol class="compact">
-      <li>Serve via <code>scripts\serve-docs.bat</code> (or <code>python -m http.server 8765</code> from the repo root) and browse via <code>http://127.0.0.1:8765/docs/index.html</code>.</li>
-      <li>The HTML pages (configuration, operation, open-issues) work fine under <code>file://</code>; only the markdown viewer needs HTTP.</li>
-    </ol>
+    <h3>Restoring defaults</h3>
+    <p><b>Cold Reset</b> from TcXaeShell wipes persistent memory and reboots the PLC — every timer, flag, and the robot endpoint return to their declared defaults. Note the robot's IP before doing this if the installation does not use <code>192.168.201.1</code>.</p>
   </div>
 </section>
 
