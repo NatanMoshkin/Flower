@@ -316,6 +316,76 @@ numeric-ID serialization and XAE silently drops elements it cannot parse,
 so always open the page in TcXaeShell and confirm the element renders
 before activating.
 
+## PERSISTENT DATA: nothing was ever written to disk (2026-07-27)
+
+An operator-edited `tPlateWaitTimeoutMs` reverted to its default after a
+power cycle. `GVL_HmiPersistent` was correctly declared `VAR_GLOBAL
+PERSISTENT` — the bug was that **`PERSISTENT` declares a durable storage
+class, not an automatic save**. TwinCAT flushes RAM to
+`Port_851.bootdata` on exactly three triggers:
+
+| Trigger | Was it happening? |
+|---|---|
+| Clean PLC stop | No — cutting power to the CP6606 is not a clean stop |
+| `FB_WritePersistentData` from PLC code | No — never called; `Tc2_Utilities` was not even referenced |
+| TcXaeShell → *PLC → Save persistent data* | Manual, operator-only |
+
+So every edit lived in RAM only and was lost on power-down; on restart the
+declared defaults reloaded.
+
+**Fix — `FB_PersistentAutoSave` (`PLC1/POUs/`), called last in `MAIN`.**
+Watches all nine structs in `GVL_HmiPersistent` and flushes ~2 s after the
+operator stops editing. Debounced rather than write-on-change because the
+panel boots from Compact Flash — one edit of a 5-digit timeout would
+otherwise be five writes.
+
+It keeps **two** shadow sets, which is what makes "stopped editing"
+detectable at all:
+- `shSaved` — what we believe reached disk, refreshed only after a
+  *successful* write. A difference means a flush is owed. After a failed
+  write it is deliberately left alone, so the retry happens naturally.
+- `shSeen` — what we saw last scan, refreshed every scan. A difference
+  means the value changed *this* scan.
+
+The quiet timer runs only while `dirty AND NOT changing`, so it restarts on
+every keystroke. Comparison is `MEMCMP` because IEC has no struct `<>`.
+Completion is the falling edge of `BUSY` — `FB_WritePersistentData` has no
+`DONE` output. Each flush logs to `GVL_Log` (so it shows on the Logs page)
+and a failure logs at ERR severity rather than failing silently.
+
+**The safety half of this fix — do not remove one without the other.**
+Making persistence work also makes the `stMasterAutoCfg` BOOLs survive a
+power cycle. `MAIN` section 0 is a one-shot cold-boot block that clears
+exactly one of them, and the split is deliberate:
+
+- **`bContinuous` is cleared.** `FB_MasterAutoCycle`'s IDLE branch tests it
+  as a **level**, not an edge:
+
+  ```
+  IF bMachineAuto AND (... OR stCfg.bContinuous) THEN
+  ```
+
+  Restoring it TRUE would drive pistons within one scan of power-up with no
+  operator or robot involvement. Nothing external gates it — that is what
+  separates it from every other start path.
+
+- **`bAutoMode` is kept** (operator decision, 2026-07-27; the first version
+  cleared it and that was wrong). The machine returns to Automatic and IDLE
+  and still needs a real start trigger. Consequence to be aware of: in Auto
+  the panel reports `nStateOut = 0` (IDLE) rather than `30` (MANUAL), so a
+  robot already running can request a cycle straight after power-up. That is
+  the intended production behaviour — resume without re-arming the panel.
+
+- The timers, `bNoSensors` and `bBypassPlateSensors` are not cleared either.
+  They are operator config and persisting them is the point. Worth knowing
+  that a bench flag left on now survives a reboot.
+
+That hazard was previously masked purely by persistence being broken. The
+general rule: **`GVL_HmiPersistent` mixes tunables with runtime state, so
+any new field there needs a decision — carry across a power cycle, or clear
+in MAIN's cold-boot block.** `GVL_HMI` is plain `VAR_GLOBAL`, so piston
+runtime and momentary commands are unaffected.
+
 ## PLATE SENSORS: status on Main + bypass (2026-07-26)
 
 **Status.** `Main.TcVIS` shows both plate sensors in the 110 px strip to the
@@ -687,9 +757,9 @@ in the System Manager.
 
 ## Out of scope (Future)
 
-- **Review persistent vars** — verify `stXxxAutoCfg` and `stMasterAutoCfg`
-  actually survive a power-cycle. Needs a bench test (set value → hard
-  power cycle → verify), not a code review.
+- ~~**Review persistent vars**~~ **Done 2026-07-27** — the bench test was
+  run and they did *not* survive. Root cause and fix in the PERSISTENT
+  section above.
 - **Reassign LEDs to functional statuses.** Currently PB1/2/3 LEDs are
   dumb mirrors of the press state. Repurposing candidates: LED1 = cycle
   running, LED2 = error latched, LED3 = TCP connected. Deferred until

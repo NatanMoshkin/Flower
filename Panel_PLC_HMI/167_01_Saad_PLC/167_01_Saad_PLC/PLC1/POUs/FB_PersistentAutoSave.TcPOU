@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_PersistentAutoSave" Id="{3c7a1f52-9b84-4d16-a2e7-5f0c81d47b93}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+   Flushes GVL_HmiPersistent to disk a short while after the operator stops
+   editing.
+
+   WHY THIS EXISTS. VAR_GLOBAL PERSISTENT declares a durable storage CLASS.
+   It does not mean "saved automatically". TwinCAT writes RAM out to
+   Port_851.bootdata on exactly three triggers: a clean PLC stop, an explicit
+   FB_WritePersistentData call, or the IDE's PLC > Save persistent data menu.
+   Cutting power to the CP6606 is not a clean stop, so before this FB existed
+   every operator edit lived only in RAM and was silently lost on the next
+   power cycle -- observed 2026-07-27 with tPlateWaitTimeoutMs reverting to
+   its declared default.
+
+   WHY DEBOUNCED. The panel boots from Compact Flash. Flushing on every
+   keystroke would turn one edit of a 5-digit timeout into five writes. The
+   FB waits for tQuietMs of no edits, so a burst collapses into one write.
+
+   SAFETY NOTE. Making persistence work also makes stMasterAutoCfg.bAutoMode
+   and .bContinuous survive a power cycle, and FB_MasterAutoCycle's IDLE
+   branch tests bContinuous as a LEVEL. MAIN's cold-boot block clears both on
+   the first scan; without it a machine powered down in Auto + Continuous
+   would start driving pistons on power-up. Do not remove one without the
+   other.
+*)
+FUNCTION_BLOCK FB_PersistentAutoSave
+VAR_INPUT
+    // Quiet period after the last edit before the flush fires.
+    tQuietMs : UDINT := 2000;
+
+    // AMS port of this PLC instance. 851 = first instance.
+    nPort    : UINT  := 851;
+END_VAR
+VAR_OUTPUT
+    bSaving    : BOOL;    // a flush is in progress
+    bDirty     : BOOL;    // RAM differs from what we believe is on disk
+    bError     : BOOL;    // last flush failed; see nErrorId
+    nErrorId   : UDINT;   // ADS error from the last failed flush
+    nSaveCount : UDINT;   // successful flushes since PLC start
+END_VAR
+VAR
+    fbWrite    : Tc2_Utilities.FB_WritePersistentData;
+    fbTrigDone : F_TRIG;   // falling edge of BUSY = the write finished
+    tonQuiet   : TON;
+
+    // Two shadow sets, which is what makes "stopped editing" detectable:
+    //   shSaved = what we believe reached the disk. Refreshed only after a
+    //             successful write, so bDirty means "a flush is owed".
+    //   shSeen  = what we saw last scan. Refreshed every scan, so a
+    //             difference means "changed during THIS scan".
+    // The quiet timer runs only while dirty AND not changing, so it restarts
+    // on every keystroke and elapses only once the operator stops.
+    shSavedPiston : ARRAY[1..8] OF ST_HmiPistonAutoCfg;
+    shSeenPiston  : ARRAY[1..8] OF ST_HmiPistonAutoCfg;
+    shSavedMaster : ST_HmiMasterAutoCfg;
+    shSeenMaster  : ST_HmiMasterAutoCfg;
+
+    // Bound once in section 0. An array of refs is the one case where a
+    // POINTER beats VAR_IN_OUT here -- the alternative is eight near-identical
+    // copies of the compare-and-baseline block.
+    apPiston : ARRAY[1..8] OF POINTER TO ST_HmiPistonAutoCfg;
+
+    bInit     : BOOL;
+    bChanging : BOOL;
+    bSaveReq  : BOOL;
+    i         : INT;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* ==========================================
+   0. ONE-TIME BIND + BASELINE
+   Baseline from the values ALREADY IN RAM, which at this point are the ones
+   restored from bootdata. Baselining from the declared defaults instead
+   would make every start look dirty and fire a pointless write.
+   MAIN's cold-boot block runs before this FB is called, so the cleared
+   bAutoMode / bContinuous are part of the baseline and do not count as an
+   edit either.
+   ========================================== *)
+IF NOT bInit THEN
+    bInit := TRUE;
+    apPiston[1] := ADR(GVL_HmiPersistent.stSepSol1AutoCfg);
+    apPiston[2] := ADR(GVL_HmiPersistent.stSepSol2AutoCfg);
+    apPiston[3] := ADR(GVL_HmiPersistent.stSepSol3AutoCfg);
+    apPiston[4] := ADR(GVL_HmiPersistent.stPushSol1AutoCfg);
+    apPiston[5] := ADR(GVL_HmiPersistent.stPushSol2AutoCfg);
+    apPiston[6] := ADR(GVL_HmiPersistent.stPushSol3AutoCfg);
+    apPiston[7] := ADR(GVL_HmiPersistent.stGripSolLAutoCfg);
+    apPiston[8] := ADR(GVL_HmiPersistent.stGripSolRAutoCfg);
+
+    FOR i := 1 TO 8 DO
+        shSavedPiston[i] := apPiston[i]^;
+        shSeenPiston[i]  := apPiston[i]^;
+    END_FOR
+    shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
+    shSeenMaster  := GVL_HmiPersistent.stMasterAutoCfg;
+END_IF
+
+(* ==========================================
+   1. CHANGE DETECTION
+   MEMCMP rather than "<>" because IEC 61131-3 has no struct comparison.
+   Padding bytes are compared too, but both sides are whole-struct copies of
+   the same type, so padding matches and cannot cause a false positive.
+   ========================================== *)
+bDirty    := FALSE;
+bChanging := FALSE;
+
+FOR i := 1 TO 8 DO
+    IF MEMCMP(apPiston[i], ADR(shSavedPiston[i]),
+              SIZEOF(ST_HmiPistonAutoCfg)) <> 0 THEN
+        bDirty := TRUE;
+    END_IF
+    IF MEMCMP(apPiston[i], ADR(shSeenPiston[i]),
+              SIZEOF(ST_HmiPistonAutoCfg)) <> 0 THEN
+        bChanging := TRUE;
+        shSeenPiston[i] := apPiston[i]^;
+    END_IF
+END_FOR
+
+IF MEMCMP(ADR(GVL_HmiPersistent.stMasterAutoCfg), ADR(shSavedMaster),
+          SIZEOF(ST_HmiMasterAutoCfg)) <> 0 THEN
+    bDirty := TRUE;
+END_IF
+IF MEMCMP(ADR(GVL_HmiPersistent.stMasterAutoCfg), ADR(shSeenMaster),
+          SIZEOF(ST_HmiMasterAutoCfg)) <> 0 THEN
+    bChanging := TRUE;
+    shSeenMaster := GVL_HmiPersistent.stMasterAutoCfg;
+END_IF
+
+(* ==========================================
+   2. DEBOUNCE
+   IN drops for the scan in which anything changed, resetting the timer. So
+   Q fires only after tQuietMs with no edits at all, while still dirty.
+   ========================================== *)
+tonQuiet(IN  := bDirty AND NOT bChanging AND NOT fbWrite.BUSY,
+         PT  := UDINT_TO_TIME(tQuietMs));
+
+(* ==========================================
+   3. FLUSH
+   START is held high until BUSY rises so the request cannot be dropped if
+   the ADS call has not been scheduled yet.
+   ========================================== *)
+IF tonQuiet.Q AND NOT fbWrite.BUSY THEN
+    bSaveReq := TRUE;
+END_IF
+
+fbWrite(NETID := '', PORT := nPort, START := bSaveReq);
+IF fbWrite.BUSY THEN
+    bSaveReq := FALSE;
+END_IF
+bSaving := fbWrite.BUSY;
+
+(* ==========================================
+   4. COMPLETION
+   Detected on the falling edge of BUSY rather than a DONE output, which
+   FB_WritePersistentData does not expose.
+   Re-baseline ONLY on success: after a failure the data is still owed to
+   disk, so leaving shSaved alone keeps bDirty set and the FB retries once
+   the operator's next edit settles.
+   ========================================== *)
+fbTrigDone(CLK := fbWrite.BUSY);
+
+IF fbTrigDone.Q THEN
+    IF fbWrite.ERR THEN
+        bError   := TRUE;
+        nErrorId := fbWrite.ERRID;
+        F_LogEvent(eSev := E_LogSev.ERR, sSource := 'Persist',
+                   sMsg := CONCAT('persistent save FAILED, ADS err ',
+                                  UDINT_TO_STRING(fbWrite.ERRID)));
+    ELSE
+        bError   := FALSE;
+        nErrorId := 0;
+        FOR i := 1 TO 8 DO
+            shSavedPiston[i] := apPiston[i]^;
+        END_FOR
+        shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
+        nSaveCount    := nSaveCount + 1;
+        F_LogEvent(eSev := E_LogSev.INFO, sSource := 'Persist',
+                   sMsg := 'persistent data saved');
+    END_IF
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

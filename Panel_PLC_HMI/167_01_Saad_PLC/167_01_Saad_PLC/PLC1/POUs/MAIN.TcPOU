@@ -40,10 +40,52 @@ VAR
     bMachineAuto : BOOL;
     bManualMode  : BOOL;   // = NOT bMachineAuto; gates PB jogs
     eMachineMode : E_ControlMode;
+
+    // Flushes GVL_HmiPersistent to disk once the operator stops editing.
+    // PERSISTENT alone never wrote anything on a power cut -- see the FB
+    // header. Called last so it sees this scan's final config values.
+    fbPersistentSave : FB_PersistentAutoSave;
+
+    // Not persistent itself, so FALSE on every PLC start -- which is exactly
+    // what makes it a cold-boot latch. See section 0.
+    bColdBootDone : BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
+   0. COLD-BOOT SAFETY — one shot, before anything reads the config.
+   stMasterAutoCfg is PERSISTENT, so once FB_PersistentAutoSave started
+   flushing to disk, its BOOLs began surviving a power cycle too. Exactly
+   one of them is cleared here, and the distinction is deliberate:
+
+   bContinuous is CLEARED. FB_MasterAutoCycle's IDLE branch tests it as a
+   LEVEL, not an edge:
+
+       IF bMachineAuto AND (... OR stCfg.bContinuous) THEN
+
+   so restoring it TRUE would start driving pistons within one scan of
+   power-up, with no operator or robot involvement at all. Nothing external
+   gates it, which is what makes it different from every other start path.
+
+   bAutoMode is KEPT (operator decision, 2026-07-27). The machine comes back
+   in Automatic and IDLE, and still needs a real start trigger — operator
+   START, or the robot's CMD:1. Note the consequence: in Auto the panel
+   reports nStateOut = 0 (IDLE) rather than 30 (MANUAL), so a robot that is
+   already running may request a cycle straight after power-up. That is the
+   intended production behaviour — resume without someone re-arming the
+   panel — not an oversight.
+
+   The timers, bNoSensors and bBypassPlateSensors are not cleared either:
+   they are operator config, and persisting them is the point of the flush.
+
+   Do not remove this block without also removing the flush.
+   ========================================== *)
+IF NOT bColdBootDone THEN
+    bColdBootDone := TRUE;
+    GVL_HmiPersistent.stMasterAutoCfg.bContinuous := FALSE;
+END_IF
+
+(* ==========================================
    Master auto-cycle — coordinates the 3 pairs of (Sep,Push) pistons
    with the robot handshake. Called BEFORE the per-piston
    auto FBs and BEFORE the piston FBs so its bSepCmd* / bPushCmd*
@@ -251,6 +293,15 @@ fbRobotTcp(
     stRobot     := GVL_Robot.stRobot,
     stParams    := GVL_Robot.stParams
 );
+
+(* ==========================================
+   Persistent config flush. Called LAST so it compares this scan's final
+   values, and after section 0 so the cold-boot clears are part of its
+   baseline rather than looking like an operator edit.
+   Writes ~2 s after the operator stops editing; logs each flush to
+   GVL_Log (visible on the Logs page) so a failing write is not silent.
+   ========================================== *)
+fbPersistentSave();
 
 ]]></ST>
     </Implementation>
