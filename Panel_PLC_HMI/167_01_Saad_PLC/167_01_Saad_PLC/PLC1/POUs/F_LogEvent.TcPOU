@@ -38,18 +38,21 @@ END_IF
 
 // Write into the ring at slot = nWriteIdx MOD 256
 idx := GVL_Log.nWriteIdx MOD 256;
-GVL_Log.aLog[idx].eSev    := eSev;
-GVL_Log.aLog[idx].sSource := sSource;
-GVL_Log.aLog[idx].sMsg    := sMsg;
+GVL_Log.aLog[idx].eSev     := eSev;
+GVL_Log.aLog[idx].sSevText := TO_STRING(eSev);
+GVL_Log.aLog[idx].sSource  := sSource;
+GVL_Log.aLog[idx].sMsg     := sMsg;
 
 // Shift the newest-first mirror down by one and write the new entry at
 // [0]. HMI Logs page binds aRecent[0..19] directly in display order.
+// The shift copies whole structs, so sSevText rides along with no extra work.
 FOR k := 19 TO 1 BY -1 DO
     GVL_Log.aRecent[k] := GVL_Log.aRecent[k-1];
 END_FOR
-GVL_Log.aRecent[0].eSev    := eSev;
-GVL_Log.aRecent[0].sSource := sSource;
-GVL_Log.aRecent[0].sMsg    := sMsg;
+GVL_Log.aRecent[0].eSev     := eSev;
+GVL_Log.aRecent[0].sSevText := TO_STRING(eSev);
+GVL_Log.aRecent[0].sSource  := sSource;
+GVL_Log.aRecent[0].sMsg     := sMsg;
 
 // Increment the monotonic write counter — Python bridge polls this and
 // drains any slots between its lastReadIdx and this value.

@@ -10,11 +10,11 @@ Layout (the panel is 800x480):
     Sev    Source          Message
     ...20 rows of aRecent[i], newest first...
 
-Severity binds straight to `aRecent[i].eSev` and therefore renders as a
-NUMBER (0..3), not DBG/INFO/WARN/ERR -- verified on the panel 2026-07-27.
-{attribute 'to_string'} makes TO_STRING() available in ST; it does not make
-the classic VISU text output resolve an enum. To fix, add a STRING mirror to
-ST_LogEntry, set it in F_LogEvent, and rebind the Sev column here.
+Severity binds to `aRecent[i].sSevText`, NOT to the eSev enum. Binding the
+enum renders 0..3 -- {attribute 'to_string'} makes TO_STRING() available in
+ST, it does not make the classic VISU text output resolve an enum. F_LogEvent
+fills sSevText via TO_STRING(eSev), the same mirror pattern ST_HmiMasterAuto
+uses for sStepText. (Verified the wrong way round on the panel first, twice.)
 
 Built by cloning proven blocks, never authoring them:
   * page skeleton + "Main" nav button  <- PistonsManual.TcVIS
@@ -79,7 +79,7 @@ INDENT_O, INDENT_C = "              <o>", "              </o>"
 
 L = "GVL_Log."
 ROWS, ROW_TOP0, ROW_STEP, ROW_H = 20, 66, 20, 19
-COLS = [("Sev", 20, 60, "%s", "eSev"),
+COLS = [("Sev", 20, 60, "%s", "sSevText"),
         ("Source", 84, 150, "%s", "sSource"),
         ("Message", 238, 542, "%s", "sMsg")]
 HDR_TOP, HDR_H = 44, 20

@@ -468,20 +468,29 @@ costs nothing per scan. Rows are display-only (asserted: no
 `bDebugMode` checkboxes, an `nWriteIdx` counter, and a Main nav button; the
 nav button *to* it sits at x=63 on Main's y=417 row.
 
-**Known cosmetic issue: the Sev column shows numbers, not names.** It binds
-straight to the enum `aRecent[i].eSev`, on the reasoning that `E_LogSev`
-carries `{attribute 'to_string'}`. That was wrong — verified on the panel
-2026-07-27, the column renders `0`/`1`. `to_string` makes `TO_STRING()`
-available in ST; it does not make the classic VISU text output resolve an
-enum to its enumerator name. Which is exactly why every other page in this
-project binds a STRING mirror (`sStepText := TO_STRING(eStep)`) — that
-pattern is not only for FlowerPyHmi's benefit, as previously assumed here.
+**The Sev column binds `sSevText`, never the enum.** `{attribute 'to_string'}`
+on `E_LogSev` makes `TO_STRING()` available **in ST only** — it does not make
+the classic VISU text output resolve an enum to its enumerator name. Binding
+`aRecent[i].eSev` renders `0`/`1`/`2`/`3`. This was assumed the other way
+round and shipped wrong twice before being fixed on 2026-07-27; treat "the
+classic VISU cannot stringify an enum" as settled, and note that it is why
+every other page here carries a STRING mirror (`sStepText`, `sErrorText`).
 
-Fix when it matters: add `sSevText : STRING(4)` to `ST_LogEntry` and set it
-in `F_LogEvent` beside `aRecent[0].eSev`, then rebind the column. Cheap
-(once per event, not per scan), but it widens `ST_LogEntry` — which
-`aLog[256]` and FlowerPyHmi's ring reader both depend on, so run
-`scripts/check_pyhmi_contract.py` after.
+So `ST_LogEntry` gained `sSevText : STRING(8)`, set by `F_LogEvent` via
+`TO_STRING(eSev)` into both rings. `STRING(8)` rather than an exactly-sized
+`STRING(4)` so a future severity name cannot truncate silently. `F_LogEvent`
+needed no change to its shift loop — `aRecent[k] := aRecent[k-1]` copies whole
+structs, so the new member rides along.
+
+Widening `ST_LogEntry` turned out to be safe for FlowerPyHmi: it reads the
+ring *per-field by symbol name* (`plc_log.py:29-31`), not as a packed struct,
+so no symbol was removed — `check_pyhmi_contract.py` still resolves 229/229.
+It also keeps its own `SEV_NAMES` map and renders from `eSev`, so the 0..3 →
+name mapping now exists in two places. Left that way deliberately: Python has
+no need of the PLC's string, and coupling it would buy nothing.
+
+Retarget script: `scripts/fix_logs_sev_column.py` (idempotent; asserts it
+rewrote exactly 20 cells and left Source/Message untouched).
 
 **Numeric entry — resolved 2026-07-26.** The project originally had only two
 input mechanisms (`Visu_TapInput` → BOOL, and `ChangeVisuInputAction`), so

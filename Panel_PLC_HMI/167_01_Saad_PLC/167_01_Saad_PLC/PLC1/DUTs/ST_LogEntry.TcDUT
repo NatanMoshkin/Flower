@@ -9,6 +9,17 @@ STRUCT
     // precision matters for a future event type, add nTick : UDINT.
 
     eSev    : E_LogSev;
+
+    // Display mirror of eSev, set by F_LogEvent. Exists because the classic
+    // VISU text output cannot resolve an enum to its enumerator name --
+    // {attribute 'to_string'} only enables TO_STRING() in ST, it does not
+    // teach the visualization anything. Same reason ST_HmiMasterAuto carries
+    // sStepText next to eStep. FlowerPyHmi ignores this field; it renders
+    // from eSev via its own SEV_NAMES map.
+    // STRING(8), not STRING(4): the four current names top out at 4 chars,
+    // but an exactly-sized string would silently truncate a longer one.
+    sSevText : STRING(8);
+
     sSource : STRING(20);    // short instance name, e.g. 'SepSol1Auto'
     sMsg    : STRING(80);    // human-readable message
 END_STRUCT
