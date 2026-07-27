@@ -73,6 +73,11 @@ GVL_IO.dOut[9] := GVL_App.bLedPb3;
 GVL_IO.dOut[10] := GVL_App.bValveGripExtendL;
 GVL_IO.dOut[11] := GVL_App.bValveGripExtendR;
 
+(* Machine status lamps. Green = Auto idle steady / cycling blink;
+   red = master cycle in ERR. Both driven by MAIN. *)
+GVL_IO.dOut[12] := GVL_App.bLedGreen;
+GVL_IO.dOut[13] := GVL_App.bLedRed;
+
 ]]></ST>
       </Implementation>
     </Action>

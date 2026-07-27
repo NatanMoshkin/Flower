@@ -418,6 +418,44 @@ any new field there needs a decision — carry across a power cycle, or clear
 in MAIN's cold-boot block.** `GVL_HMI` is plain `VAR_GLOBAL`, so piston
 runtime and momentary commands are unaffected.
 
+## CONTINUOUS DISABLED + STATUS LAMPS (2026-07-27)
+
+**Continuous is off on the real machine.** Every cycle is started by the
+operator or by the robot's `CMD:1`, so the checkbox was removed from
+`AutoMain` (`scripts/remove_continuous_checkbox.py`; the remaining three
+shifted up 40 px to close the gap) and `MAIN` section 0 forces
+`stMasterAutoCfg.bContinuous := FALSE` **every scan**.
+
+Forcing rather than merely deleting the control matters: a VISU page is one
+of several writers. **FlowerPyHmi has its own Continuous checkbox on
+`main.html` and `manual_control.html`** and writes the field over ADS.
+Removing the panel checkbox alone would have hidden the control while
+leaving the behaviour reachable. Consequence to be aware of: those
+FlowerPyHmi checkboxes now visibly revert when ticked — worth removing there
+too, but that is a separate repo.
+
+The field is kept rather than deleted from `ST_HmiMasterAutoCfg` because
+`FB_MasterAutoCycle` clears it in six places on ERR / STOP paths, and
+FlowerPyHmi polls it; forcing is the smaller, safer change.
+
+**Status lamps — DO 12 green / DO 13 red.** Unlike the PB LEDs (dumb press
+mirrors), these report machine state, driven by `MAIN` from the master
+cycle:
+
+| Lamp | DO | Behaviour |
+|---|---|---|
+| RED | `dOut[13]` | On while the master cycle is latched in `ERR`. |
+| GREEN | `dOut[12]` | Auto + IDLE → steady. Auto + cycling → blink (400 ms on / 400 ms off). Manual, or ERR → off. |
+
+Green is off in ERR so the two lamps cannot contradict each other — red lit
+alongside green would read as "faulted but running". Green is off in Manual
+because it means "the automatic cycle is live", which is exactly what Manual
+is not.
+
+The blink source is a self-resetting `TON` **toggling a BOOL**, not
+`tonBlink.Q` directly: the bare `TON` pulses for a single scan per period,
+which would be invisible rather than a blink.
+
 ## PLATE SENSORS: status on Main + bypass (2026-07-26)
 
 **Status.** `Main.TcVIS` shows both plate sensors in the 110 px strip to the
@@ -518,7 +556,7 @@ block (a new `.TcVIS` is invisible to the build without one):
 | Page | Contents | Reached from |
 |---|---|---|
 | `Main` | AutoMain embedded as a frame + 4 nav buttons + plate lamps | — |
-| `AutoMain` | title, step/error fields, START/STOP/RESET, 4 checkboxes, 5 timers | embedded in Main |
+| `AutoMain` | title, step/error fields, START/STOP/RESET, 3 checkboxes, 5 timers | embedded in Main |
 | `PistonsManual` | 6 Piston frames (Sep/Push 1-3) | Main |
 | `GripperManual` | 2 Piston frames (`stGripSolL` / `stGripSolR`) | Main |
 | `Robot` | conn state, Rx/Tx counts, last Rx/Tx, nStateOut, nRobotCmd, Get Sync + New Bulb buttons, 11 tuning params, editable Robot IP | Main |
@@ -793,7 +831,9 @@ panel push-buttons + LEDs are wired. Mapping lives in `PRG_IoMap.TcPOU`
 | GripSolR | dIn[19] | dIn[20] | dOut[11] |
 | PlateSenL | dIn[21] | — | — |
 | PlateSenR | dIn[22] | — | — |
-| free | dIn[23..24] | — | dOut[12..16] |
+| LED_GREEN (machine status) | — | — | dOut[12] |
+| LED_RED (machine status) | — | — | dOut[13] |
+| free | dIn[23..24] | — | dOut[14..16] |
 
 **Rewired 2026-07-27** to match the physical terminals — the PBs moved down
 to dIn[13..15] / dOut[7..9] (dIn[13] and dOut[7] were the channels freed by

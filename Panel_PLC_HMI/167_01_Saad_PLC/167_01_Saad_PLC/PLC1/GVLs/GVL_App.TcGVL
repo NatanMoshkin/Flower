@@ -35,7 +35,9 @@
 //   dOut[4..6]   = PushSolN Extend
 //   dOut[7..9]   = PB1/2/3 LEDs
 //   dOut[10..11] = GripSolL/R Extend
-//   dOut[12..16] = free
+//   dOut[12]     = LED_GREEN (machine status)
+//   dOut[13]     = LED_RED (machine status)
+//   dOut[14..16] = free
 VAR_GLOBAL
     // SepSol1 (Pin separator 1) — DI 1..2, DO 1
     bSensorSepRetracted1  : BOOL;
@@ -90,6 +92,13 @@ VAR_GLOBAL
     bPb1     : BOOL;
     bPb2     : BOOL;
     bPb3     : BOOL;
+
+    // Machine status lamps -- DO 12 / DO 13. Driven by MAIN from the master
+    // cycle's state, NOT press mirrors like the PB LEDs above.
+    //   bLedRed   = master cycle latched in ERR.
+    //   bLedGreen = Auto+IDLE steady, Auto+cycling blink, otherwise off.
+    bLedGreen : BOOL;
+    bLedRed   : BOOL;
     bLedPb1  : BOOL;
     bLedPb2  : BOOL;
     bLedPb3  : BOOL;

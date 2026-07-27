@@ -46,9 +46,11 @@ VAR
     // header. Called last so it sees this scan's final config values.
     fbPersistentSave : FB_PersistentAutoSave;
 
-    // Not persistent itself, so FALSE on every PLC start -- which is exactly
-    // what makes it a cold-boot latch. See section 0.
-    bColdBootDone : BOOL;
+    // Status-lamp blink source. A self-resetting TON toggling a BOOL gives a
+    // 50% duty cycle; the TON on its own only produces a one-scan pulse,
+    // which would make the lamp flicker rather than blink.
+    tonBlink : TON;
+    bBlink   : BOOL;
 
     // Wall clock for the log timestamps. Lives here because F_LogEvent is a
     // FUNCTION and cannot own an FB instance. dwCycle is in SECONDS.
@@ -59,37 +61,33 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
-   0. COLD-BOOT SAFETY — one shot, before anything reads the config.
-   stMasterAutoCfg is PERSISTENT, so once FB_PersistentAutoSave started
-   flushing to disk, its BOOLs began surviving a power cycle too. Exactly
-   one of them is cleared here, and the distinction is deliberate:
+   0. CONTINUOUS IS DISABLED ON THE REAL MACHINE
+   Forced FALSE every scan, not merely cleared at boot. The production
+   machine never free-runs: every cycle is started by the operator or by the
+   robot's CMD:1. The checkbox was removed from AutoMain, but a VISU page is
+   only one of several writers — FlowerPyHmi has its own Continuous checkbox
+   on two pages and reaches the field over ADS — so the field itself has to
+   be the enforcement point. Any write is overwritten within one scan.
 
-   bContinuous is CLEARED. FB_MasterAutoCycle's IDLE branch tests it as a
-   LEVEL, not an edge:
+   Why it matters that this one is airtight: FB_MasterAutoCycle's IDLE branch
+   tests it as a LEVEL, not an edge:
 
        IF bMachineAuto AND (... OR stCfg.bContinuous) THEN
 
-   so restoring it TRUE would start driving pistons within one scan of
-   power-up, with no operator or robot involvement at all. Nothing external
-   gates it, which is what makes it different from every other start path.
+   so a TRUE here re-arms a cycle with no operator or robot involvement at
+   all. It is the only start path with nothing external gating it, which is
+   also why it was the one field the cold-boot block used to clear.
 
-   bAutoMode is KEPT (operator decision, 2026-07-27). The machine comes back
-   in Automatic and IDLE, and still needs a real start trigger — operator
-   START, or the robot's CMD:1. Note the consequence: in Auto the panel
-   reports nStateOut = 0 (IDLE) rather than 30 (MANUAL), so a robot that is
-   already running may request a cycle straight after power-up. That is the
-   intended production behaviour — resume without someone re-arming the
-   panel — not an oversight.
+   bAutoMode is deliberately NOT touched (operator decision, 2026-07-27): the
+   panel comes back in Automatic and IDLE after a power cycle, still needing
+   a real start trigger. Consequence: in Auto it reports nStateOut = 0 (IDLE)
+   rather than 30 (MANUAL), so a robot already running may request a cycle
+   straight after power-up. That is the intended production behaviour.
 
-   The timers, bNoSensors and bBypassPlateSensors are not cleared either:
-   they are operator config, and persisting them is the point of the flush.
-
-   Do not remove this block without also removing the flush.
+   The timers, bNoSensors and bBypassPlateSensors are untouched too — they
+   are operator config and persisting them is the point of the flush.
    ========================================== *)
-IF NOT bColdBootDone THEN
-    bColdBootDone := TRUE;
-    GVL_HmiPersistent.stMasterAutoCfg.bContinuous := FALSE;
-END_IF
+GVL_HmiPersistent.stMasterAutoCfg.bContinuous := FALSE;
 
 (* ==========================================
    0a. LOG WALL CLOCK
@@ -199,6 +197,40 @@ GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineA
 GVL_App.bLedPb1 := GVL_App.bPb1;
 GVL_App.bLedPb2 := GVL_App.bPb2;
 GVL_App.bLedPb3 := GVL_App.bPb3;
+
+(* ==========================================
+   Machine status lamps (DO 12 green / DO 13 red).
+   Unlike the PB LEDs above, which are dumb press mirrors, these report
+   machine state:
+
+     RED   = the master cycle is in its latched ERR state.
+     GREEN = Auto and IDLE        -> steady  (armed, waiting for a start)
+             Auto and cycling     -> blink   (running)
+             Manual, or in ERR    -> off
+
+   Green is off in ERR so the two lamps never contradict each other: red on
+   with green also lit would read as "faulted but running". Green is off in
+   Manual because it means "the automatic cycle is live", which is precisely
+   what Manual is not.
+
+   Blink source is a self-resetting TON toggling bBlink, giving 400 ms on /
+   400 ms off. Using tonBlink.Q directly would light the lamp for a single
+   scan per period -- invisible.
+   ========================================== *)
+tonBlink(IN := NOT tonBlink.Q, PT := T#400MS);
+IF tonBlink.Q THEN
+    bBlink := NOT bBlink;
+END_IF
+
+GVL_App.bLedRed := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR);
+
+IF NOT bMachineAuto OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR THEN
+    GVL_App.bLedGreen := FALSE;
+ELSIF GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.IDLE THEN
+    GVL_App.bLedGreen := TRUE;
+ELSE
+    GVL_App.bLedGreen := bBlink;
+END_IF
 
 fbTrigPb1(CLK := GVL_App.bPb1);
 IF bMachineAuto AND fbTrigPb1.Q THEN
