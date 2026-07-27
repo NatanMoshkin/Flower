@@ -865,6 +865,63 @@ in the System Manager.
   no POU, no VISU page, and `scripts/check_pyhmi_contract.py` still resolves
   229/229 FlowerPyHmi symbols without them.
 
+- **Remove `stBridgeCfg` / `ST_LogBridgeCfg` — spans both repos.**
+  `GVL_Log.stBridgeCfg` (log dir, level, retention days/MB, poll ms) existed
+  *solely* so the retired `RobotBridge/log_pump.py` could publish its own
+  logger configuration for an HMI to display. With the bridge retired
+  (2026-07-26) **nothing writes it**: it reads as empty strings and zeros, and
+  FlowerPyHmi's Logs page renders a visibly blank "Log bridge config" block
+  because of it. Confirmed dead by grep — no POU, no VISU page, no script
+  assigns it.
+
+  Not urgent (it is inert, not harmful), but it is the last structural
+  leftover of the bridge and it makes a shipped page look broken.
+
+  **Order matters: do FlowerPyHmi first, then the PLC.** Deleting the PLC
+  symbol while the poller still asks for it sends `_read_bridge_cfg` down the
+  1808 → probe-every-symbol → exclude path in `PyadsClient.read_many`. It
+  recovers (it is its own `read_many` call, not part of the ~220-symbol cycle
+  batch, so it degrades rather than taking the poll loop down) — but it costs a
+  one-off probe and logs a "dropping N unresolvable symbol(s)" warning that
+  will look like a real fault to whoever reads the log next.
+
+  **FlowerPyHmi** (separate repo — 8 places):
+  - `flower_py_hmi/plc_log.py` — `BRIDGE_CFG_ROOT`, `BRIDGE_CFG_FIELDS`,
+    `bridge_cfg_symbol()`, and the module docstring line about it
+  - `flower_py_hmi/state.py` — the two imports, `_plc_log_bridge_cfg` (init +
+    the reconnect reset), the `if self._plc_log_bridge_cfg is None` block in
+    `_read_plc_log`, `out["bridge_cfg"]`, and `_read_bridge_cfg()` itself
+  - `flower_py_hmi/ads_client.py` — the five `GVL_Log.stBridgeCfg.*` seeds in
+    `prime_plc_log()`
+  - `flower_py_hmi/templates/logs.html` — the `bridge-cfg-title` heading and
+    the `#plc-bridge-cfg` `<dl>`
+  - `flower_py_hmi/static/logs.js` — the `pl.bridge_cfg` / `[data-cfg]` render
+    block, and the `bridgeEl` lookup
+  - `flower_py_hmi/static/settings.css` — `.bridge-cfg*` rules, if unused after
+  - `flower_py_hmi/templates/docs/logs.html` — the "Log bridge config — dead"
+    section (written 2026-07-27 to explain the blank block; delete it with the
+    block)
+
+  **This repo** (3 places):
+  - `PLC1/GVLs/GVL_Log.TcGVL:45` — the `stBridgeCfg : ST_LogBridgeCfg;` field
+    and its comment block
+  - `PLC1/DUTs/ST_LogBridgeCfg.TcDUT` — delete the file
+  - `PLC1/PLC1.plcproj:56` — remove its `<Compile Include>` entry, or the
+    build will fail on a missing file
+
+  Then run `pytest` in FlowerPyHmi. **`scripts/check_pyhmi_contract.py` will
+  not notice this change either way** — it mirrors `_cycle_symbols()`, which
+  never included the bridge-cfg symbols (nor the `aRecent` ring); both are read
+  by their own separate `read_many` calls. So the resolved count stays put, and
+  a green contract check is *not* evidence the removal is complete. Grep for
+  `bridge_cfg` and `stBridgeCfg` across both repos instead — that is what
+  confirms it.
+
+  No other symbol path changes: FlowerPyHmi reads `GVL_Log` **per-field by
+  symbol name**, not as a packed struct, so narrowing the GVL cannot shift an
+  offset under anything else. (Same property that made widening `ST_LogEntry`
+  with `sTime` / `sSevText` safe.)
+
 
 ## Playwright
 
