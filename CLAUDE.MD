@@ -85,7 +85,8 @@ second source of truth that nothing keeps in step.
 
 Resolved. `FB_RobotTcpClient` (`Tc2_TcpIp` on TF6310) is the sole channel
 between the PLC and the Dobot. The former discrete-I/O handshake
-(`STAND_SEQ_DO`/`STAND_SEQ_DI`) is retired; `DI[13]` and `DO[7]` are free.
+(`STAND_SEQ_DO`/`STAND_SEQ_DI`) is retired; the `DI[13]` / `DO[7]` channels
+it freed now carry PB1 and its LED (rewired 2026-07-27).
 
 The four original options in `docs/robot-integration-options.md` are now
 historic; the file is kept for archaeology but does not describe current
@@ -124,7 +125,7 @@ uses free-with-TF6310 `Tc2_TcpIp`) dials the robot server `:6001`. TF6310
 is installed+running on the CP6606 — the documented exception to the
 avoid-paid-libs rule. All start/stop/reset traffic goes through this
 channel; the former discrete-I/O handshake (`STAND_SEQ_DO`/`STAND_SEQ_DI`)
-is retired and its DI[13] / DO[7] channels are free.
+is retired; the DI[13] / DO[7] channels it freed now carry PB1 + LED1.
 
 - Protocol (raw ASCII, NO newline framing; one send → one reply — matches
   `RobotBridge/Client_working_example/tcp client.py` + `dummy_server.py`
@@ -487,9 +488,9 @@ the panel's DI/DO. Behaviour is gated by `bAutoMode`:
 
 | PB | DI | LED (DO) | In Automatic | In Manual |
 |---|---|---|---|---|
-| PB1 | dIn[20] | dOut[10] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | Held → both grip pistons extend (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
-| PB2 | dIn[21] | dOut[11] | Ignored. | Held → all 3 SepSol pistons extend. |
-| PB3 | dIn[22] | dOut[12] | Ignored. | Held → all 3 PushSol pistons extend. |
+| PB1 | dIn[13] | dOut[7] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | Held → both grip pistons extend (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
+| PB2 | dIn[14] | dOut[8] | Ignored. | Held → all 3 SepSol pistons extend. |
+| PB3 | dIn[15] | dOut[9] | Ignored. | Held → all 3 PushSol pistons extend. |
 
 LEDs are dumb mirrors of the raw PB press state (`GVL_App.bLedPbN :=
 GVL_App.bPbN`) — a wiring / hardware-health diagnostic, not a status
@@ -497,8 +498,8 @@ indicator. Room to repurpose later: swap the LED-write source (running,
 error latched, TCP connected, etc.) without touching the DI wiring.
 
 PB inputs live in `GVL_App` (not HMI-mapped). `PRG_IoMap.ReadInputs`
-copies from `dIn[20..22]`; `PRG_IoMap.WriteOutputs` copies to
-`dOut[10..12]`. MAIN's jog OR-merge into piston FBs uses the new
+copies from `dIn[13..15]`; `PRG_IoMap.WriteOutputs` copies to
+`dOut[7..9]`. MAIN's jog OR-merge into piston FBs uses the new
 `FB_SolSpringPiston_2Pos.bJogExtend` VAR_INPUT so the HMI-owned
 `stHmi.bManJogExtend` field is not mutated by MAIN.
 
@@ -597,15 +598,21 @@ panel push-buttons + LEDs are wired. Mapping lives in `PRG_IoMap.TcPOU`
 | PushSol1 | dIn[7] | dIn[8] | dOut[4] |
 | PushSol2 | dIn[9] | dIn[10] | dOut[5] |
 | PushSol3 | dIn[11] | dIn[12] | dOut[6] |
-| (retired robot discrete-IO) | dIn[13] free | — | dOut[7] free |
-| GripSolL | dIn[14] | dIn[15] | dOut[8] |
-| GripSolR | dIn[16] | dIn[17] | dOut[9] |
-| PlateSenL | dIn[18] | — | — |
-| PlateSenR | dIn[19] | — | — |
-| PB1 (grip / cycle-start bypass) | dIn[20] | — | dOut[10] LED1 |
-| PB2 (Sep jog) | dIn[21] | — | dOut[11] LED2 |
-| PB3 (Push jog) | dIn[22] | — | dOut[12] LED3 |
-| free | dIn[23..24] | — | dOut[13..16] |
+| PB1 (grip / cycle-start bypass) | dIn[13] | — | dOut[7] LED1 |
+| PB2 (Sep jog) | dIn[14] | — | dOut[8] LED2 |
+| PB3 (Push jog) | dIn[15] | — | dOut[9] LED3 |
+| free | dIn[16] | — | — |
+| GripSolL | dIn[17] | dIn[18] | dOut[10] |
+| GripSolR | dIn[19] | dIn[20] | dOut[11] |
+| PlateSenL | dIn[21] | — | — |
+| PlateSenR | dIn[22] | — | — |
+| free | dIn[23..24] | — | dOut[12..16] |
+
+**Rewired 2026-07-27** to match the physical terminals — the PBs moved down
+to dIn[13..15] / dOut[7..9] (dIn[13] and dOut[7] were the channels freed by
+retiring the robot's discrete-I/O handshake), and grip + plate moved up.
+`dIn[16]` is a deliberate gap: it closes out the second 8-channel input
+terminal so the grip sensors start on a terminal boundary.
 
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side — the
