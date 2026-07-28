@@ -67,9 +67,12 @@ STRUCT
     //   as keep-alive.
     //
     // nRobotCmd : INT -- FB_RobotTcpClient writes each time a "CMD:n" reply
-    //   arrives. MAIN R_TRIGs on nRobotCmd=1 (start cycle) and =2 (reset
-    //   error). Robot is responsible for zeroing after the PLC's next state
-    //   push acknowledges the command.
+    //   carries a command. MAIN consumes it as a LEVEL (1 = start cycle,
+    //   2 = reset error) and CLEARS it to 0 in the same scan; that clear is
+    //   the PLC's acknowledgement, so the field normally reads 0 and a robot
+    //   start is traced on the Logs page instead. The robot re-asserting the
+    //   same value is therefore always honoured -- see the MAIN comment for
+    //   the deadlock this replaced.
     // ------------------------------------------------------------------
     nStateOut          : INT;
     nRobotCmd          : INT;

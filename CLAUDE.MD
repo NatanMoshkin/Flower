@@ -143,10 +143,11 @@ is retired; the DI[13] / DO[7] channels it freed now carry PB1 + LED1.
   every `IDLE_STATE_MS` (default 1000 ms) as keep-alive. Replaces the old
   `HEARTBEAT` frame.
 - `CMD:<m>` (`m` ∈ {0,1,2}: 0=none, 1=start cycle, 2=reset error).
-  Written into `stParams.nRobotCmd`; `MAIN` R_TRIGs on the value and
-  feeds pulses into FB_MasterAutoCycle (`bExtStartPulse`) or the HMI's
-  `bReset`. The robot is responsible for zeroing after the next state
-  push acknowledges the command.
+  `ParseCmd` writes it into `stParams.nRobotCmd`; `MAIN` consumes that
+  field as a **level** and **clears it to 0 in the same scan**, feeding
+  FB_MasterAutoCycle (`bExtStartPulse`) or the HMI's `bReset`. The PLC's
+  clear is the acknowledgement — see "ROBOT CMD:1 DEADLOCK" below for why
+  edge-detection here broke the machine.
 
 - `DUTs/ST_RobotParams.TcDUT` — 11 INT tuning params + request flags
   (`bGetSync`, `bSetParam`/`sSetName`/`nSetVal`, `bTriggerNewBulb`, FB
@@ -220,7 +221,7 @@ protocol). No discrete-I/O handshake anymore.
 | Direction | ST_RobotParams field | Wire | Semantic |
 |---|---|---|---|
 | PLC → Robot | `nStateOut : INT` | `STATE:<n>` frame | `TO_INT(eStep)` in Auto; `MANUAL=30` in Manual. Robot derives "PLC is running" from `n ≠ 0`. |
-| Robot → PLC | `nRobotCmd : INT` | `CMD:<m>` reply | 0=none, 1=start cycle (rising edge → `bExtStartPulse`), 2=reset error (rising edge → `stMasterAuto.bReset`). |
+| Robot → PLC | `nRobotCmd : INT` | `CMD:<m>` reply | 0=none, 1=start cycle (level → `bExtStartPulse`), 2=reset error (level → `stMasterAuto.bReset`). MAIN clears the field to 0 on consumption. |
 
 The former `POS1/POS2/POS3` + `AUTO_STARTED/PUSH_DONE/PISTONS_ERROR` TCP
 protocol and the `STAND_SEQ_DO`/`STAND_SEQ_DI` discrete-I/O handshake
@@ -456,6 +457,60 @@ The blink source is a self-resetting `TON` **toggling a BOOL**, not
 `tonBlink.Q` directly: the bare `TON` pulses for a single scan per period,
 which would be invisible rather than a blink.
 
+## ROBOT CMD:1 DEADLOCK — found on the real machine (2026-07-28)
+
+The robot issued `CMD:1`, the panel received it (`stRobot.sLastMessage` read
+`CMD:1`, Rx/Tx counters climbing normally), the master cycle sat in Auto +
+IDLE — and no cycle started, permanently.
+
+**Root cause: a rising-edge trigger on a field that only the far end could
+reset.** MAIN had `fbTrigRobotStart : R_TRIG` on `stParams.nRobotCmd = 1`,
+and *nothing on the PLC side ever wrote `nRobotCmd`* — the protocol left
+zeroing to the robot, which only zeroes once it sees the PLC leave IDLE via
+a `STATE:<n>` push. So:
+
+1. A `CMD:1` arrives while the panel is in Manual, or latched in `ERR`. The
+   R_TRIG fires, `FB_MasterAutoCycle`'s IDLE branch correctly refuses it
+   (gated on `bMachineAuto`; `ERR` is not `IDLE`). The pulse is discarded.
+2. `nRobotCmd` stays at **1** forever.
+3. The operator returns the machine to Auto/IDLE. The robot re-asserts
+   `CMD:1` on every keep-alive reply — but re-sending a value that is
+   *already* 1 produces **no rising edge**.
+4. Deadlock: the robot waits for a state change, the PLC waits for an edge
+   that cannot come. Nothing anywhere reports a fault.
+
+**Fix — MAIN consumes the level and clears it** (`bRobotStartPulse`; the two
+`R_TRIG`s are gone). The PLC's clear *is* the acknowledgement; the robot's
+own zeroing became belt-and-braces. A request that cannot be honoured this
+scan is dropped and the robot's next keep-alive re-asserts it ~1 s later —
+self-healing instead of one-shot. Repeat pulses are harmless: only the IDLE
+branch consumes `bExtStartPulse`, and it is gated on `bMachineAuto`.
+
+**Consequence for diagnostics:** `nRobotCmd` now reads 0 almost always,
+because it is consumed within a scan. The trace of a robot-initiated start
+is the **`External start pulse` entry on the Logs page**; `sLastMessage`
+still shows the raw `CMD:1` frame. That log entry is the decisive evidence
+for this class of fault — present means the pulse fired and the FB refused
+it (check `bAutoMode`), absent means the pulse never fired.
+
+**Second defect fixed at the same time — `ParseCmd`.** The old parse was
+`FIND(sRxMsg,'CMD:') = 1` plus `MID(sRxMsg, LEN(sRxMsg) - 4, 5)`, which
+required the reply to be *exactly* `'CMD:'` + digits. The robot's Lua loop
+writes on a 100 ms tick while the PLC reads once per round-trip, so two
+replies can coalesce into one receive (`'CMD:0CMD:1'`) — the old MID window
+straddled the boundary and `STRING_TO_INT` returned **0**, silently eating a
+start request. `ParseCmd` now searches for the **last** `'CMD:'` and reads
+exactly one validated digit, so coalesced frames, trailing whitespace and
+stray newlines are all tolerated and the newest command wins.
+
+**Note on the robot side.** `Robot/167-01-Saad/src2.lua` as committed has
+**no `STATE`/`CMD` handling at all** — its generic `NAME:VALUE` branch
+swallows `STATE:0` (it contains a colon) and answers `OK: SET STATE`, so the
+command channel is one-way dead against that revision. The same is true of
+the reference `dummy_server.py:73`. The machine runs a newer, **uncommitted**
+`src2.lua` that does emit `CMD:1`. Commit it — the PLC-side protocol has no
+counterpart in version control otherwise.
+
 ## PLATE SENSORS: status on Main + bypass (2026-07-26)
 
 **Status.** `Main.TcVIS` shows both plate sensors in the 110 px strip to the
@@ -490,9 +545,9 @@ them as a vertical table (one row per state in chronological run order),
 background highlights yellow when `eStep` matches the row's enum value,
 red for the ERR row.
 
-**External start pulse.** MAIN owns the `R_TRIG` on `stParams.nRobotCmd = 1`
-and feeds a one-scan pulse into FB_MasterAutoCycle's `bExtStartPulse`
-VAR_INPUT. HMI checkbox "Sim bStartAssembly" binds
+**External start pulse.** MAIN tests `stParams.nRobotCmd = 1` as a level,
+clears the field, and feeds a one-scan `bRobotStartPulse` into
+FB_MasterAutoCycle's `bExtStartPulse` VAR_INPUT. HMI checkbox "Sim bStartAssembly" binds
 `ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — a bench sim flag consumed
 by the FB's own R_TRIG and OR-merged inside the IDLE state exit condition
 alongside the operator's START button and the external pulse. Also driven

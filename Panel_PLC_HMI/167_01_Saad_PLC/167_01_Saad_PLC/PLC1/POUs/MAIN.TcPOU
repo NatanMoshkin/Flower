@@ -23,12 +23,12 @@ VAR
     // former discrete-I/O handshake (STAND_SEQ_DO/DI) is retired.
     fbRobotTcp : FB_RobotTcpClient;
 
-    // Edge detectors on the robot's TCP command channel (nRobotCmd:
-    // 0=none, 1=start cycle, 2=reset error). Rising edge on =1 feeds
-    // fbMasterAutoCycle's start pulse; rising edge on =2 pulses the
-    // HMI-owned bReset flag which the FB's own R_TRIG then consumes.
-    fbTrigRobotStart : R_TRIG;
-    fbTrigRobotReset : R_TRIG;
+    // Robot TCP command channel (nRobotCmd: 0=none, 1=start cycle,
+    // 2=reset error). Consumed as a LEVEL and cleared on consumption --
+    // see the body for why edge-detecting it deadlocked the machine.
+    // bRobotStartPulse is the resulting one-scan pulse handed to
+    // fbMasterAutoCycle's bExtStartPulse.
+    bRobotStartPulse : BOOL;
 
     // PB1 rising edge in Auto mode triggers a cycle start (bypass of the
     // robot's CMD:1). Fed into stMasterAuto.bSimStartAssembly which the FB
@@ -149,18 +149,50 @@ fbMasterAutoCycle.bPlateSenR := GVL_App.bPlateSenR;
 GVL_HMI.bPlateSenL := GVL_App.bPlateSenL;
 GVL_HMI.bPlateSenR := GVL_App.bPlateSenR;
 
-(* Robot command edge detection. nRobotCmd is written by fbRobotTcp on
-   each CMD:<n> reply (see below). RESET pulse is fanned into the HMI
-   bReset flag so the operator- and robot-initiated resets share one
-   consumption path inside the FB. *)
-fbTrigRobotStart(CLK := GVL_Robot.stParams.nRobotCmd = 1);
-fbTrigRobotReset(CLK := GVL_Robot.stParams.nRobotCmd = 2);
-IF fbTrigRobotReset.Q THEN
-    GVL_HMI.stMasterAuto.bReset := TRUE;
+(* ==========================================
+   ROBOT COMMAND CONSUMPTION (nRobotCmd, written by fbRobotTcp on each
+   CMD:<n> reply -- see the fbRobotTcp call further down).
+
+   Consumed as a LEVEL and CLEARED here. The PLC clearing the field is the
+   acknowledgement; the robot zeroing it after the next state push is now
+   belt-and-braces rather than load-bearing.
+
+   This used to be a pair of R_TRIGs on nRobotCmd = 1 / = 2, and nothing on
+   the PLC side ever reset the field. That deadlocked the machine
+   (2026-07-28, found on the real machine): a CMD:1 arriving while the panel
+   was in Manual or latched in ERR fired the edge, the FB's IDLE branch
+   correctly refused it, and nRobotCmd stayed at 1 forever. The robot
+   re-asserts CMD:1 in every STATE reply until it sees the panel leave IDLE
+   -- but re-sending a value that is already 1 produces no rising edge. So
+   the robot waited for a state change while the PLC waited for an edge that
+   could never come, and the Robot page showed CMD:1 arriving happily the
+   whole time.
+
+   Clearing makes it self-healing. A request that cannot be honoured this
+   scan is dropped, and the robot's next keep-alive re-asserts it ~1 s
+   later. Repeat pulses are harmless: only FB_MasterAutoCycle's IDLE branch
+   consumes bExtStartPulse, and it is gated on bMachineAuto.
+
+   Diagnostic note: nRobotCmd now reads 0 almost always, because it is
+   consumed within a scan of arriving. The trace of a robot start is the
+   'External start pulse' entry on the Logs page, and stRobot.sLastMessage
+   still shows the raw CMD frame.
+
+   RESET is fanned into the HMI bReset flag so operator- and robot-initiated
+   resets share one consumption path inside the FB.
+   ========================================== *)
+bRobotStartPulse := FALSE;
+
+IF GVL_Robot.stParams.nRobotCmd = 1 THEN
+    bRobotStartPulse             := TRUE;
+    GVL_Robot.stParams.nRobotCmd := 0;
+ELSIF GVL_Robot.stParams.nRobotCmd = 2 THEN
+    GVL_HMI.stMasterAuto.bReset  := TRUE;
+    GVL_Robot.stParams.nRobotCmd := 0;
 END_IF
 
 fbMasterAutoCycle(
-    bExtStartPulse := fbTrigRobotStart.Q,
+    bExtStartPulse := bRobotStartPulse,
     bMachineAuto   := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode,
     stHmi          := GVL_HMI.stMasterAuto,
     stCfg          := GVL_HmiPersistent.stMasterAutoCfg,

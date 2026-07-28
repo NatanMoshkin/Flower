@@ -21,8 +21,8 @@
    E_MasterAutoStep, or MANUAL=30 when bAutoMode=FALSE). Sent on every
    change of stParams.nStateOut and every IDLE_STATE_MS as keep-alive.
    The robot's reply carries the next command (m in {0,1,2}: 0=none,
-   1=start cycle, 2=reset error) which is written to stParams.nRobotCmd
-   for MAIN to R_TRIG.
+   1=start cycle, 2=reset error) which ParseCmd writes to
+   stParams.nRobotCmd. MAIN consumes that field as a level and clears it.
 
    Tuning params are bidirectional. GET_SYNC pulls all 11 into stParams
    after every connect, and the FB then snapshots them into aShadow. Any
@@ -595,11 +595,9 @@ METHOD HandleReply : BOOL
         <ST><![CDATA[stRobot.nPacketsRx   := stRobot.nPacketsRx + 1;
 stRobot.sLastMessage := sRxMsg;
 
-// Any reply may embed the next robot command as "CMD:n". Parse it
+// Any reply may embed the next robot command as "CMD:n". Parsed
 // regardless of iPend so the state-push round-trip carries commands.
-IF FIND(sRxMsg, 'CMD:') = 1 AND LEN(sRxMsg) > 4 THEN
-    stParams.nRobotCmd := STRING_TO_INT(MID(sRxMsg, LEN(sRxMsg) - 4, 5));
-END_IF
+ParseCmd();
 
 CASE iPend OF
     TX_GETSYNC:
@@ -631,6 +629,60 @@ CASE iPend OF
 END_CASE
 
 iPend := TX_NONE;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ParseCmd" Id="{6a1c8d94-2e5b-4f37-b0c8-71d43e9a5f26}">
+      <Declaration><![CDATA[(*
+   Extract "CMD:<digit>" out of a reply and write it to stParams.nRobotCmd.
+   Returns TRUE when a command was found and stored; leaves nRobotCmd
+   untouched otherwise, so a reply with no CMD frame in it (a SYNC, an
+   "OK: SET ..." ACK) cannot clobber a command that is still pending.
+
+   Deliberately more forgiving than the anchored one-liner it replaces
+   (FIND(sRxMsg,'CMD:') = 1 plus MID over the tail), which required the
+   frame to be EXACTLY 'CMD:' + digits:
+
+   * Searches for the LAST occurrence rather than requiring position 1. The
+     robot's Lua loop writes on a 100 ms tick while the PLC only reads once
+     per round-trip, so two replies can coalesce into a single receive
+     ('CMD:0CMD:1'). The old MID window then straddled the boundary and
+     STRING_TO_INT returned 0 -- silently discarding a start request. Taking
+     the last occurrence also means the newest command wins.
+   * Reads exactly ONE digit and validates it, instead of assuming the digit
+     is the final character. Trailing whitespace, a stray newline or any
+     suffix the robot may append no longer parses as 0.
+
+   m is single-digit by protocol (0=none, 1=start cycle, 2=reset error).
+*)
+METHOD ParseCmd : BOOL
+VAR
+    i     : INT;
+    nLast : INT;   // 1-based position of the last 'CMD:' found, 0 = none
+    nCh   : BYTE;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ParseCmd := FALSE;
+nLast    := 0;
+
+// Upper bound is LEN-4 so that both the 4-char tag and the digit that must
+// follow it are inside the string. Shorter replies skip the loop entirely.
+FOR i := 1 TO LEN(sRxMsg) - 4 DO
+    IF MID(sRxMsg, 4, i) = 'CMD:' THEN
+        nLast := i;
+    END_IF
+END_FOR
+
+IF nLast > 0 THEN
+    // String indexing is 0-based: 'CMD:' occupies nLast-1 .. nLast+2, so
+    // the digit sits at nLast+3.
+    nCh := sRxMsg[nLast + 3];
+    IF nCh >= 16#30 AND nCh <= 16#39 THEN
+        stParams.nRobotCmd := TO_INT(nCh - 16#30);
+        ParseCmd           := TRUE;
+    END_IF
+END_IF
 ]]></ST>
       </Implementation>
     </Method>
