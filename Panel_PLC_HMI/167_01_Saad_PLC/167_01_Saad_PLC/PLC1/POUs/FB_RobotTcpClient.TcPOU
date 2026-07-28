@@ -93,6 +93,35 @@ VAR
     nPendVal : INT;   // value actually sent; written to aShadow on ACK
 END_VAR
 VAR
+    // ------------------------------- LOGGING (see the Fail method for policy)
+    // Every robot event is pushed into GVL_Log through F_LogEvent, so the panel
+    // Logs page and FlowerPyHmi both see it. Lifecycle and protocol events log
+    // at INFO / WARN / ERR; raw frames log at DBG, which F_LogEvent drops
+    // unless GVL_Log.bDebugMode is set. So production stays readable and
+    // ticking Debug turns this FB into a protocol tracer.
+    //
+    // The ring is only 20 entries deep on the panel page, which is why the two
+    // repeating events below are edge-logged rather than level-logged.
+
+    // Last CMD value logged. The robot may repeat a command across several
+    // replies before zeroing it, so commands log on change only. Baselined
+    // even for CMD:0, so the next non-zero value is not read as a repeat.
+    nLastCmdLogged : INT;
+
+    // TRUE while STATE pushes are going unanswered. A wedged robot leaves the
+    // socket open and the keep-alive re-fires every second, so a level-logged
+    // WARN would emit ~1/s and flush the whole ring in 20 seconds. Log the
+    // transition in and the recovery out, never the steady state.
+    bStateUnanswered : BOOL;
+
+    // Whether the in-flight TX should be traced at DBG. StartSend defaults it
+    // TRUE for every frame; SendState overrides it to FALSE for a keep-alive
+    // repeat, AFTER calling StartSend. Both halves are load-bearing: the
+    // override must come second to win, and StartSend must clear it or a
+    // keep-alive's FALSE would leak into the next real frame and hide it.
+    bTraceTx : BOOL;
+END_VAR
+VAR
     // Endpoint actually dialled for the live session. sRemoteHost is only
     // read at connect time, so without this a commissioner who edits the IP
     // on the Robot page sees nothing happen until the socket happens to
@@ -122,8 +151,9 @@ END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// Disable request routes an active session through the Error/close path.
+// Logged at INFO, not ERR: an operator clearing bTcpEnable is not a fault.
 IF NOT bEnable AND (eState = E_RobotConnState.Connecting OR eState = E_RobotConnState.Connected) THEN
-    eState := E_RobotConnState.Error;
+    Fail(eSev := E_LogSev.INFO, sWhy := 'Disabled, closing link');
 END_IF
 
 // Endpoint retarget. The connect call reads sRemoteHost once, so a live
@@ -141,7 +171,12 @@ ELSIF (sRemoteHost <> sDialledHost) OR (nRemotePort <> nDialledPort) THEN
     sDialledHost := sRemoteHost;
     nDialledPort := nRemotePort;
     IF eState = E_RobotConnState.Connecting OR eState = E_RobotConnState.Connected THEN
-        eState := E_RobotConnState.Error;
+        // INFO for the same reason as the disable path: a commissioner typing
+        // a new IP is not a fault. Endpoint() already reads the NEW value --
+        // sDialledHost was updated two lines up -- so the entry names where we
+        // are going, which is the useful half.
+        Fail(eSev := E_LogSev.INFO,
+             sWhy := CONCAT('Endpoint changed, redialling ', Endpoint()));
     END_IF
 END_IF
 
@@ -165,7 +200,11 @@ E_RobotConnState.Connecting:
     IF NOT fbConnect.bBusy THEN
         fbConnect(bExecute := FALSE);
         IF fbConnect.bError THEN
-            eState := E_RobotConnState.Error;
+            // nErrId is the whole diagnostic value here: 'Connect failed' on
+            // its own cannot distinguish a wrong IP from a robot that is off.
+            Fail(eSev := E_LogSev.ERR,
+                 sWhy := CONCAT(CONCAT('Connect failed ', Endpoint()),
+                                CONCAT(' err ', UDINT_TO_STRING(fbConnect.nErrId))));
         ELSE
             hSocket         := fbConnect.hSocket;
             iIo             := IO_IDLE;
@@ -175,7 +214,16 @@ E_RobotConnState.Connecting:
             bShadowValid    := FALSE;  // no edit detection until that SYNC lands
             nLastStateSent  := -1;     // force initial STATE push
             tonIdle(IN := FALSE);
+
+            // Reset the log edge-detectors with the rest of the session state,
+            // so a reconnect re-reports an unanswered link or a repeated
+            // command instead of staying quiet about it.
+            bStateUnanswered := FALSE;
+            nLastCmdLogged   := 0;
+
             eState := E_RobotConnState.Connected;
+            F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                       sMsg := CONCAT('Connected ', Endpoint()));
         END_IF
     END_IF
 
@@ -210,6 +258,7 @@ METHOD ConnectedIo : BOOL
 VAR
     nChanged : INT;   // index of first param edited by the HMI, 0 = none
     nIdx     : INT;   // param index behind an explicit bSetParam name
+    nRaw     : INT;   // value as the operator left it, before ClampParam
 END_VAR
 ]]></Declaration>
       <Implementation>
@@ -244,7 +293,8 @@ IO_IDLE:
         iPend  := TX_GETSYNC;
         StartSend();
     ELSIF stParams.nStateOut <> nLastStateSent THEN
-        SendState();
+        // A real state change: traced at DBG.
+        SendState(bKeepAlive := FALSE);
     ELSIF stParams.bSetParam THEN
         // Explicit escape hatch: caller supplies the raw name/value pair.
         // Clamp it too, and write the clamped value back so the caller can
@@ -252,7 +302,11 @@ IO_IDLE:
         // that is the point of the escape hatch.
         nIdx := ParamIndex(stParams.sSetName);
         IF nIdx > 0 THEN
-            stParams.nSetVal := ClampParam(i := nIdx, nVal := stParams.nSetVal);
+            nRaw             := stParams.nSetVal;
+            stParams.nSetVal := ClampParam(i := nIdx, nVal := nRaw);
+            IF stParams.nSetVal <> nRaw THEN
+                LogClamp(i := nIdx, nRaw := nRaw, nSent := stParams.nSetVal);
+            END_IF
         END_IF
         sTxMsg   := CONCAT(CONCAT(stParams.sSetName, ':'), INT_TO_STRING(stParams.nSetVal));
         iPend    := TX_SETPARAM;
@@ -276,13 +330,20 @@ IO_IDLE:
         // the FB would re-send on every idle scan. Writing back converges,
         // and the HMI then shows what the robot actually got.
         nPendIdx := nChanged;
-        nPendVal := ClampParam(i := nChanged, nVal := ParamValue(nChanged));
+        nRaw     := ParamValue(nChanged);
+        nPendVal := ClampParam(i := nChanged, nVal := nRaw);
+        IF nPendVal <> nRaw THEN
+            // Log BEFORE the write-back below overwrites the field: this is the
+            // only moment the operator's original number still exists anywhere.
+            LogClamp(i := nChanged, nRaw := nRaw, nSent := nPendVal);
+        END_IF
         SetParamValue(i := nChanged, nVal := nPendVal);
         sTxMsg   := CONCAT(CONCAT(ParamName(nChanged), ':'), INT_TO_STRING(nPendVal));
         iPend    := TX_SETPARAM;
         StartSend();
     ELSIF tonIdle.Q THEN
-        SendState();
+        // Keep-alive repeat of a state already sent: deliberately not traced.
+        SendState(bKeepAlive := TRUE);
     END_IF
 
 IO_WAIT_SEND:
@@ -296,10 +357,18 @@ IO_WAIT_SEND:
     IF NOT fbSend.bBusy THEN
         fbSend(bExecute := FALSE);
         IF fbSend.bError THEN
-            eState := E_RobotConnState.Error;
+            Fail(eSev := E_LogSev.ERR,
+                 sWhy := CONCAT(CONCAT('Send failed on ', PendName()),
+                                CONCAT(' err ', UDINT_TO_STRING(fbSend.nErrId))));
         ELSE
             stRobot.nPacketsTx     := stRobot.nPacketsTx + 1;
             stRobot.sLastTxMessage := sTxMsg;
+            // Traced here rather than in StartSend so the entry means "this
+            // left the box", not "this was queued".
+            IF bTraceTx THEN
+                F_LogEvent(eSev := E_LogSev.DBG, sSource := stRobot.Name,
+                           sMsg := CONCAT('TX ', LEFT(sTxMsg, 76)));
+            END_IF
             tonReply(IN := FALSE);
             iIo := IO_WAIT_RECV;
         END_IF
@@ -317,7 +386,9 @@ IO_WAIT_RECV:
     IF NOT fbReceive.bBusy THEN
         fbReceive(bExecute := FALSE);
         IF fbReceive.bError THEN
-            eState := E_RobotConnState.Error;
+            Fail(eSev := E_LogSev.ERR,
+                 sWhy := CONCAT(CONCAT('Recv failed on ', PendName()),
+                                CONCAT(' err ', UDINT_TO_STRING(fbReceive.nErrId))));
         ELSIF fbReceive.nRecBytes > 0 THEN
             aRxBuffer[fbReceive.nRecBytes] := 0;   // null-terminate
             MEMCPY(ADR(sRxMsg), ADR(aRxBuffer), fbReceive.nRecBytes + 1);
@@ -330,10 +401,19 @@ IO_WAIT_RECV:
             // else is a real fault -> drop and reconnect.
             tonReply(IN := FALSE);
             IF iPend = TX_STATE THEN
+                // Edge-logged, not level-logged: the keep-alive re-fires every
+                // second, so a WARN per unanswered push would flush the ring in
+                // 20 entries and hide whatever caused it.
+                IF NOT bStateUnanswered THEN
+                    bStateUnanswered := TRUE;
+                    F_LogEvent(eSev := E_LogSev.WARN, sSource := stRobot.Name,
+                               sMsg := 'STATE unanswered, link may be stale');
+                END_IF
                 iPend := TX_NONE;
                 iIo   := IO_IDLE;
             ELSE
-                eState := E_RobotConnState.Error;
+                Fail(eSev := E_LogSev.ERR,
+                     sWhy := CONCAT('Reply timeout on ', PendName()));
             END_IF
         END_IF
     END_IF
@@ -345,6 +425,14 @@ END_CASE
     <Method Name="SendState" Id="{b1c4d2e0-3f7a-4c18-9d55-7e2a6b0f4c31}">
       <Declaration><![CDATA[// Arm a STATE:n push and remember what we sent.
 METHOD SendState : BOOL
+VAR_INPUT
+    // TRUE when this is the 1 Hz keep-alive repeat of a state already sent.
+    // Such frames are not traced at DBG -- at 1 Hz they would bury every other
+    // entry in a 20-deep ring. Passed explicitly by the two call sites rather
+    // than derived here, because deriving it would mean reading nLastStateSent
+    // after the line below has already overwritten it.
+    bKeepAlive : BOOL;
+END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[sTxMsg         := CONCAT('STATE:', INT_TO_STRING(stParams.nStateOut));
@@ -352,6 +440,9 @@ nLastStateSent := stParams.nStateOut;
 iPend          := TX_STATE;
 nPendIdx       := 0;
 StartSend();
+
+// Must come AFTER StartSend, which defaults bTraceTx TRUE for every frame.
+bTraceTx := NOT bKeepAlive;
 ]]></ST>
       </Implementation>
     </Method>
@@ -576,6 +667,81 @@ END_CASE
 ]]></ST>
       </Implementation>
     </Method>
+    <Method Name="Fail" Id="{d6013ef2-72bf-445c-b880-d87a5faef200}">
+      <Declaration><![CDATA[(*
+   Log a reason and route the session into the Error state, which closes the
+   socket and re-dials after RECONNECT_MS.
+
+   Centralised so every teardown path is logged exactly once, by the code that
+   knows why. Before this existed, six places assigned eState := Error and the
+   HMI was left showing 'Disconnected' with no record of the cause.
+
+   eSev is a parameter because two callers are NOT faults: an operator clearing
+   bTcpEnable, and an endpoint retarget. Both reuse this same close-and-redial
+   path deliberately, and logging either at ERR would cry wolf.
+*)
+METHOD Fail : BOOL
+VAR_INPUT
+    eSev : E_LogSev;
+    sWhy : STRING(80);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[F_LogEvent(eSev := eSev, sSource := stRobot.Name, sMsg := sWhy);
+eState := E_RobotConnState.Error;
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Endpoint" Id="{6c2f28ff-cf1a-4f44-8736-6c02d3ad8fa1}">
+      <Declaration><![CDATA[// 'host:port' of the endpoint currently dialled, for log messages. Reads the
+// dialled pair rather than the inputs, so an entry written during a retarget
+// names what is actually being connected to.
+METHOD Endpoint : STRING(60)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[Endpoint := CONCAT(CONCAT(sDialledHost, ':'), UINT_TO_STRING(nDialledPort));
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="PendName" Id="{d8b0b803-f97e-4a2d-b9fc-997728c77ed3}">
+      <Declaration><![CDATA[// Wire name of the message awaiting a reply, so a send or timeout entry says
+// WHICH exchange failed. 'Reply timeout' alone cannot distinguish a robot that
+// never answers GET_SYNC from one that stopped mid-cycle.
+METHOD PendName : STRING(20)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE iPend OF
+    TX_GETSYNC:  PendName := 'GET_SYNC';
+    TX_SETPARAM: PendName := 'SET';
+    TX_NEWBULB:  PendName := 'New_Bulb';
+    TX_STATE:    PendName := 'STATE';
+ELSE
+    PendName := 'none';
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="LogClamp" Id="{7f3a1c58-2d90-4e61-b4a7-05e8c9d21b46}">
+      <Declaration><![CDATA[// Report that a parameter write was bounded before it went out.
+//
+// WARN rather than INFO: the operator typed a number the robot would have
+// taken literally, and ClampParam's write-back then replaces it in the field,
+// so without this entry the edit appears to have simply not taken.
+METHOD LogClamp : BOOL
+VAR_INPUT
+    i     : INT;   // param index
+    nRaw  : INT;   // value as the operator left it
+    nSent : INT;   // value actually transmitted
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[F_LogEvent(eSev := E_LogSev.WARN, sSource := stRobot.Name,
+           sMsg := CONCAT(CONCAT(ParamName(i), ' '),
+                          CONCAT(CONCAT(INT_TO_STRING(nRaw), ' out of range, clamped to '),
+                                 INT_TO_STRING(nSent))));
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="StartSend" Id="{aaa8f8f6-1eec-428e-a921-2ce64744b1fb}">
       <Declaration><![CDATA[// Arm a send: reset edges/timers and enter the send wait state.
 METHOD StartSend : BOOL
@@ -584,27 +750,86 @@ METHOD StartSend : BOOL
         <ST><![CDATA[tonIdle(IN := FALSE);
 fbSend(bExecute := FALSE);
 iIo := IO_WAIT_SEND;
+
+// Trace every frame by default. SendState is the only caller that opts out,
+// and it does so after this returns. Clearing it here is what stops a
+// keep-alive's opt-out from leaking into the next real frame.
+bTraceTx := TRUE;
 ]]></ST>
       </Implementation>
     </Method>
     <Method Name="HandleReply" Id="{57d85451-0daa-42a3-9e5e-dc41761a4754}">
       <Declaration><![CDATA[// Dispatch on what we last sent; clear the consumed request flag.
 METHOD HandleReply : BOOL
+VAR
+    bCmdSeen : BOOL;   // this reply carried a CMD: frame
+    nCmd     : INT;    // its value, valid only when bCmdSeen
+END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[stRobot.nPacketsRx   := stRobot.nPacketsRx + 1;
+        <ST><![CDATA[// Explicitly initialised rather than trusting method-local init: nCmd is only
+// meaningful when bCmdSeen is TRUE, and every other method in this FB seeds its
+// locals the same way.
+bCmdSeen := FALSE;
+nCmd     := 0;
+
+stRobot.nPacketsRx   := stRobot.nPacketsRx + 1;
 stRobot.sLastMessage := sRxMsg;
+
+// A reply of any kind proves the link is answering again.
+IF bStateUnanswered THEN
+    bStateUnanswered := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+               sMsg := 'STATE replies resumed');
+END_IF
 
 // Any reply may embed the next robot command as "CMD:n". Parse it
 // regardless of iPend so the state-push round-trip carries commands.
 IF FIND(sRxMsg, 'CMD:') = 1 AND LEN(sRxMsg) > 4 THEN
-    stParams.nRobotCmd := STRING_TO_INT(MID(sRxMsg, LEN(sRxMsg) - 4, 5));
+    bCmdSeen           := TRUE;
+    nCmd               := STRING_TO_INT(MID(sRxMsg, LEN(sRxMsg) - 4, 5));
+    stParams.nRobotCmd := nCmd;
+END_IF
+
+// DBG frame trace. The idle 'CMD:0' answer to a keep-alive is the one reply
+// deliberately not traced -- at 1 Hz it would bury everything else.
+// LEFT bounds the string explicitly: a SYNC reply is longer than the 80 chars
+// F_LogEvent takes, and an explicit truncation beats a silent one.
+IF NOT (bCmdSeen AND nCmd = 0) THEN
+    F_LogEvent(eSev := E_LogSev.DBG, sSource := stRobot.Name,
+               sMsg := CONCAT('RX ', LEFT(sRxMsg, 76)));
+END_IF
+
+// Commands log on change. The robot may repeat one across several replies
+// before zeroing it, and CMD:0 re-baselines without logging, so a genuine
+// repeat of the same command after an intervening 0 still reports.
+IF bCmdSeen AND (nCmd <> nLastCmdLogged) THEN
+    nLastCmdLogged := nCmd;
+    IF nCmd = 1 THEN
+        F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                   sMsg := 'CMD:1 start cycle');
+    ELSIF nCmd = 2 THEN
+        F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                   sMsg := 'CMD:2 reset error');
+    ELSIF nCmd <> 0 THEN
+        // MAIN only acts on 1 and 2, so anything else is silently ignored
+        // downstream. Worth a WARN rather than nothing at all.
+        F_LogEvent(eSev := E_LogSev.WARN, sSource := stRobot.Name,
+                   sMsg := CONCAT('CMD unknown, ignored: ', INT_TO_STRING(nCmd)));
+    END_IF
 END_IF
 
 CASE iPend OF
     TX_GETSYNC:
         IF FIND(sRxMsg, 'SYNC:') = 1 THEN
             ParseSync();
+            F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                       sMsg := 'SYNC ok, tuning params pulled');
+        ELSE
+            // SetShadowAll below deliberately runs anyway, so this WARN is the
+            // only sign the pull produced nothing.
+            F_LogEvent(eSev := E_LogSev.WARN, sSource := stRobot.Name,
+                       sMsg := CONCAT('SYNC reply malformed: ', LEFT(sRxMsg, 54)));
         END_IF
         // Re-baseline unconditionally, even if the reply was malformed and
         // ParseSync did nothing. The shadow then equals whatever stParams
@@ -618,12 +843,23 @@ CASE iPend OF
         // the operator edited the same param again mid-round-trip, the
         // mismatch survives and gets re-sent on the next idle scan.
         IF nPendIdx > 0 THEN
+            // Logged before the shadow is banked -- aShadow still holds the
+            // previous accepted value, which is the 'from' half of the entry.
+            F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                       sMsg := CONCAT(CONCAT(ParamName(nPendIdx), ' '),
+                                      CONCAT(CONCAT(INT_TO_STRING(aShadow[nPendIdx]), ' -> '),
+                                             INT_TO_STRING(nPendVal))));
             aShadow[nPendIdx] := nPendVal;
             nPendIdx := 0;
         ELSE
+            F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                       sMsg := CONCAT(CONCAT('SET ', stParams.sSetName),
+                                      CONCAT(' = ', INT_TO_STRING(stParams.nSetVal))));
             stParams.bSetParam := FALSE;
         END_IF
     TX_NEWBULB:
+        F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                   sMsg := 'New_Bulb acknowledged');
         stParams.bTriggerNewBulb := FALSE;
     TX_STATE:
         // CMD parsing already handled above; no flag to clear.
