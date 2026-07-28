@@ -47,7 +47,7 @@
 		</System>
 		<Plc>
 			<Project GUID="{CDA13425-DE55-41D1-8B6D-E32BEAC7D966}" Name="PLC1" PrjFilePath="PLC1\PLC1.plcproj" TmcFilePath="PLC1\PLC1.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" SymbolicMapping="true">
-				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcPath="PLC1\PLC1.tmc" TmcHash="{48629783-7221-56CD-5764-928E76A22CD3}">
+				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcPath="PLC1\PLC1.tmc" TmcHash="{C400B29E-7742-8837-B97B-D1F9672DCAD7}">
 					<Name>PLC1 Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>
 					<Vars VarGrpType="1">
@@ -102,7 +102,7 @@
 			</Project>
 		</Plc>
 		<Io>
-			<Device Id="1" Disabled="true" DevType="111" DevFlags="#x0003" AmsPort="28673" AmsNetId="5.79.93.36.2.1" RemoteName="Device 1 (EtherCAT)" InfoImageId="2">
+			<Device Id="1" DevType="111" DevFlags="#x0003" AmsPort="28673" AmsNetId="5.79.93.36.2.1" RemoteName="Device 1 (EtherCAT)" InfoImageId="2">
 				<Name>Device 1 (EtherCAT)</Name>
 				<AddressInfo>
 					<Ccat>
@@ -134,7 +134,7 @@
 						<ImageId>1001</ImageId>
 						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x07113052" RevisionNo="#x00120000" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL1809 16Ch. Dig. Input 24V, 3ms" Desc="EL1809" PortABoxInfo="#x01000001">
 							<SyncMan>001002000000010004000000000000000200001000010000</SyncMan>
-							<Fmmu>0000000000000000000000010000000002000000000000000000000000000000</Fmmu>
+							<Fmmu>0000000000000000001000010100000002000000000000000000000000000000</Fmmu>
 							<Pdo Name="Channel 1" Index="#x1a00" Flags="#x0011" SyncMan="0">
 								<Entry Name="Input" Index="#x6000" Sub="#x01">
 									<Type>BIT</Type>
@@ -271,7 +271,7 @@
 						<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x0af93052" RevisionNo="#x00120000" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL2809 16Ch. Dig. Output 24V, 0.5A" Desc="EL2809" PortABoxInfo="#x01000003">
 							<SyncMan>000f01004400010003000000000000000100000f44090000</SyncMan>
 							<SyncMan>010f01004400010003000000000000000100010f44090000</SyncMan>
-							<Fmmu>0000000000000000000000020000000001000000000000000000000000000000</Fmmu>
+							<Fmmu>0000000000000000000f00020100000001000000000000000000000000000000</Fmmu>
 							<Pdo Name="Channel 1" Index="#x1600" InOut="1" Flags="#x0011" SyncMan="0">
 								<Entry Name="Output" Index="#x7000" Sub="#x01">
 									<Type>BIT</Type>
@@ -365,6 +365,7 @@
 		</Io>
 	</Project>
 	<Mappings>
+		<MappingInfo Identifier="{00000000-2002-0850-0020-500810000403}" Id="#x02030010"/>
 		<OwnerA Name="TIPC^PLC1^PLC1 Instance">
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 1 (EK1100)^Term 2 (EL1809)">
 				<Link VarA="IOmapTask Inputs^GVL_IO.dIn[10]" VarB="Channel 10^Input"/>

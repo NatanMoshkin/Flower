@@ -18,18 +18,18 @@ WriteOutputs();
    Each SOL-Spring actuator has both a Retracted and an Extended proximity
    switch (spring retracts, coil extends; both end positions get sensors).
    ========================================== *)
-GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[1];
-GVL_App.bSensorSepExtended1   := GVL_IO.dIn[2];
-GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[3];
-GVL_App.bSensorSepExtended2   := GVL_IO.dIn[4];
-GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[5];
-GVL_App.bSensorSepExtended3   := GVL_IO.dIn[6];
-GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[7];
-GVL_App.bSensorPushExtended1  := GVL_IO.dIn[8];
-GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[9];
-GVL_App.bSensorPushExtended2  := GVL_IO.dIn[10];
-GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[11];
-GVL_App.bSensorPushExtended3  := GVL_IO.dIn[12];
+GVL_App.bSensorSepRetracted1  := GVL_IO.dIn[3];
+GVL_App.bSensorSepExtended1   := GVL_IO.dIn[4];
+GVL_App.bSensorSepRetracted2  := GVL_IO.dIn[7];
+GVL_App.bSensorSepExtended2   := GVL_IO.dIn[8];
+GVL_App.bSensorSepRetracted3  := GVL_IO.dIn[11];
+GVL_App.bSensorSepExtended3   := GVL_IO.dIn[12];
+GVL_App.bSensorPushRetracted1 := GVL_IO.dIn[1];
+GVL_App.bSensorPushExtended1  := GVL_IO.dIn[2];
+GVL_App.bSensorPushRetracted2 := GVL_IO.dIn[5];
+GVL_App.bSensorPushExtended2  := GVL_IO.dIn[6];
+GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[9];
+GVL_App.bSensorPushExtended3  := GVL_IO.dIn[10];
 
 (* Panel push buttons Consumer logic lives in MAIN (mode-gated
    jog OR cycle-start bypass). *)
@@ -57,12 +57,12 @@ GVL_App.bPlateSenR := GVL_IO.dIn[22];
    WRITE OUTPUTS — copy named GVL_App aliases into raw GVL_IO.dOut[] channels.
    Single Extend coil per actuator (SOL-Spring, spring retracts).
    ========================================== *)
-GVL_IO.dOut[1] := GVL_App.bValveSepExtend1;
-GVL_IO.dOut[2] := GVL_App.bValveSepExtend2;
-GVL_IO.dOut[3] := GVL_App.bValveSepExtend3;
-GVL_IO.dOut[4] := GVL_App.bValvePushExtend1;
-GVL_IO.dOut[5] := GVL_App.bValvePushExtend2;
-GVL_IO.dOut[6] := GVL_App.bValvePushExtend3;
+GVL_IO.dOut[4] := GVL_App.bValveSepExtend1;
+GVL_IO.dOut[5] := GVL_App.bValveSepExtend2;
+GVL_IO.dOut[6] := GVL_App.bValveSepExtend3;
+GVL_IO.dOut[1] := GVL_App.bValvePushExtend1;
+GVL_IO.dOut[2] := GVL_App.bValvePushExtend2;
+GVL_IO.dOut[3] := GVL_App.bValvePushExtend3;
 
 (* Panel push-button status LEDs — mirror driven by MAIN. *)
 GVL_IO.dOut[7] := GVL_App.bLedPb1;
@@ -102,6 +102,8 @@ GVL_IO.dOut[13] := GVL_App.bLedRed;
       <LineId Id="32" Count="2" />
       <LineId Id="31" Count="0" />
       <LineId Id="1" Count="0" />
+      <LineId Id="23" Count="2" />
+      <LineId Id="36" Count="1" />
     </LineIds>
   </POU>
 </TcPlcObject>

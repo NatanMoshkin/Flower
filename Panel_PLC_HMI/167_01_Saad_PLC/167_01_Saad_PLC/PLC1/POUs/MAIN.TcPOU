@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.16">
   <POU Name="MAIN" Id="{14abf4a7-7840-47f5-84af-a7dedadf8c83}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM MAIN
 VAR
@@ -321,15 +321,15 @@ fbGripSolL(
     bOutSolenoid     => GVL_App.bValveGripExtendL
 );
 
-fbGripSolR(
-    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
-    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
-    bJogExtend       := bManualMode AND GVL_App.bPb1,
-    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
-    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
-    stHmi            := GVL_HMI.stGripSolR,
-    bOutSolenoid     => GVL_App.bValveGripExtendR
-);
+//fbGripSolR(
+//    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
+//    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
+//    bJogExtend       := bManualMode AND GVL_App.bPb1,
+//    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
+//    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
+//    stHmi            := GVL_HMI.stGripSolR,
+//    bOutSolenoid     => GVL_App.bValveGripExtendR
+//);
 
 (* ==========================================
    Robot TCP/IP client (TCP-only protocol, port 6001). Runs every scan;
@@ -367,5 +367,9 @@ fbPersistentSave();
 
 ]]></ST>
     </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="3" Count="304" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
   </POU>
 </TcPlcObject>
