@@ -321,15 +321,15 @@ fbGripSolL(
     bOutSolenoid     => GVL_App.bValveGripExtendL
 );
 
-//fbGripSolR(
-//    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
-//    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
-//    bJogExtend       := bManualMode AND GVL_App.bPb1,
-//    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
-//    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
-//    stHmi            := GVL_HMI.stGripSolR,
-//    bOutSolenoid     => GVL_App.bValveGripExtendR
-//);
+fbGripSolR(
+    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
+    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
+    bJogExtend       := bManualMode AND GVL_App.bPb1,
+    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
+    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
+    stHmi            := GVL_HMI.stGripSolR,
+    bOutSolenoid     => GVL_App.bValveGripExtendR
+);
 
 (* ==========================================
    Robot TCP/IP client (TCP-only protocol, port 6001). Runs every scan;
