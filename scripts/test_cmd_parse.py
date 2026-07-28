@@ -1,12 +1,21 @@
-"""Port of the OLD inline CMD parse vs the NEW ParseCmd method, run against
-the frames the panel can actually receive on the wire.
+"""Port of FB_RobotTcpClient.ParseCmd, plus the OLD inline parse it replaced,
+run against the frames the panel can actually receive on the wire.
+
+`parse_cmd` here is the single Python mirror of the ST method -- imported by
+scripts/test_param_shadow_logic.py so the sequencer test and this one cannot
+drift apart the way two hand-copied ports would.
 
 IEC semantics used:
   LEN(s)          -> len(s)
   MID(IN, L, P)   -> L characters of IN starting at the 1-based position P
   FIND(IN1, IN2)  -> 1-based position of IN2 in IN1, 0 if absent
   STRING_TO_INT   -> leading-integer parse, 0 on failure
+
+Run:  python scripts/test_cmd_parse.py
+Exit: 0 = parse behaves as specified, 1 = drift found.
 """
+
+NO_CMD = -1   # ParseCmd's "this reply carries no CMD frame" return
 
 
 def MID(s, L, P):
@@ -30,15 +39,10 @@ def STRING_TO_INT(s):
         return 0
 
 
-def old_parse(rx, nRobotCmd):
-    """FIND(sRxMsg,'CMD:') = 1 AND LEN > 4  ->  MID(sRxMsg, LEN-4, 5)"""
-    if FIND(rx, "CMD:") == 1 and len(rx) > 4:
-        nRobotCmd = STRING_TO_INT(MID(rx, len(rx) - 4, 5))
-    return nRobotCmd
-
-
-def new_parse(rx, nRobotCmd):
-    """Last 'CMD:' occurrence, exactly one validated digit."""
+def parse_cmd(rx):
+    """FB_RobotTcpClient.ParseCmd: value of the last 'CMD:<digit>' in rx, or
+    NO_CMD (-1) when there is no usable frame. -1 rather than 0 because CMD:0
+    (withdraw) is itself a valid command."""
     nLast = 0
     for i in range(1, len(rx) - 4 + 1):          # FOR i := 1 TO LEN(sRxMsg) - 4
         if MID(rx, 4, i) == "CMD:":
@@ -46,7 +50,22 @@ def new_parse(rx, nRobotCmd):
     if nLast > 0:
         ch = ord(rx[nLast + 3])                  # 0-based index nLast+3
         if 0x30 <= ch <= 0x39:
-            nRobotCmd = ch - 0x30
+            return ch - 0x30
+    return NO_CMD
+
+
+def consume(rx, nRobotCmd):
+    """HandleReply's write rule: only overwrite the field when a frame was
+    actually found, so an ACK or a SYNC cannot clobber a pending command."""
+    cmd = parse_cmd(rx)
+    return cmd if cmd >= 0 else nRobotCmd
+
+
+def old_consume(rx, nRobotCmd):
+    """The parse this replaced: anchored at position 1, and assuming the digit
+    is the final character -- MID(sRxMsg, LEN-4, 5)."""
+    if FIND(rx, "CMD:") == 1 and len(rx) > 4:
+        return STRING_TO_INT(MID(rx, len(rx) - 4, 5))
     return nRobotCmd
 
 
@@ -67,19 +86,40 @@ CASES = [
     ("",                     1, 1, "empty receive"),
 ]
 
-hdr = f"{'frame':<30} {'expect':>6} {'old':>6} {'new':>6}   note"
-print(hdr)
-print("-" * len(hdr))
-old_bad = new_bad = 0
-for frame, prior, expect, note in CASES:
-    o = old_parse(frame, prior)
-    n = new_parse(frame, prior)
-    old_bad += o != expect
-    new_bad += n != expect
-    flag = lambda v: f"{v}{'' if v == expect else ' X'}"
-    print(f"{frame!r:<30} {expect:>6} {flag(o):>6} {flag(n):>6}   {note}")
+# CMD:0 must stay distinguishable from "no frame at all" -- the whole reason
+# ParseCmd returns -1 instead of 0.
+SENTINEL_CASES = [
+    ("CMD:0",           0,      "CMD:0 is a real command, not an absence"),
+    ("OK: SET STATE",   NO_CMD, "no frame -> NO_CMD"),
+    ("CMD:",            NO_CMD, "unusable frame -> NO_CMD"),
+]
 
-print()
-print(f"old parse: {old_bad}/{len(CASES)} wrong")
-print(f"new parse: {new_bad}/{len(CASES)} wrong")
-raise SystemExit(1 if new_bad else 0)
+
+def main():
+    hdr = f"{'frame':<30} {'expect':>6} {'old':>6} {'new':>6}   note"
+    print(hdr)
+    print("-" * len(hdr))
+    old_bad = new_bad = 0
+    for frame, prior, expect, note in CASES:
+        o = old_consume(frame, prior)
+        n = consume(frame, prior)
+        old_bad += o != expect
+        new_bad += n != expect
+        fmt = lambda v: f"{v}{'' if v == expect else ' X'}"
+        print(f"{frame!r:<30} {expect:>6} {fmt(o):>6} {fmt(n):>6}   {note}")
+
+    print()
+    for frame, expect, note in SENTINEL_CASES:
+        got = parse_cmd(frame)
+        flag = "" if got == expect else "  X"
+        new_bad += got != expect
+        print(f"sentinel: {frame!r:<20} -> {got:>3} (expect {expect:>3}){flag}   {note}")
+
+    print()
+    print(f"old parse: {old_bad}/{len(CASES)} wrong")
+    print(f"new parse: {new_bad}/{len(CASES) + len(SENTINEL_CASES)} wrong")
+    return 1 if new_bad else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -503,6 +503,15 @@ start request. `ParseCmd` now searches for the **last** `'CMD:'` and reads
 exactly one validated digit, so coalesced frames, trailing whitespace and
 stray newlines are all tolerated and the newest command wins.
 
+`ParseCmd` returns `INT`: the command value, or **−1 when the reply carries no
+usable CMD frame**. −1 rather than 0 because `CMD:0` (withdraw) is itself a
+valid command, so "no frame" and "frame saying zero" have to stay
+distinguishable — `HandleReply` writes `stParams.nRobotCmd` only when the
+result is ≥ 0, which is what stops an `OK: SET ...` ACK or a `SYNC` reply from
+clobbering a command MAIN has not consumed yet. The write lives in
+`HandleReply` rather than inside `ParseCmd` so it sits next to the logging
+that reports it.
+
 **Note on the robot side.** `Robot/167-01-Saad/src2.lua` as committed has
 **no `STATE`/`CMD` handling at all** — its generic `NAME:VALUE` branch
 swallows `STATE:0` (it contains a colon) and answers `OK: SET STATE`, so the
@@ -510,6 +519,48 @@ command channel is one-way dead against that revision. The same is true of
 the reference `dummy_server.py:73`. The machine runs a newer, **uncommitted**
 `src2.lua` that does emit `CMD:1`. Commit it — the PLC-side protocol has no
 counterpart in version control otherwise.
+
+**Verified on the machine 2026-07-28:** built, downloaded, robot start works;
+the Manual→Auto and ERR→RESET recovery tests both pass.
+
+## ROBOT COMMS LOGGING (merged 2026-07-28)
+
+`FB_RobotTcpClient` logged nothing; a dropped link left the Robot page reading
+`Disconnected` with no record of when or why, and `sLastMessage` holds exactly
+one frame — overwritten within a second by the 1 Hz keep-alive.
+
+Lifecycle and protocol events now log at INFO/WARN/ERR; raw frames log at DBG,
+which `F_LogEvent` drops unless `GVL_Log.bDebugMode` is set. Production stays
+readable and ticking Debug turns the FB into a protocol tracer. New `Fail()`
+method centralises teardown — six sites assigned `eState := Error` and none
+said why; `eSev` is a parameter because two callers (operator clearing
+`bTcpEnable`, endpoint retarget) reuse that close-and-redial path on purpose
+and are not faults.
+
+Three suppressions are deliberate, because the panel ring is only 20 entries
+deep and a log that records everything is useless:
+
+- The 1 Hz STATE keep-alive and its idle `CMD:0` reply are **not** traced. A
+  state *change* is; its identical repeat is not. `SendState` takes
+  `bKeepAlive` from its two call sites rather than deriving it, which would
+  mean reading `nLastStateSent` after the method already overwrote it.
+- Unanswered STATE is **edge**-logged (`bStateUnanswered`). A wedged robot
+  leaves the socket open and the keep-alive re-fires every second, so a
+  level-logged WARN would flush the ring in 20 seconds and hide the cause.
+  One WARN in, one INFO out.
+- Commands log **on change** (`nLastCmdLogged`), so a command repeated across
+  replies is one entry. Note this is independent of MAIN's level-consume: the
+  robot repeating `CMD:1` is now *acted on* every time but *logged* once.
+  `CMD:0` re-baselines without logging, so a genuine repeat after an
+  intervening zero still reports.
+
+`bTraceTx` ordering is load-bearing: `StartSend` sets it TRUE for every frame
+and `SendState` overrides it to FALSE for a keep-alive **after** calling
+`StartSend`. The override must come second to win, and `StartSend` must set it
+or a keep-alive's FALSE would leak into the next real frame and hide it.
+
+Clamp logging happens **before** `ClampParam`'s write-back — the only moment
+the operator's original value still exists anywhere.
 
 ## PLATE SENSORS: status on Main + bypass (2026-07-26)
 
