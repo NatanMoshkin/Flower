@@ -17,9 +17,10 @@
 # before the colon branch.
 #
 # Usage:
-#   python dummy_server.py             # auto: request a bulb whenever PLC is IDLE
-#   python dummy_server.py --manual    # press Enter to request one bulb
-#   python dummy_server.py --no-bulbs  # never request; just watch the states
+#   python dummy_server.py                # auto: request a bulb whenever PLC is IDLE
+#   python dummy_server.py --manual       # press Enter to request one bulb
+#   python dummy_server.py --no-bulbs     # fully passive: never command anything
+#   python dummy_server.py --force-start  # CMD:1 on EVERY state (tests the PLC gate)
 
 import argparse
 import select
@@ -109,10 +110,20 @@ def decide_cmd(state):
     if bulb_mode == "force":
         return CMD_START
 
+    # --no-bulbs is FULLY passive: it never commands anything, not even a fault
+    # reset. This test has to come before the ERR branch below.
+    #
+    # It used to fall through to CMD:2 on ERR, which made a latched fault
+    # impossible to observe -- the mock cleared it within a second of it
+    # appearing, so iErrorCode / the red lamp / STATE:99 were all gone before you
+    # could read them, and the mode did not match its own name.
+    if bulb_mode == "none":
+        return CMD_NONE
+
     if state == STATE_ERR:
         return CMD_RESET
 
-    if state == STATE_IDLE and bulb_mode != "none" and wants_bulb:
+    if state == STATE_IDLE and wants_bulb:
         if bulb_mode == "manual":
             wants_bulb = False          # one bulb per Enter
         return CMD_START
@@ -343,7 +354,8 @@ def main():
     group.add_argument("--manual", action="store_true",
                       help="press Enter to request one bulb")
     group.add_argument("--no-bulbs", action="store_true",
-                      help="never request a bulb; just watch the state pushes")
+                      help="fully passive: never command anything, not even a fault reset - "
+                           "lets a latched ERR stay put for inspection")
     group.add_argument("--force-start", action="store_true",
                       help="answer EVERY state with CMD:1, even NOT_HOMED / MANUAL / "
                            "ERR - a badly-behaved robot, for testing the PLC's gate")
@@ -355,7 +367,7 @@ def main():
         print("Mode: MANUAL - press Enter to request a bulb")
     elif args.no_bulbs:
         bulb_mode, wants_bulb = "none", False
-        print("Mode: NO-BULBS - watching state pushes only")
+        print("Mode: NO-BULBS - fully passive, never commands anything (not even CMD:2)")
     elif args.force_start:
         bulb_mode, wants_bulb = "force", True
         print("Mode: FORCE-START - CMD:1 on every state, ignoring what the panel says.")
