@@ -36,10 +36,17 @@ VAR_GLOBAL PERSISTENT
     // first-ever boot or Reset Origin. FB_PersistentAutoSave flushes edits
     // to disk ~2 s after the operator stops typing.
     //
+    // *** CHANGING THE LITERAL BELOW DOES NOT CHANGE A COMMISSIONED PANEL. ***
+    // That is the whole point of the PERSISTENT block above: any panel that has
+    // already booted keeps its stored value, so a new default reaches only a
+    // fresh install or a Reset Origin. To retarget a panel that is already
+    // running, type the address on the Robot page (FB_RobotTcpClient tears the
+    // live session down and re-dials) or do Reset Origin to fall back to this.
+    //
     // Declared here rather than in GVL_HmiPersistent so the symbol paths
     // GVL_Robot.sRobotHost / .nRobotPort are unchanged -- a GVL may hold
     // both a volatile and a persistent block.
-    sRobotHost : STRING := '192.168.201.1';
+    sRobotHost : STRING := '192.168.1.11';   // was 192.168.201.1 until 2026-07-29
     nRobotPort : UINT := 6001;
 END_VAR
 ]]></Declaration>

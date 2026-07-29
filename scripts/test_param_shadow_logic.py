@@ -82,7 +82,7 @@ class Fb:
         # entries are absent unless bDebugMode is set -- same filter as the FB.
         self.log = []
         self.bDebugMode = False
-        self.sHost = "192.168.201.1"
+        self.sHost = "192.168.1.11"
         self.nPort = 6001
 
         self.on_connect()
@@ -642,7 +642,7 @@ def t_log_connect_names_the_endpoint():
     from a robot that is switched off."""
     r = Robot(ROBOT_DEFAULTS)
     fb = Fb(r, PLC_DEFAULTS)
-    assert any("192.168.201.1:6001" in m for m in fb.logged("INFO")), \
+    assert any("192.168.1.11:6001" in m for m in fb.logged("INFO")), \
         fb.logged("INFO")
 
 

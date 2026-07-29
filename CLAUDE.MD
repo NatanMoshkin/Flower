@@ -153,7 +153,9 @@ is retired; the DI[13] / DO[7] channels it freed now carry PB1 + LED1.
   (`bGetSync`, `bSetParam`/`sSetName`/`nSetVal`, `bTriggerNewBulb`, FB
   auto-clears each after ACK) + the two INTs `nStateOut` / `nRobotCmd`.
 - `GVL_Robot`: `stParams`, `bTcpEnable`, plus a **`VAR_GLOBAL PERSISTENT`**
-  block holding `sRobotHost` (factory default '192.168.201.1') and
+  block holding `sRobotHost` (factory default '192.168.1.11' since 2026-07-29,
+  was '192.168.201.1'; **a new literal does not retarget an already-commissioned
+  panel** — the stored value wins, so use the Robot page or Reset Origin) and
   `nRobotPort` (6001) — editable from the Robot page; see the PERSISTENT
   section for why those two persist and `bTcpEnable` does not. Status mirror in `stRobot`:
   `eConnState`/`sConnStateText`/`nPacketsRx`/`nPacketsTx`/
@@ -737,7 +739,7 @@ other.
 
 The robot comms live in `FB_RobotTcpClient` (`Panel_PLC_HMI/…/PLC1/POUs/`)
 which uses the free-with-TF6310 `Tc2_TcpIp` library to dial the robot at
-`GVL_Robot.sRobotHost:nRobotPort` (default `192.168.201.1:6001`). TF6310
+`GVL_Robot.sRobotHost:nRobotPort` (default `192.168.1.11:6001`). TF6310
 is installed+running on the CP6606 — this is the documented exception
 to the avoid-paid-libs rule (see project memory
 `feedback_avoid_licensed_beckhoff_libs.md`).
