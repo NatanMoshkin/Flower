@@ -94,6 +94,21 @@ def decide_cmd(state):
     """
     global wants_bulb
 
+    # --force-start: answer EVERY state with CMD:1, including NOT_HOMED, MANUAL
+    # and ERR. A badly-behaved robot.
+    #
+    # This is the only way to test the PLC's own gate. In every other mode this
+    # mock is polite -- it sends CMD:0 while the panel reports un-armed -- so
+    # "the machine did not move" only proves the MOCK behaved, not that the PLC
+    # would refuse a command it did not want. Those are different claims, and
+    # only the second is a safety property.
+    #
+    # Expect while forced: 'External start pulse' in the panel log on every
+    # reply (FB_MasterAutoCycle logs it unconditionally, before the state
+    # machine), eStep unchanged, nothing moving.
+    if bulb_mode == "force":
+        return CMD_START
+
     if state == STATE_ERR:
         return CMD_RESET
 
@@ -329,6 +344,9 @@ def main():
                       help="press Enter to request one bulb")
     group.add_argument("--no-bulbs", action="store_true",
                       help="never request a bulb; just watch the state pushes")
+    group.add_argument("--force-start", action="store_true",
+                      help="answer EVERY state with CMD:1, even NOT_HOMED / MANUAL / "
+                           "ERR - a badly-behaved robot, for testing the PLC's gate")
     args = ap.parse_args()
 
     if args.manual:
@@ -338,6 +356,11 @@ def main():
     elif args.no_bulbs:
         bulb_mode, wants_bulb = "none", False
         print("Mode: NO-BULBS - watching state pushes only")
+    elif args.force_start:
+        bulb_mode, wants_bulb = "force", True
+        print("Mode: FORCE-START - CMD:1 on every state, ignoring what the panel says.")
+        print("  A badly-behaved robot. The panel MUST refuse it unless armed and IDLE:")
+        print("  expect 'External start pulse' in the panel log with eStep unchanged.")
     else:
         print("Mode: AUTO - a bulb is requested on every IDLE")
 

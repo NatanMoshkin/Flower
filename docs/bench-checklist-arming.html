@@ -298,14 +298,51 @@ Dummy Dobot server listening on 0.0.0.0:6001</code></pre>
 
   <div class="test" data-id="A2">
     <div class="test-top"><span class="id">A2</span>
-      <h4>Robot asking for a bulb is refused</h4>
+      <h4>A well-behaved robot waits</h4>
       <div class="verdict"></div></div>
     <dl class="rows">
-      <dt>Do</dt><dd>Leave the mock in AUTO (it wants a bulb) and wait 30 s.</dd>
-      <dt>Expect</dt><dd>Still <code>NOT_HOMED</code>, still nothing moving,
-        <code>nCyclesCompleted</code> unchanged. No <code>External start pulse</code> in the log.
-        <strong>This is the power-up hazard being closed</strong> — before this change the robot could
-        start a cycle here with the pistons anywhere.</dd>
+      <dt>Do</dt><dd>Leave the mock in AUTO and wait 30 s.</dd>
+      <dt>Expect</dt><dd>Mock keeps answering <code>CMD:0</code>; panel stays
+        <code>NOT_HOMED</code>, <code>nCyclesCompleted</code> unchanged, no
+        <code>External start pulse</code> in the log.<br>
+        <strong>Note what this does and does not prove.</strong> In AUTO the mock only asks when it
+        sees <code>STATE:0</code>, so this confirms the <em>protocol contract</em> — nothing more.
+        The PLC's own gate is A2b.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A2b">
+    <div class="test-top"><span class="id">A2b</span>
+      <h4>A badly-behaved robot is refused <span class="k">the real gate test</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Restart the mock as
+        <code>python scripts/mock_robot/mock_robot.py --force-start</code> — it answers
+        <strong>every</strong> state with <code>CMD:1</code>, including <code>NOT_HOMED</code>.
+        Leave the panel un-armed.<br>
+        Equivalent without the mock: write (or <strong>Force</strong>)
+        <code>GVL_Robot.stParams.nRobotCmd := 1</code> from TcXaeShell.</dd>
+      <dt>Expect</dt><dd>The log <strong>does</strong> show
+        <code>External start pulse</code> — repeatedly — because the FB logs it unconditionally
+        before the state machine runs. And <code>eStep</code> stays <code>NOT_HOMED</code> with
+        nothing moving, <code>nRobotCmd</code> snapping back to <code>0</code>.<br>
+        That pairing is the proof: the command genuinely arrived, was seen, and was
+        <em>refused</em>. "Nothing happened" on its own cannot distinguish a working gate from a
+        robot that never asked. <strong>This is the power-up hazard being closed</strong> — before
+        this change the same command started a cycle with the pistons anywhere.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A2c">
+    <div class="test-top"><span class="id">A2c</span>
+      <h4>Still refused in Manual and in ERR</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>With <code>--force-start</code> still running, switch to <strong>Manual</strong>,
+        then (later, after F1) try it again while latched in <code>ERR</code>.</dd>
+      <dt>Expect</dt><dd>Refused in both. Manual is gated by <code>bMachineAuto</code>;
+        <code>ERR</code> is not <code>IDLE</code> so the exit condition is never reached.
+        Put the mock back to AUTO before A3.</dd>
     </dl>
   </div>
 

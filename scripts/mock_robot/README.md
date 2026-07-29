@@ -43,17 +43,40 @@ Legacy frames still work, so the vendor's `tcp client.py` is unaffected:
 ## Running it
 
 ```
-python scripts/mock_robot/mock_robot.py              # AUTO: request a bulb on every IDLE
-python scripts/mock_robot/mock_robot.py --manual     # press Enter for one bulb
-python scripts/mock_robot/mock_robot.py --no-bulbs   # never request; just watch states
+python scripts/mock_robot/mock_robot.py                # AUTO: request a bulb on every IDLE
+python scripts/mock_robot/mock_robot.py --manual       # press Enter for one bulb
+python scripts/mock_robot/mock_robot.py --no-bulbs     # never request; just watch states
+python scripts/mock_robot/mock_robot.py --force-start  # CMD:1 on EVERY state (rude)
 ```
 
 - **AUTO** is what you want for walking the sequence — the machine produces back
   to back, so every state and every log entry appears without you touching
   anything.
 - **`--manual`** is for stepping one bulb at a time while you watch the pistons.
-- **`--no-bulbs`** proves the *negative* cases: that the panel does **not** move
-  when it should not.
+- **`--no-bulbs`** watches the state pushes without ever commanding anything.
+- **`--force-start`** answers *every* state with `CMD:1`, including `NOT_HOMED`,
+  `MANUAL` and `ERR`. See below — it is the only mode that actually tests the
+  PLC.
+
+### Why `--force-start` exists
+
+In every other mode this mock is **polite**: while the panel reports un-armed it
+replies `CMD:0`. So if you watch an un-armed panel not move, you have proved the
+*mock* behaved — not that the PLC would refuse a command it did not want. Those
+are different claims, and only the second one is a safety property.
+
+`--force-start` removes the politeness. With the panel in `NOT_HOMED`, expect:
+
+- `External start pulse` **in the panel log, repeatedly** — `FB_MasterAutoCycle`
+  logs it unconditionally in section 0b, before the state machine runs
+- `eStep` unchanged, nothing moving, `nRobotCmd` snapping back to `0`
+
+That *pairing* is the proof: the command arrived, was seen, and was refused.
+"Nothing happened" alone cannot tell a working gate from a robot that never
+asked.
+
+Equivalent without the mock: write — or **Force** — `GVL_Robot.stParams.nRobotCmd
+:= 1` from TcXaeShell while the panel is un-armed.
 
 Listens on `0.0.0.0:6001`, one client at a time, exactly like the Lua server.
 Tuning params persist while the process runs (they are Lua globals on the real
