@@ -254,9 +254,14 @@ footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule
       <h4>Start the mock in AUTO mode</h4>
       <div class="verdict"></div></div>
     <dl class="rows">
-      <dt>Do</dt><dd><code>python scripts/mock_robot/mock_robot.py</code></dd>
+      <dt>Do</dt><dd><code>python scripts/mock_robot/mock_robot.py</code> —
+        and make sure no other instance is already running.</dd>
       <dt>Expect</dt><dd><pre><code>Mode: AUTO - a bulb is requested on every IDLE
-Dummy Dobot server listening on 0.0.0.0:6001</code></pre></dd>
+Dummy Dobot server listening on 0.0.0.0:6001</code></pre>
+        If it says <code>Cannot listen on 0.0.0.0:6001</code>, a stale instance holds the port —
+        close it (<code>Get-NetTCPConnection -LocalPort 6001</code>). Two instances used to
+        both "start" and take connections arbitrarily, so you could watch one terminal while
+        the panel talked to the other.</dd>
     </dl>
   </div>
 

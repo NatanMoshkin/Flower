@@ -22,11 +22,22 @@
 #   python dummy_server.py --no-bulbs  # never request; just watch the states
 
 import argparse
+import select
 import socket
 import threading
+import time
 
 HOST = "0.0.0.0"   # same as ip in global.lua
 PORT = 6001        # same as port in global.lua
+
+# Drop a client that has gone quiet for this long. The PLC pushes STATE every
+# ~1 s, so 5 s of silence means it is gone, not merely idle.
+#
+# Backstop rather than the main defence: serve_forever() also watches the
+# listening socket, so a reconnecting PLC pre-empts a stale socket at once
+# instead of waiting this out. See serve_forever's docstring for the bench
+# failure that motivated both.
+CLIENT_IDLE_TIMEOUT = 5.0
 
 # Robot parameters with reasonable defaults (kept while server runs)
 STATE = {
@@ -119,6 +130,46 @@ def handle_state(raw):
     return f"CMD:{cmd}"
 
 
+KNOWN_TAGS = ("STATE:", "GET_SYNC", "HEARTBEAT", "New_Bulb:")
+
+
+def split_frames(raw):
+    """Split a read that may hold several concatenated frames.
+
+    The protocol has no delimiter -- one send, one reply -- so normally a recv
+    holds exactly one frame. But if the PLC ever gets a frame ahead (or TCP
+    coalesces two writes) a naive parse sees 'STATE:0STATE:10' and answers
+    nothing useful. Cut at the start of each known tag; anything without a tag is
+    returned whole so NAME:VALUE writes still work.
+    """
+    raw = raw.strip()
+    if not raw:
+        return []
+
+    cuts = []
+    for tag in KNOWN_TAGS:
+        start = 0
+        while True:
+            i = raw.find(tag, start)
+            if i < 0:
+                break
+            cuts.append(i)
+            start = i + 1
+
+    if not cuts:
+        return [raw]
+
+    cuts = sorted(set(cuts + [len(raw)]))
+    if cuts[0] != 0:
+        cuts.insert(0, 0)
+    out = []
+    for a, b in zip(cuts, cuts[1:]):
+        piece = raw[a:b].strip()
+        if piece:
+            out.append(piece)
+    return out
+
+
 def bulb_prompt():
     """--manual: each Enter arms exactly one bulb."""
     global wants_bulb
@@ -184,24 +235,89 @@ def handle_message(msg):
     return None
 
 
-def serve_client(conn, addr):
+def accept_client(server):
+    """Accept and configure one client socket."""
     global last_state
 
+    conn, addr = server.accept()
     last_state = None   # so the first STATE of a new session always prints
+    # Small request/reply frames: don't let Nagle sit on a 5-byte "CMD:1".
+    try:
+        conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except OSError:
+        pass
     print(f"New Client Connected Successfully: {addr[0]}:{addr[1]}")
-    with conn:
-        while True:
+    return conn
+
+
+def pump(conn):
+    """Read whatever is ready and answer it. False => the client is finished."""
+    try:
+        data = conn.recv(1024)
+    except (ConnectionError, OSError):
+        return False
+    if not data:
+        return False
+
+    # One recv can carry more than one frame: the protocol has no delimiter, so
+    # if the PLC gets a frame ahead the read holds e.g. 'STATE:0STATE:10'.
+    for msg in split_frames(data.decode("utf-8", "replace")):
+        reply = handle_message(msg)
+        if reply is not None:
             try:
-                data = conn.recv(1024)
-            except ConnectionError:
-                break
-            if not data:
-                break
-            msg = data.decode("utf-8").strip()
-            reply = handle_message(msg)
-            if reply is not None:
                 conn.sendall(reply.encode("utf-8"))
-    print("Connection Lost - waiting for new client...")
+            except (ConnectionError, OSError):
+                return False
+    return True
+
+
+def serve_forever(server):
+    """Single-client service loop, but watching the LISTENING socket too.
+
+    The Lua server handles one client at a time and so do we -- but we cannot
+    just block in recv() on that client, because the PLC opens its next socket
+    BEFORE the old one is gone. Observed on the bench: two simultaneous
+    ESTABLISHED connections from the panel, one of them accepted and dead, the
+    other stuck unaccepted in the listen backlog. The kernel completes its
+    handshake, so the PLC believes it is connected, while nothing here ever
+    reads it -- one 'New Client Connected' line and then total silence, with the
+    panel never getting past Connecting.
+
+    So: select on the listener as well. A new connection pre-empts the old one
+    immediately, and a client that simply goes quiet is dropped after
+    CLIENT_IDLE_TIMEOUT (the PLC pushes STATE at 1 Hz, so silence means gone).
+    """
+    conn = None
+    last_rx = 0.0
+
+    while True:
+        watch = [server] + ([conn] if conn is not None else [])
+        try:
+            ready, _, _ = select.select(watch, [], [], 1.0)
+        except OSError:
+            ready = []
+
+        for sock in ready:
+            if sock is server:
+                new = accept_client(server)
+                if conn is not None:
+                    print("  (a new connection arrived while one was open - "
+                          "dropping the stale one)")
+                    conn.close()
+                conn, last_rx = new, time.monotonic()
+            else:
+                if pump(conn):
+                    last_rx = time.monotonic()
+                else:
+                    conn.close()
+                    conn = None
+                    print("Connection Lost - waiting for new client...")
+
+        if conn is not None and time.monotonic() - last_rx > CLIENT_IDLE_TIMEOUT:
+            conn.close()
+            conn = None
+            print(f"No data for {CLIENT_IDLE_TIMEOUT:.0f}s - dropping client, "
+                  "waiting for a new one")
 
 
 def main():
@@ -226,17 +342,37 @@ def main():
         print("Mode: AUTO - a bulb is requested on every IDLE")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server:
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((HOST, PORT))
+        # Deliberately NOT SO_REUSEADDR on Windows, where it lets a SECOND
+        # instance bind a port that is already listening. Both then appear to
+        # start fine and incoming connections land on one of them arbitrarily --
+        # so you watch one terminal while the panel talks to the other, and the
+        # mock looks broken. SO_EXCLUSIVEADDRUSE makes the second instance fail
+        # loudly instead. On POSIX, SO_REUSEADDR is safe and avoids TIME_WAIT
+        # blocking a quick restart.
+        try:
+            if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                server.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+            else:
+                server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        except OSError:
+            pass
+
+        try:
+            server.bind((HOST, PORT))
+        except OSError as exc:
+            print(f"Cannot listen on {HOST}:{PORT} -- {exc}")
+            print("Something already holds that port. Close the other "
+                  "mock_robot.py (check every open terminal) and retry.")
+            print("  Windows:  Get-NetTCPConnection -LocalPort 6001")
+            return 1
         server.listen(1)  # Lua server handles one client at a time
         print(f"Dummy Dobot server listening on {HOST}:{PORT}")
-        while True:
-            conn, addr = server.accept()
-            serve_client(conn, addr)
+        serve_forever(server)
+    return 0
 
 
 if __name__ == "__main__":
     try:
-        main()
+        raise SystemExit(main())
     except KeyboardInterrupt:
         print("\nServer stopped.")

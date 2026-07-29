@@ -113,6 +113,40 @@ perfectly healthy: `Connected`, both packet counters climbing once a second. Tha
 is precisely the failure that cost a commissioning session, and it is still the
 state of the committed `src2.lua`.
 
+## Two sockets at once
+
+Observed on the bench 2026-07-29, and the reason this server is `select`-based
+rather than a plain blocking `accept` / `recv` loop.
+
+The panel had **two simultaneous ESTABLISHED connections** to port 6001:
+
+```
+LocalAddress LocalPort RemoteAddress RemotePort OwningProcess
+192.168.1.10      6001 192.168.1.100      50807          2008
+192.168.1.10      6001 192.168.1.100      50808          2008
+```
+
+The PLC opens its next socket *before* the previous one is gone. A one-client
+server accepts the first and blocks reading it; the second is completed by the
+kernel from the listen backlog — so it shows `ESTABLISHED` and **the PLC believes
+it is connected** — but nothing ever reads it. Result: one
+`New Client Connected` line, then silence, and a panel that never gets past
+`Connecting` because its `GET_SYNC` is never answered.
+
+Two defences now:
+
+- `select` watches the **listening socket as well as** the client, so a new
+  connection pre-empts the stale one immediately (`(a new connection arrived
+  while one was open - dropping the stale one)`).
+- a client that goes quiet for `CLIENT_IDLE_TIMEOUT` (5 s) is dropped. The PLC
+  pushes `STATE` at 1 Hz, so silence that long means it is gone.
+
+Related: `SO_REUSEADDR` is **not** set on Windows, where it lets a second
+instance bind a port that is already listening. Both would appear to start and
+connections would land on one of them arbitrarily — so you watch one terminal
+while the panel talks to the other. `SO_EXCLUSIVEADDRUSE` makes the second
+instance fail loudly instead.
+
 ## Two copies exist — keep this one canonical
 
 There is a near-identical `dummy_server.py` in the robot repo
@@ -130,6 +164,8 @@ point at this file.
 |---|---|
 | Panel logs `ERR Connect failed … err 1` and retries every 3 s | Nothing listening. Mock not started, wrong IP on the Robot page, or a firewall blocking 6001. |
 | `Connected`, counters climbing, but no cycle ever starts | The reply is not a `CMD:` frame. If Last Rx on the Robot page reads `OK: SET STATE`, the server is a version without STATE handling — see [the ordering rule](#the-ordering-rule). |
+| One `New Client Connected` line, then **silence**, panel stuck on `Connecting` | The server was wedged on a dead socket. Fixed 2026-07-29 — but if you see it again, check for **more than one connection** from the panel: `Get-NetTCPConnection -LocalPort 6001`. See [Two sockets at once](#two-sockets-at-once). |
+| Mock looks dead but the panel says `Connected` | A **second instance** is holding the port and got the connection. Now refused at startup with `Cannot listen on 0.0.0.0:6001`, but check every open terminal. |
 | Mock prints `[STATE] 40 NOT_HOMED` forever | Correct and expected. The panel is in Auto but un-armed; press the green PB3 or the HMI START. |
 | Mock prints `[STATE] 30 MANUAL` | The panel is in Manual. Nothing will run until it is switched to Automatic *and* armed. |
 | Cycle starts once then never again | Should no longer happen (fixed 2026-07-28, `nRobotCmd` is consumed as a level and cleared). If it does, check MAIN clears `nRobotCmd`. |
