@@ -22,6 +22,18 @@ TYPE E_MasterAutoStep :
     GRIP_EXTENDING       := 21,
     GRIP_RETRACTING      := 22,
     MANUAL               := 30,
+    // In Automatic but NOT armed: the pistons have not been homed under
+    // operator control since power-up / Manual / a STOP, so the robot must not
+    // command a cycle. Exited only by an operator START (HMI button or PB3),
+    // which runs the INIT retract chain and lands in IDLE.
+    //
+    // 40 sits in the same "not a sequence step" class as MANUAL(30) and
+    // ERR(99). Values are WIRE values -- nStateOut is read by the robot -- so
+    // nothing here may ever be renumbered.
+    //
+    // Keep the name short: sStepText is STRING(20) and INIT_PUSH_RETRACTING
+    // already fills it exactly, so a longer enumerator would truncate.
+    NOT_HOMED            := 40,
     ERR                  := 99
 ) ;
 END_TYPE

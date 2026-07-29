@@ -30,10 +30,15 @@ VAR
     // fbMasterAutoCycle's bExtStartPulse.
     bRobotStartPulse : BOOL;
 
-    // PB1 rising edge in Auto mode triggers a cycle start (bypass of the
-    // robot's CMD:1). Fed into stMasterAuto.bSimStartAssembly which the FB
-    // already OR-merges with the external start pulse and auto-clears.
-    fbTrigPb1 : R_TRIG;
+    // PB3 rising edge in Auto is the operator START: "home the pistons and arm
+    // the machine". Drives stMasterAuto.bStart, the same field as the HMI
+    // button. PB3 because it is the GREEN button (PB1 red, PB2 orange) and this
+    // is the go-ahead; it used to be PB1.
+    //
+    // Note it drives bStart, NOT bSimStartAssembly. Under the arming model
+    // START no longer runs a bulb cycle, and bSimStartAssembly keeps its own
+    // distinct job as the bench stand-in for the robot's CMD:1.
+    fbTrigPb3 : R_TRIG;
 
     // Scratch copies of the global machine mode, computed once per scan and
     // fanned out to all eight pistons (both eMode and bMode) just below.
@@ -228,7 +233,9 @@ GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineA
    ========================================== *)
 GVL_App.bLedPb1 := GVL_App.bPb1;
 GVL_App.bLedPb2 := GVL_App.bPb2;
-GVL_App.bLedPb3 := GVL_App.bPb3;
+(* PB3's LED is no longer a press mirror in Auto -- it is the "press me to arm"
+   prompt. Assigned further down, after bBlink is refreshed, so the blink is
+   this scan's value rather than last scan's. *)
 
 (* ==========================================
    Machine status lamps (DO 12 green / DO 13 red).
@@ -256,7 +263,13 @@ END_IF
 
 GVL_App.bLedRed := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR);
 
-IF NOT bMachineAuto OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR THEN
+IF NOT bMachineAuto
+   OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR
+   OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.NOT_HOMED THEN
+    (* Off in NOT_HOMED as well as Manual/ERR: green means "the automatic cycle
+       is live and armed", and an un-homed machine is precisely not that. PB3's
+       own green LED is the "press me" signal in that state, so the two are not
+       competing for the operator's attention. *)
     GVL_App.bLedGreen := FALSE;
 ELSIF GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.IDLE THEN
     GVL_App.bLedGreen := TRUE;
@@ -264,9 +277,19 @@ ELSE
     GVL_App.bLedGreen := bBlink;
 END_IF
 
-fbTrigPb1(CLK := GVL_App.bPb1);
-IF bMachineAuto AND fbTrigPb1.Q THEN
-    GVL_HMI.stMasterAuto.bSimStartAssembly := TRUE;
+(* PB3 LED -- "press me to arm" prompt, blinking while the machine is in Auto
+   and un-homed. Falls back to a raw press mirror in Manual, where PB3 is the
+   Push jog button and the LED keeps its original wiring-diagnostic role.
+   PB1/PB2 LEDs stay dumb mirrors in both modes. *)
+IF bMachineAuto THEN
+    GVL_App.bLedPb3 := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.NOT_HOMED) AND bBlink;
+ELSE
+    GVL_App.bLedPb3 := GVL_App.bPb3;
+END_IF
+
+fbTrigPb3(CLK := GVL_App.bPb3);
+IF bMachineAuto AND fbTrigPb3.Q THEN
+    GVL_HMI.stMasterAuto.bStart := TRUE;
 END_IF;
 
 bManualMode := NOT bMachineAuto;

@@ -220,7 +220,7 @@ protocol). No discrete-I/O handshake anymore.
 
 | Direction | ST_RobotParams field | Wire | Semantic |
 |---|---|---|---|
-| PLC → Robot | `nStateOut : INT` | `STATE:<n>` frame | `TO_INT(eStep)` in Auto; `MANUAL=30` in Manual. Robot derives "PLC is running" from `n ≠ 0`. |
+| PLC → Robot | `nStateOut : INT` | `STATE:<n>` frame | `TO_INT(eStep)` in Auto; `MANUAL=30` in Manual. The robot acts on exactly three values: **0** = armed, send `CMD:1`; **99** = faulted, send `CMD:2`; **anything else (incl. `NOT_HOMED=40`)** = wait, send `CMD:0`. |
 | Robot → PLC | `nRobotCmd : INT` | `CMD:<m>` reply | 0=none, 1=start cycle (level → `bExtStartPulse`), 2=reset error (level → `stMasterAuto.bReset`). MAIN clears the field to 0 on consumption. |
 
 The former `POS1/POS2/POS3` + `AUTO_STARTED/PUSH_DONE/PISTONS_ERROR` TCP
@@ -229,19 +229,34 @@ are both retired. `WAIT_POS2` is retired too — the Dobot's
 `PerformStandSequence` moves the arm clear of the stand *before* it
 issues `CMD:1`, so no intermediate "robot moved away" wait is needed.
 
-**Fifteen-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value
+**TWO KINDS OF START, DIFFERENT OWNERS (2026-07-29).** See the ARMING MODEL
+section below for the reasoning; the short version:
+
+| Trigger | Means | Valid from |
+|---|---|---|
+| operator START (`stHmi.bStart`, HMI button or green **PB3** in Auto) | home the pistons and **arm** | `NOT_HOMED`, `IDLE` |
+| robot `CMD:1` (`bExtStartPulse`) | run **one bulb cycle** | `IDLE` only |
+
+**Sixteen-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value
 still declared in the enum but unused — safe to remove once every HMI
 page has stopped referring to it):
 
 ```
-IDLE (0)                Wait for operator START OR bExtStartPulse (robot
-                        CMD:1 edge) OR bSimStep_Idle OR bContinuous checked
-                        (level — while checked, IDLE starts the next cycle
-                        immediately). On start, transitions to
-                        INIT_PUSH_RETRACTING (not directly to SEP_EXTENDING)
-                        so pistons left extended by a prior manual move are
-                        driven home first. nStateOut = 0 here so the robot
-                        sees "PLC idle" via TCP.
+NOT_HOMED (40)          In Automatic but NOT armed. Entered on power-up (the
+                        declared default of stHmi.eStep), on any time spent in
+                        Manual, and on operator STOP. Nothing driven, no timer.
+                        nStateOut = 40, which the robot answers CMD:0 (wait).
+                        Exits ONLY on operator START -> INIT chain with
+                        bHomeThenIdle TRUE.
+IDLE (0)                Armed. Waits for bExtStartPulse (robot CMD:1) OR
+                        bSimStartAssembly OR bSimStep_Idle -> INIT chain with
+                        bHomeThenIdle FALSE (a bulb cycle). Operator START here
+                        re-homes instead (bHomeThenIdle TRUE), which is harmless
+                        and keeps START's meaning identical everywhere.
+                        nStateOut = 0 so the robot sees "armed, send me a bulb".
+                        NOTE fbTrigStart.Q and stCfg.bContinuous were both
+                        REMOVED from this exit condition — that is what makes
+                        the robot the only starter of a bulb.
 INIT_PUSH_RETRACTING(10) Drive PushCmdRetract[1..3]; wait AND of all 3
                         PushIsRetracted. Auto-satisfies on the next scan
                         when push is already home.
@@ -251,6 +266,9 @@ INIT_GRIP_RETRACTING(12) Drive GripCmdRetract[1..2]; wait AND of all
                         GripIsRetracted. Defensive symmetry with the INIT
                         Sep/Push states so a manual jog left extended does
                         not collide with the arriving plate.
+                        THE ONE PLACE THE TWO CALLERS DIVERGE: exits to IDLE
+                        when bHomeThenIdle (homing), else to WAIT_PLATE (bulb
+                        cycle). Everything above is identical for both.
 WAIT_PLATE (20)         Wait `bPlateSenL AND bPlateSenR` (robot has placed
                         the plate). Latched at start only; sensors not
                         monitored past this step. Timeout uses
@@ -270,19 +288,24 @@ SEP_RETRACTING (7)      Drive SepCmdRetract[1..3]; wait AND of all SepIsRetracte
 SEP_RETRACTED_DWELL (8) Wait tSepRetractedDwellMs (default 500).
 GRIP_RETRACTING (22)    Drive GripCmdRetract[1..2]; wait AND of all
                         GripIsRetracted. Releases the plate; increment
-                        nCyclesCompleted; back to IDLE (which re-arms by
-                        itself while Continuous is checked).
+                        nCyclesCompleted; back to IDLE — still armed, so the
+                        robot's next CMD:1 runs the next bulb.
 ERR (99)                Latched. iErrorCode = step's fault code.
-                        bContinuous cleared on entry so RESET does not
-                        restart motion. nStateOut = 99 so the robot sees
-                        the fault via TCP. Reset on HMI RESET rising edge
-                        OR robot CMD:2.
+                        nStateOut = 99, on which the robot answers CMD:2.
+                        RESET (that CMD:2, or the HMI button) clears the error
+                        and re-enters the INIT chain with bHomeThenIdle TRUE —
+                        NOT straight to IDLE. A fault leaves the pistons
+                        anywhere, so advertising IDLE(0) would claim "ready"
+                        while it is not; and RESET landing in IDLE with the
+                        robot still asking made RESET itself a start button.
 ```
 
-A 16th sentinel value **MANUAL (30)** exists in the enum but is never
+A 17th sentinel value **MANUAL (30)** exists in the enum but is never
 assigned to `eStep`. `MAIN` reports it to the robot as `nStateOut = 30`
 while `bAutoMode = FALSE` — the enum is the shared vocabulary between
 PLC and robot, so this sentinel lives there rather than as a magic INT.
+`NOT_HOMED (40)` by contrast *is* a real assigned state, and sits in the same
+"not a sequence step" numeric class as 30 and 99.
 
 **Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
 
@@ -299,7 +322,7 @@ PLC and robot, so this sentinel lives there rather than as a magic INT.
 | 9    | WAIT_PLATE timeout (plate not present) — suppressed by `bBypassPlateSensors` |
 | 10   | GRIP_EXTENDING timeout             |
 | 11   | GRIP_RETRACTING timeout            |
-| 99   | Operator STOP while running        |
+| 99   | **RETIRED** — was "Operator STOP while running". STOP now disarms to `NOT_HOMED` instead of faulting. Do not reuse the number: old log entries and CSV exports still carry it. |
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
@@ -373,11 +396,18 @@ exactly one of them, and the split is deliberate:
   separates it from every other start path.
 
 - **`bAutoMode` is kept** (operator decision, 2026-07-27; the first version
-  cleared it and that was wrong). The machine returns to Automatic and IDLE
-  and still needs a real start trigger. Consequence to be aware of: in Auto
-  the panel reports `nStateOut = 0` (IDLE) rather than `30` (MANUAL), so a
-  robot already running can request a cycle straight after power-up. That is
-  the intended production behaviour — resume without re-arming the panel.
+  cleared it and that was wrong). The machine returns to Automatic and still
+  needs a real start trigger.
+
+  **Superseded 2026-07-29 — read this if you are chasing power-up behaviour.**
+  This bullet used to end: *"in Auto the panel reports `nStateOut = 0` (IDLE),
+  so a robot already running can request a cycle straight after power-up. That
+  is the intended production behaviour."* It is no longer intended and no longer
+  possible. `eStep` now defaults to **`NOT_HOMED (40)`**, so a persisted
+  `bAutoMode = TRUE` brings the panel back in Automatic but **un-armed**,
+  reporting 40 — which the robot answers `CMD:0`. An operator START is required
+  before any motion. `bAutoMode` still persists; it is the *arming* that does
+  not. See the ARMING MODEL section.
 
 - The timers, `bNoSensors` and `bBypassPlateSensors` are not cleared either.
   They are operator config and persisting them is the point. Worth knowing
@@ -523,6 +553,76 @@ counterpart in version control otherwise.
 **Verified on the machine 2026-07-28:** built, downloaded, robot start works;
 the Manual→Auto and ERR→RESET recovery tests both pass.
 
+## ARMING MODEL: operator arms, robot runs bulbs (2026-07-29)
+
+Commissioning showed the old start model did not match how the cell runs. **Any**
+trigger — operator START, robot `CMD:1`, PB1, a stale `bContinuous` — ran the
+whole bulb cycle, and `RESET` from `ERR` dropped straight to `IDLE`. Three
+consequences:
+
+- **Power-up could move the machine.** `bAutoMode` persists, so the panel booted
+  into Auto reporting `STATE:0`; a running robot read that as "ready" and could
+  command a cycle with the pistons anywhere and no operator present.
+- **`RESET` was a start button.** Once the `CMD:1` deadlock was fixed, a robot
+  holding a start request got it honoured ~1 s after the operator cleared a
+  fault — the operator who may have just cleared a jam by hand.
+- **Operator `STOP` self-recovered.** STOP latched `ERR 99`, the robot saw
+  `STATE:99`, sent `CMD:2`, and the machine restarted itself within seconds.
+
+Note the second and third only became reachable *because* the deadlock fix
+worked. The latch bug had been masking them.
+
+**The model now:**
+
+| Trigger | Means | Valid from |
+|---|---|---|
+| operator START — `stHmi.bStart`, HMI button or green PB3 in Auto | home the pistons and **arm** | `NOT_HOMED`, `IDLE` |
+| robot `CMD:1` — `bExtStartPulse` | run **one bulb cycle** | `IDLE` only |
+
+So the machine cannot move after power-up, after Manual, or after a STOP until a
+human presses START; and once armed, only the robot decides when a bulb runs.
+
+**What makes each half true, mechanically:**
+
+- **`NOT_HOMED (40)`** is a real assigned state, and `stHmi.eStep`'s *declared
+  default*. `GVL_HMI` is plain `VAR_GLOBAL`, so that initialiser is re-applied on
+  every cold boot and every download — no MAIN-side one-shot needed. It reports
+  40, which the robot answers `CMD:0`.
+- **`IDLE`'s exit condition dropped `fbTrigStart.Q` and `stCfg.bContinuous`.**
+  That is the load-bearing edit: it removes every path by which a bulb can start
+  without the robot. `bContinuous` is still force-cleared in MAIN section 0 and
+  is now simply never consulted.
+- **Manual parks in `NOT_HOMED`, not `IDLE`.** That *is* the implementation of
+  "returning from Manual needs a START" — no edge detection anywhere, the state
+  is already un-armed when Auto comes back.
+- **`bHomeThenIdle`** picks which exit the shared `INIT_*` retract chain takes:
+  `IDLE` when homing, `WAIT_PLATE` when it is the front of a bulb cycle. Set by
+  whoever *enters* the chain, never from inside it — the three INIT states are
+  shared and must not care which caller they serve.
+- **STOP disarms rather than faults.** Error code 99 is retired. STOP now goes to
+  `NOT_HOMED`, so the robot is told "wait" instead of "fault" and never tries to
+  reset it. This also restores `ERR` to meaning *something went wrong* rather
+  than *someone intervened*. STOP fires from `IDLE` too, giving the operator an
+  explicit disarm.
+- **RESET homes instead of jumping to `IDLE`.** A fault leaves the pistons in
+  unknown positions, so `IDLE` would advertise "ready" while it is not.
+
+**Error recovery is now entirely robot-driven and needs no operator:**
+`ERR` → `STATE:99` → robot `CMD:2` → PLC clears the error and homes →
+`STATE:0` → robot `CMD:1` → next bulb.
+
+**The robot only ever acts on three values** — 0 (armed), 99 (faulted),
+everything else (wait). So `NOT_HOMED = 40` needs **no new branch** robot-side;
+it lands in the existing "wait". `dummy_server.py` implements exactly this
+contract and is the reference for the real `src2.lua`.
+
+`scripts/test_master_cycle_arming.py` ports Sections 2 and 4 of the FB and
+asserts the arming transitions — 15 cases including "robot cannot start an
+un-armed machine", "START never runs a bulb cycle", "STOP survives a robot still
+asking", and "RESET does not jump to IDLE". Sensors are modelled as satisfied on
+the next scan (the `bNoSensors` bench case), so it tests *which state comes
+next*, not timing. Run `python scripts/test_master_cycle_arming.py`.
+
 ## ROBOT COMMS LOGGING (merged 2026-07-28)
 
 `FB_RobotTcpClient` logged nothing; a dropped link left the Robot page reading
@@ -598,11 +698,13 @@ red for the ERR row.
 
 **External start pulse.** MAIN tests `stParams.nRobotCmd = 1` as a level,
 clears the field, and feeds a one-scan `bRobotStartPulse` into
-FB_MasterAutoCycle's `bExtStartPulse` VAR_INPUT. HMI checkbox "Sim bStartAssembly" binds
-`ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — a bench sim flag consumed
-by the FB's own R_TRIG and OR-merged inside the IDLE state exit condition
-alongside the operator's START button and the external pulse. Also driven
-by PB1 rising edge in Auto mode (see the panel-hardware decision below).
+FB_MasterAutoCycle's `bExtStartPulse` VAR_INPUT. HMI checkbox "Sim bStartAssembly"
+binds `ST_HmiMasterAuto.bSimStartAssembly` (TwoWay) — a bench sim flag consumed
+by the FB's own R_TRIG and OR-merged inside the IDLE exit condition alongside the
+external pulse. **The operator's START button is no longer in that condition**
+(2026-07-29): START means "home and arm", so `bSimStartAssembly` is now the only
+way to simulate a robot cycle start from the panel. The physical Start button is
+**PB3** (green), and it drives `bStart`, not `bSimStartAssembly`.
 
 **Logging.** `F_LogEvent` fires on every state transition (INFO for
 normal `PREV -> NEW`, ERR for entries into ERR with `sMsg = sErrorText`),
@@ -798,11 +900,26 @@ also adds missing ones on first open.
 Three momentary-contact push buttons with integrated LEDs are wired to
 the panel's DI/DO. Behaviour is gated by `bAutoMode`:
 
+Button colours matter to the assignment: **PB1 red, PB2 orange, PB3 green.**
+
 | PB | DI | LED (DO) | In Automatic | In Manual |
 |---|---|---|---|---|
-| PB1 | dIn[13] | dOut[7] | Rising edge → cycle-start bypass (writes `stMasterAuto.bSimStartAssembly := TRUE`). Redundant with robot CMD:1. | **Momentary**: held → both grip pistons extend, released → they retract (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
+| PB1 | dIn[13] | dOut[7] | **Ignored** (was the cycle-start bypass until 2026-07-29). | **Momentary**: held → both grip pistons extend, released → they retract (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
 | PB2 | dIn[14] | dOut[8] | Ignored. | **Momentary**: held → all 3 SepSol pistons extend, released → they retract. |
-| PB3 | dIn[15] | dOut[9] | Ignored. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
+| PB3 | dIn[15] | dOut[9] | **Operator START** — rising edge writes `stMasterAuto.bStart := TRUE`, i.e. "home the pistons and arm". Green button for the go-ahead. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
+
+**START moved PB1 → PB3 (2026-07-29)** for two reasons: PB3 is the green
+button, and START changed meaning. It drives `bStart` (home + arm), **not**
+`bSimStartAssembly` — that flag keeps its own distinct job as the bench
+stand-in for the robot's `CMD:1`, so you can still test a bulb cycle without
+the mock. PB3 therefore carries two mode-gated roles, exactly as PB1 did.
+
+**PB3's LED is no longer a dumb mirror.** In Automatic it blinks while
+`eStep = NOT_HOMED` — a "press me to arm" prompt — and is off otherwise. In
+Manual it falls back to the raw press mirror, where PB3 is the Push jog and the
+LED keeps its wiring-diagnostic role. PB1/PB2 LEDs stay dumb mirrors in both
+modes. It is assigned *after* `bBlink` is refreshed in `MAIN`, not in the PB LED
+block, so the blink is this scan's value rather than last scan's.
 
 **PB jog is momentary; the HMI jog is not (2026-07-27).** Section 2 of
 `FB_SolSpringPiston_2Pos` retains the coil when no branch matches, so
@@ -929,7 +1046,7 @@ panel push-buttons + LEDs are wired. Mapping lives in `PRG_IoMap.TcPOU`
 | PushSol1 | dIn[7] | dIn[8] | dOut[4] |
 | PushSol2 | dIn[9] | dIn[10] | dOut[5] |
 | PushSol3 | dIn[11] | dIn[12] | dOut[6] |
-| PB1 (grip / cycle-start bypass) | dIn[13] | — | dOut[7] LED1 |
+| PB1 (grip jog, red) | dIn[13] | — | dOut[7] LED1 |
 | PB2 (Sep jog) | dIn[14] | — | dOut[8] LED2 |
 | PB3 (Push jog) | dIn[15] | — | dOut[9] LED3 |
 | free | dIn[16] | — | — |
@@ -961,11 +1078,12 @@ in the System Manager.
 - ~~**Review persistent vars**~~ **Done 2026-07-27** — the bench test was
   run and they did *not* survive. Root cause and fix in the PERSISTENT
   section above.
-- **Reassign LEDs to functional statuses.** Currently PB1/2/3 LEDs are
-  dumb mirrors of the press state. Repurposing candidates: LED1 = cycle
-  running, LED2 = error latched, LED3 = TCP connected. Deferred until
-  operator preference is known — the LED source is a one-line change in
-  `MAIN.TcPOU`.
+- **Reassign LEDs to functional statuses.** **Partly done 2026-07-29** —
+  LED3 now blinks "press me to arm" while `eStep = NOT_HOMED` in Automatic
+  (still a press mirror in Manual). LED1 and LED2 remain dumb press mirrors;
+  remaining candidates are LED2 = error latched and LED1 = TCP connected.
+  Deferred until operator preference is known — each is a one-line change in
+  `MAIN.TcPOU`'s status-lamp section.
 - ~~Delete deprecated fields in `ST_HmiRobot`.~~ **Done 2026-07-26** —
   `bAtPos1/2/3`, `bTx*` and `bRxResetError` removed. Nothing referenced them:
   no POU, no VISU page, and `scripts/check_pyhmi_contract.py` still resolves
