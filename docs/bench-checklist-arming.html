@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>167_01 Bench Checklist — arming model + robot handshake</title>
+<style>
+:root {
+  --ground:      #eef1f2;
+  --surface:     #ffffff;
+  --surface-2:   #e4e9ea;
+  --ink:         #131a1e;
+  --ink-2:       #4a575d;
+  --ink-3:       #6f7c82;
+  --rule:        #cdd6d8;
+  --accent:      #0e8a45;
+  --accent-soft: #d8ece0;
+  --fault:       #c4342c;
+  --fault-soft:  #f7dedc;
+  --caution:     #a8761a;
+  --caution-soft:#f7ecd6;
+  --mono: ui-monospace, "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --step: 1.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #141a1f; --surface: #1b2329; --surface-2: #232d34;
+    --ink: #e7edef; --ink-2: #a9b7bd; --ink-3: #7d8b92; --rule: #2f3b43;
+    --accent: #3fbb75; --accent-soft: #143724;
+    --fault: #f2726a; --fault-soft: #3d1d1b;
+    --caution: #d9a640; --caution-soft: #3a2c12;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #141a1f; --surface: #1b2329; --surface-2: #232d34;
+  --ink: #e7edef; --ink-2: #a9b7bd; --ink-3: #7d8b92; --rule: #2f3b43;
+  --accent: #3fbb75; --accent-soft: #143724;
+  --fault: #f2726a; --fault-soft: #3d1d1b;
+  --caution: #d9a640; --caution-soft: #3a2c12;
+}
+:root[data-theme="light"] {
+  --ground: #eef1f2; --surface: #ffffff; --surface-2: #e4e9ea;
+  --ink: #131a1e; --ink-2: #4a575d; --ink-3: #6f7c82; --rule: #cdd6d8;
+  --accent: #0e8a45; --accent-soft: #d8ece0;
+  --fault: #c4342c; --fault-soft: #f7dedc;
+  --caution: #a8761a; --caution-soft: #f7ecd6;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font: 16px/1.6 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+.wrap { max-width: 62rem; margin: 0 auto; padding: 0 1.25rem 6rem; }
+
+/* ---------- masthead ---------- */
+header.mast { padding: 2.5rem 0 1.25rem; }
+.eyebrow {
+  font: 600 0.7rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--accent); margin: 0 0 .75rem;
+}
+h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); line-height: 1.15; margin: 0 0 .5rem; text-wrap: balance; letter-spacing: -.01em; }
+.sub { color: var(--ink-2); margin: 0; max-width: 60ch; }
+.meta { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: 1rem;
+        font: 0.78rem/1.4 var(--mono); color: var(--ink-3); }
+
+/* ---------- sticky progress ---------- */
+.bar {
+  position: sticky; top: 0; z-index: 20; background: var(--ground);
+  border-bottom: 1px solid var(--rule); padding: .6rem 0;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.bar .track { flex: 1 1 12rem; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+.bar .fill { height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+.tally { font: 600 0.8rem/1 var(--mono); color: var(--ink-2); white-space: nowrap; }
+.tally b { color: var(--ink); }
+.tally .bad { color: var(--fault); }
+button.util {
+  font: 600 0.75rem/1 var(--sans); color: var(--ink-2); background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 5px; padding: .45rem .7rem; cursor: pointer;
+}
+button.util:hover { color: var(--ink); border-color: var(--ink-3); }
+button.util:focus-visible, .verdict button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- callouts ---------- */
+.callout {
+  border: 1px solid var(--rule); border-left: 4px solid var(--caution);
+  background: var(--caution-soft); border-radius: 6px;
+  padding: 1rem 1.1rem; margin: 1.5rem 0;
+}
+.callout.stop { border-left-color: var(--fault); background: var(--fault-soft); }
+.callout.done { border-left-color: var(--accent); background: var(--accent-soft); }
+.callout.done code { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+body.only-open .test[data-state] { display: none; }
+body.only-open section.all-done { display: none; }
+.shead .badge { margin-left: auto; font: 600 .68rem/1 var(--mono); text-transform: uppercase;
+                letter-spacing: .07em; padding: .25rem .45rem; border-radius: 3px;
+                background: var(--accent); color: #fff; }
+.shead .badge.open { background: var(--caution); }
+.callout h3 { margin: 0 0 .4rem; font-size: .95rem; letter-spacing: .01em; }
+.callout p { margin: .4rem 0 0; font-size: .9rem; color: var(--ink); }
+.callout :last-child { margin-bottom: 0; }
+
+/* ---------- sections ---------- */
+section { margin-top: 2.5rem; }
+.shead { display: flex; align-items: baseline; gap: .75rem; border-bottom: 2px solid var(--ink); padding-bottom: .4rem; margin-bottom: 1rem; }
+.snum { font: 700 0.8rem/1 var(--mono); color: var(--accent); }
+.shead h2 { font-size: 1.1rem; margin: 0; letter-spacing: -.005em; }
+.shead .note { margin-left: auto; font: 0.75rem/1 var(--mono); color: var(--ink-3); }
+
+/* ---------- test cards ---------- */
+.test {
+  background: var(--surface); border: 1px solid var(--rule);
+  border-left: 4px solid var(--rule); border-radius: 6px;
+  padding: .9rem 1.1rem; margin-bottom: .7rem;
+}
+.test[data-state="pass"]    { border-left-color: var(--accent); }
+.test[data-state="fail"]    { border-left-color: var(--fault); }
+.test[data-state="blocked"] { border-left-color: var(--caution); }
+.test-top { display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap; }
+.id { font: 700 0.72rem/1.4 var(--mono); color: var(--ink-3); letter-spacing: .04em; }
+.test h4 { margin: 0; font-size: .97rem; flex: 1 1 18rem; letter-spacing: -.005em; }
+.rows { margin: .7rem 0 0; display: grid; grid-template-columns: 4.5rem 1fr; gap: .35rem .8rem; }
+.rows dt { font: 600 0.68rem/1.5 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.rows dd { margin: 0; font-size: .9rem; color: var(--ink-2); }
+.rows dd strong { color: var(--ink); font-weight: 600; }
+code, .k {
+  font: 0.855em/1.45 var(--mono); background: var(--surface-2);
+  padding: .1em .35em; border-radius: 3px; color: var(--ink);
+  overflow-wrap: break-word;
+}
+pre {
+  margin: .5rem 0 0; padding: .7rem .8rem; background: var(--surface-2);
+  border-radius: 5px; overflow-x: auto; font: 0.8rem/1.6 var(--mono); color: var(--ink);
+}
+pre code { background: none; padding: 0; }
+.lamp { display: inline-flex; align-items: center; gap: .3rem; font: 600 .72rem/1 var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+.lamp::before { content: ""; width: .6rem; height: .6rem; border-radius: 50%; box-shadow: 0 0 0 1px var(--rule) inset; }
+.lamp.g::before { background: var(--accent); }
+.lamp.r::before { background: var(--fault); }
+.lamp.off::before { background: var(--surface-2); }
+
+/* ---------- verdict buttons ---------- */
+.verdict { display: flex; gap: .35rem; margin-left: auto; }
+.verdict button {
+  font: 600 .72rem/1 var(--mono); letter-spacing: .04em; text-transform: uppercase;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink-3);
+  border-radius: 4px; padding: .4rem .55rem; cursor: pointer;
+}
+.verdict button:hover { color: var(--ink); }
+.test[data-state="pass"]    .verdict button[value="pass"]    { background: var(--accent); border-color: var(--accent); color: #fff; }
+.test[data-state="fail"]    .verdict button[value="fail"]    { background: var(--fault); border-color: var(--fault); color: #fff; }
+.test[data-state="blocked"] .verdict button[value="blocked"] { background: var(--caution); border-color: var(--caution); color: #fff; }
+
+/* ---------- sign-off ---------- */
+.signoff { margin-top: 2.5rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 1.25rem; }
+.signoff h2 { margin: 0 0 .6rem; font-size: 1.05rem; }
+.signoff p { margin: .5rem 0; font-size: .9rem; color: var(--ink-2); }
+textarea {
+  width: 100%; min-height: 7rem; margin-top: .6rem; padding: .7rem;
+  font: 0.8rem/1.6 var(--mono); color: var(--ink);
+  background: var(--ground); border: 1px solid var(--rule); border-radius: 5px; resize: vertical;
+}
+footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+         font: 0.78rem/1.6 var(--mono); color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 34rem) {
+  .rows { grid-template-columns: 1fr; gap: .15rem; }
+  .rows dt { margin-top: .4rem; }
+  .verdict { margin-left: 0; width: 100%; }
+  .verdict button { flex: 1; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">167_01 Saad Flower · Development CP6606</p>
+  <h1>Bench checklist — arming model &amp; robot handshake</h1>
+  <p class="sub">Verifies the <code>NOT_HOMED</code> arming state, robot-only cycle start,
+  STOP-disarms, unattended fault recovery, and the robot comms log — against
+  <code>mock_robot.py</code>, with no real IO.</p>
+  <div class="meta">
+    <span>branch <code>fix/robot-cmd1-deadlock</code></span>
+    <span>commits <code>a75fd30</code> → <code>a2bbf51</code></span>
+    <span>bench run 2026-07-29</span>
+  </div>
+</header>
+
+<div class="callout done">
+  <h3>29 of 31 bench checks already verified over ADS — 2026-07-29</h3>
+  <p>Driven against the development CP6606 (<code>5.79.93.36.1.1</code>) with <code>pyads</code>,
+  using <code>mock_robot.py</code> in all four modes. Those verdicts are pre-filled below;
+  <strong>what is left is sections 07 and 08</strong>, plus <code>A4</code> and <code>M3</code>
+  which need the physical panel. Use <em>Show outstanding only</em> to hide what is done.</p>
+  <p>Highlights worth not re-deriving: <code>A2b</code> — 20 <code>External start pulse</code>
+  entries arrived under <code>--force-start</code> and <strong>every one was refused</strong>,
+  <code>eStep</code> never leaving <code>NOT_HOMED</code>. <code>S2</code> — 20 <code>CMD:1</code>
+  pulses refused over 15 s after an operator STOP, never restarting. <code>F1</code>–<code>F4</code>
+  — the whole fault loop, unaided, with <code>ERR -&gt; INIT_PUSH_RETRACTING</code> confirming
+  RESET homes rather than advertising ready.</p>
+</div>
+
+<div class="bar">
+  <div class="track"><div class="fill" id="fill"></div></div>
+  <span class="tally" id="tally">0 / 0</span>
+  <button class="util" id="openonly" type="button">Show outstanding only</button>
+  <button class="util" id="theme" type="button">Theme</button>
+  <button class="util" id="copy" type="button">Copy results</button>
+  <button class="util" id="reset" type="button">Reset</button>
+</div>
+
+<div class="callout stop">
+  <h3>Before this build ever goes back to the real machine</h3>
+  <p><code>167_01_Saad_PLC.tsproj</code> is currently rewritten for this bench:
+  <code>TargetNetId</code> points at <code>5.79.93.36.1.1</code> and the EtherCAT device is
+  <code>Disabled="true"</code>. That is correct here and <strong>must not be committed</strong> —
+  deploying it to the machine would run the PLC with no fieldbus at all.
+  Re-enable the device and retarget, or <code>git checkout</code> the file, before you go back.</p>
+</div>
+
+<div class="callout">
+  <h3>What this run cannot tell you</h3>
+  <p>No real IO. Every piston sensor is simulated by timers, so this proves
+  <em>sequence, arming, protocol and logging</em> — not wiring, not travel times, not
+  the plate sensors. Physical jog and lamp-wiring checks are marked
+  <span class="k">machine only</span> and are expected to be blocked here.</p>
+</div>
+
+<!-- ============================== 0 ============================== -->
+<section>
+  <div class="shead"><span class="snum">00</span><h2>Prepare the bench</h2>
+    <span class="note">blocking — nothing below works until these pass</span></div>
+
+  <div class="test" data-id="P1">
+    <div class="test-top"><span class="id">P1</span>
+      <h4>Build and download to the development panel</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Build in TcXaeShell, then Activate / download to the dev CP6606.</dd>
+      <dt>Expect</dt><dd>Clean build. New symbols resolve: <code>E_MasterAutoStep.NOT_HOMED</code>,
+        <code>FB_MasterAutoCycle.bHomeThenIdle</code>, <code>MAIN.fbTrigPb3</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="P2">
+    <div class="test-top"><span class="id">P2</span>
+      <h4>Set the bench flags on <span class="k">AutoMain</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Tick <strong>No sensors (timed steps)</strong> and <strong>Bypass plate sensors</strong>.</dd>
+      <dt>Expect</dt><dd>Both stay ticked. <code>bNoSensors</code> deliberately does <em>not</em> cover
+        <code>WAIT_PLATE</code> — without the second flag the cycle stops at
+        <code>iErrorCode 9</code>. You will deliberately un-tick it later in F1.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="P3">
+    <div class="test-top"><span class="id">P3</span>
+      <h4>Point the panel at the mock</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>On the <strong>Robot</strong> page, set the IP to the PC running the mock.</dd>
+      <dt>Expect</dt><dd>The field may still hold an old address — <code>sRobotHost</code> is
+        <code>VAR_GLOBAL PERSISTENT</code>, so the new <code>192.168.1.11</code> default
+        <strong>does not reach an already-commissioned panel</strong>. Typing here tears down the live
+        session and re-dials immediately.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="P4">
+    <div class="test-top"><span class="id">P4</span>
+      <h4>Start the mock in AUTO mode</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd><code>python scripts/mock_robot/mock_robot.py</code> —
+        and make sure no other instance is already running.</dd>
+      <dt>Expect</dt><dd><pre><code>Mode: AUTO - a bulb is requested on every IDLE
+Dummy Dobot server listening on 0.0.0.0:6001</code></pre>
+        If it says <code>Cannot listen on 0.0.0.0:6001</code>, a stale instance holds the port —
+        close it (<code>Get-NetTCPConnection -LocalPort 6001</code>). Two instances used to
+        both "start" and take connections arbitrarily, so you could watch one terminal while
+        the panel talked to the other.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="P5">
+    <div class="test-top"><span class="id">P5</span>
+      <h4>Link comes up</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Watch the Robot page and the Logs page.</dd>
+      <dt>Expect</dt><dd>State <code>Connected</code>; Rx/Tx counters climbing ~1/s.
+        Log: <code>INFO Connected &lt;ip&gt;:6001</code> then <code>INFO SYNC ok, tuning params pulled</code>.
+        Mock prints <code>[SYNC] sent: …</code>. The 11 tuning params populate.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 1 ============================== -->
+<section>
+  <div class="shead"><span class="snum">01</span><h2>Arming — the machine must not move on its own</h2>
+    <span class="note">the reason this change exists</span></div>
+
+  <div class="test" data-id="A1">
+    <div class="test-top"><span class="id">A1</span>
+      <h4>Comes up in Auto but un-armed</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Observe immediately after download / power-up, in Automatic.</dd>
+      <dt>Expect</dt><dd>Step reads <code>NOT_HOMED</code>. <strong>Nothing moves.</strong>
+        <span class="lamp off">green off</span> <span class="lamp off">red off</span>
+        <span class="lamp g">PB3 blinking</span><br>
+        Mock: <code>[STATE] 40  NOT_HOMED</code>, replying <code>CMD:0</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A2">
+    <div class="test-top"><span class="id">A2</span>
+      <h4>A well-behaved robot waits</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Leave the mock in AUTO and wait 30 s.</dd>
+      <dt>Expect</dt><dd>Mock keeps answering <code>CMD:0</code>; panel stays
+        <code>NOT_HOMED</code>, <code>nCyclesCompleted</code> unchanged, no
+        <code>External start pulse</code> in the log.<br>
+        <strong>Note what this does and does not prove.</strong> In AUTO the mock only asks when it
+        sees <code>STATE:0</code>, so this confirms the <em>protocol contract</em> — nothing more.
+        The PLC's own gate is A2b.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A2b">
+    <div class="test-top"><span class="id">A2b</span>
+      <h4>A badly-behaved robot is refused <span class="k">the real gate test</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Restart the mock as
+        <code>python scripts/mock_robot/mock_robot.py --force-start</code> — it answers
+        <strong>every</strong> state with <code>CMD:1</code>, including <code>NOT_HOMED</code>.
+        Leave the panel un-armed.<br>
+        Equivalent without the mock: write (or <strong>Force</strong>)
+        <code>GVL_Robot.stParams.nRobotCmd := 1</code> from TcXaeShell.</dd>
+      <dt>Expect</dt><dd>The log <strong>does</strong> show
+        <code>External start pulse</code> — repeatedly — because the FB logs it unconditionally
+        before the state machine runs. And <code>eStep</code> stays <code>NOT_HOMED</code> with
+        nothing moving, <code>nRobotCmd</code> snapping back to <code>0</code>.<br>
+        That pairing is the proof: the command genuinely arrived, was seen, and was
+        <em>refused</em>. "Nothing happened" on its own cannot distinguish a working gate from a
+        robot that never asked. <strong>This is the power-up hazard being closed</strong> — before
+        this change the same command started a cycle with the pistons anywhere.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A2c">
+    <div class="test-top"><span class="id">A2c</span>
+      <h4>Still refused in Manual and in ERR</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>With <code>--force-start</code> still running, switch to <strong>Manual</strong>,
+        then (later, after F1) try it again while latched in <code>ERR</code>.</dd>
+      <dt>Expect</dt><dd>Refused in both. Manual is gated by <code>bMachineAuto</code>;
+        <code>ERR</code> is not <code>IDLE</code> so the exit condition is never reached.
+        Put the mock back to AUTO before A3.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A3">
+    <div class="test-top"><span class="id">A3</span>
+      <h4>HMI START homes and arms</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Press <strong>START</strong> on <span class="k">AutoMain</span>.</dd>
+      <dt>Expect</dt><dd>Log, in order:<pre><code>INFO  START pressed
+INFO  NOT_HOMED -&gt; INIT_PUSH_RETRACTING
+INFO  INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING
+INFO  INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING
+INFO  INIT_GRIP_RETRACTING -&gt; IDLE</code></pre>
+        <span class="lamp g">green steady</span> PB3 LED off.
+        Note it lands in <code>IDLE</code>, <strong>not</strong> <code>WAIT_PLATE</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="A4">
+    <div class="test-top"><span class="id">A4</span>
+      <h4>Green PB3 does the same thing</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Press <strong>STOP</strong> to disarm, then press the green <strong>PB3</strong>
+        (<code>dIn[15]</code>) on the panel.</dd>
+      <dt>Expect</dt><dd>Identical log to A3. START moved PB1 → PB3 because PB3 is the green button.
+        PB1 in Auto now does nothing — confirm pressing it has no effect.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 2 ============================== -->
+<section>
+  <div class="shead"><span class="snum">02</span><h2>Bulb cycle — robot-driven only</h2></div>
+
+  <div class="test" data-id="C1">
+    <div class="test-top"><span class="id">C1</span>
+      <h4>Mock starts one cycle from IDLE</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>From <code>IDLE</code>, let the mock issue <code>CMD:1</code>.</dd>
+      <dt>Expect</dt><dd>Mock: <code>[STATE] 0   IDLE  -&gt; CMD:1 start cycle</code>.
+        Log shows <code>External start pulse</code>, then the full sequence
+        <code>IDLE → INIT_* → WAIT_PLATE → GRIP_EXTENDING → SEP_EXTENDING → PUSH_EXTENDING →
+        DWELL_PUSH → PUSH_RETRACTING → PUSH_RETRACTED_DWELL → SEP_RETRACTING →
+        SEP_RETRACTED_DWELL → GRIP_RETRACTING → IDLE</code>.
+        <code>nCyclesCompleted</code> +1. <span class="lamp g">green blinking</span> while running.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="C2">
+    <div class="test-top"><span class="id">C2</span>
+      <h4>Consecutive bulbs — every start fires</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Let it run at least 3 cycles back to back.</dd>
+      <dt>Expect</dt><dd><code>nCyclesCompleted</code> increments every time, no stalls.
+        This re-verifies the level-consume fix: a repeated <code>CMD:1</code> is honoured
+        <em>every</em> time, where the old edge-trigger fired once and then deadlocked.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="C3">
+    <div class="test-top"><span class="id">C3</span>
+      <h4><code>nRobotCmd</code> reads 0 — expected, not a fault</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Watch <code>nRobotCmd</code> on the Robot page during a cycle.</dd>
+      <dt>Expect</dt><dd>Almost always <code>0</code>, because MAIN consumes and clears it within a
+        scan. <strong>That is the new normal.</strong> The trace of a robot start is the
+        <code>External start pulse</code> log entry; <code>Last Rx</code> still shows the raw
+        <code>CMD:1</code> frame.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="C4">
+    <div class="test-top"><span class="id">C4</span>
+      <h4>Bench sim start still works without the mock</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Switch the mock to <code>--no-bulbs</code>, then tick
+        <strong>Sim bStartAssembly</strong>.</dd>
+      <dt>Expect</dt><dd>One full cycle runs. <code>bSimStartAssembly</code> is now the <em>only</em>
+        panel-side way to simulate a robot cycle start, since operator START was removed from the
+        <code>IDLE</code> exit condition.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section>
+  <div class="shead"><span class="snum">03</span><h2>STOP disarms — it no longer faults</h2>
+    <span class="note">error code 99 is retired</span></div>
+
+  <div class="test" data-id="S1">
+    <div class="test-top"><span class="id">S1</span>
+      <h4>STOP mid-cycle</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Start a cycle, then press <strong>STOP</strong> while it is moving.</dd>
+      <dt>Expect</dt><dd>Step → <code>NOT_HOMED</code>. <code>iErrorCode 0</code>, error text empty.
+        <span class="lamp off">red OFF</span> <span class="lamp off">green off</span>
+        <span class="lamp g">PB3 blinking</span><br>
+        Mock shows <code>[STATE] 40  NOT_HOMED</code> and <strong>must not print
+        <code>CMD:2</code></strong>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="S2">
+    <div class="test-top"><span class="id">S2</span>
+      <h4>Robot cannot undo an operator STOP</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>With the mock back in AUTO (still wanting a bulb), wait 30 s after the STOP.</dd>
+      <dt>Expect</dt><dd>Stays <code>NOT_HOMED</code>. Before this change STOP latched
+        <code>ERR 99</code>, the robot answered <code>CMD:2</code>, and the machine restarted itself
+        within seconds. <strong>This is the test that proves that is gone.</strong></dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="S3">
+    <div class="test-top"><span class="id">S3</span>
+      <h4>STOP from IDLE is an explicit disarm</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Arm to <code>IDLE</code>, then press <strong>STOP</strong> without starting a cycle.</dd>
+      <dt>Expect</dt><dd>→ <code>NOT_HOMED</code>. This is new behaviour, slightly beyond the original
+        ask: it gives the operator a way to take the machine out of the robot's reach.
+        Flag it if you'd rather STOP did nothing from <code>IDLE</code>.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section>
+  <div class="shead"><span class="snum">04</span><h2>Fault recovery — unattended, robot-driven</h2></div>
+
+  <div class="test" data-id="F1">
+    <div class="test-top"><span class="id">F1</span>
+      <h4>Provoke a real fault</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd><strong>Un-tick</strong> Bypass plate sensors, arm, then let the mock start a cycle.
+        With no plate sensors wired, <code>WAIT_PLATE</code> will time out.</dd>
+      <dt>Expect</dt><dd><code>ERR</code>, <code>iErrorCode 9</code>,
+        text <code>WAIT_PLATE timed out (plate never arrived)</code>.
+        <span class="lamp r">red on</span> <span class="lamp off">green off</span><br>
+        Log: <code>ERR WAIT_PLATE timed out …</code>. Mock:
+        <code>[STATE] 99  ERR  -&gt; CMD:2 reset error</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="F2">
+    <div class="test-top"><span class="id">F2</span>
+      <h4>RESET homes — it does not jump to IDLE</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Watch what the robot's <code>CMD:2</code> produces. Touch nothing.</dd>
+      <dt>Expect</dt><dd>Log reads <code>ERR -&gt; INIT_PUSH_RETRACTING</code> —
+        <strong>not</strong> <code>ERR -&gt; IDLE</code>. Then the chain to <code>IDLE</code>.
+        A fault leaves the pistons in unknown positions, so advertising <code>STATE:0</code>
+        immediately would claim "ready" while it is not.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="F3">
+    <div class="test-top"><span class="id">F3</span>
+      <h4>Recovery completes with no operator action</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Keep watching. Re-tick Bypass plate sensors so the next cycle can pass.</dd>
+      <dt>Expect</dt><dd>Full loop unaided:
+        <code>ERR → STATE:99 → CMD:2 → clear + home → STATE:0 → CMD:1 → next bulb</code>.
+        Nobody pressed anything. <code>iErrorCode</code> back to 0.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="F4">
+    <div class="test-top"><span class="id">F4</span>
+      <h4>HMI RESET behaves identically</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Provoke the fault again with the mock on <code>--no-bulbs</code>, then press
+        <strong>RESET</strong> on the panel.</dd>
+      <dt>Expect</dt><dd>Same homing path. Operator and robot resets share one consumption path,
+        so they cannot diverge.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section>
+  <div class="shead"><span class="snum">05</span><h2>Mode interlock</h2></div>
+
+  <div class="test" data-id="M1">
+    <div class="test-top"><span class="id">M1</span>
+      <h4>Manual reports 30 and disarms</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>From a running or armed state, switch to <strong>Manual</strong>.</dd>
+      <dt>Expect</dt><dd>Motion stops, step parks at <code>NOT_HOMED</code>,
+        <code>nStateOut</code> = <code>30</code>. Mock: <code>[STATE] 30  MANUAL</code> → <code>CMD:0</code>.
+        <span class="lamp off">green off</span>. PB3's LED reverts to a press mirror — press it and
+        the LED follows.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="M2">
+    <div class="test-top"><span class="id">M2</span>
+      <h4>Manual → Auto still needs a START</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Switch back to <strong>Automatic</strong> with the mock in AUTO, and wait.</dd>
+      <dt>Expect</dt><dd>Stays <code>NOT_HOMED</code>; the robot cannot start.
+        Manual jogging can leave the pistons anywhere, so the machine is deliberately
+        un-armed on return. One START press and production resumes.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="M3">
+    <div class="test-top"><span class="id">M3</span>
+      <h4>Manual jogs unchanged <span class="k">machine only</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>In Manual, hold PB1 / PB2 / PB3.</dd>
+      <dt>Expect</dt><dd>Grip / Sep / Push respectively. With no IO here, verify the command bits
+        (<code>GVL_App.bValve*</code>) online rather than watching pistons — then mark this
+        <strong>blocked</strong> and repeat it on the machine.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section>
+  <div class="shead"><span class="snum">06</span><h2>Robot comms log</h2>
+    <span class="note">first run of the merged logging branch on hardware</span></div>
+
+  <div class="test" data-id="L1">
+    <div class="test-top"><span class="id">L1</span>
+      <h4>Production log stays readable</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Leave <strong>Debug</strong> unticked and idle the link for a minute.</dd>
+      <dt>Expect</dt><dd>No <code>TX</code>/<code>RX</code> entries at all. The 1 Hz keep-alive
+        must not appear — with a 20-entry ring it would flush everything else in 20 seconds.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="L2">
+    <div class="test-top"><span class="id">L2</span>
+      <h4>Debug turns it into a protocol tracer</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Tick <strong>Debug</strong> and run a cycle.</dd>
+      <dt>Expect</dt><dd><code>DBG TX STATE:…</code> / <code>DBG RX CMD:1</code> appear for real
+        state changes — but the keep-alive repeat and its idle <code>CMD:0</code> reply stay
+        suppressed even here.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="L3">
+    <div class="test-top"><span class="id">L3</span>
+      <h4>Out-of-range tuning value is clamped and reported</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>On the Robot page, type <code>J_SPEED</code> = <code>500</code>.</dd>
+      <dt>Expect</dt><dd><code>WARN J_SPEED 500 out of range, clamped to 100</code>, and the field
+        settles at <code>100</code>. Without that entry the edit would look like it simply didn't take.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="L4">
+    <div class="test-top"><span class="id">L4</span>
+      <h4>Accepted change logs from → to</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Set <code>J_SPEED</code> = <code>55</code>.</dd>
+      <dt>Expect</dt><dd><code>INFO J_SPEED 100 -&gt; 55</code>; mock prints
+        <code>[SET] J_SPEED = 55</code>. Value survives — it is not reverted by the next
+        <code>GET_SYNC</code>.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="L5">
+    <div class="test-top"><span class="id">L5</span>
+      <h4>Dropped link is edge-logged, not spammed</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Kill the mock (<kbd>Ctrl</kbd>+<kbd>C</kbd>), wait ~15 s, restart it.</dd>
+      <dt>Expect</dt><dd><strong>Exactly one</strong> <code>WARN STATE unanswered, link may be
+        stale</code> — not one per second. Then reconnect attempts, and on restart
+        <code>INFO STATE replies resumed</code> / <code>INFO Connected …</code>.
+        You already saw the matching <code>ERR Connect failed … err …</code> path with no robot present.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="L6">
+    <div class="test-top"><span class="id">L6</span>
+      <h4>Timestamps are real</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Read the Time column on the Logs page.</dd>
+      <dt>Expect</dt><dd>Wall-clock <code>HH:MM:SS</code>, not <code>--:--:--</code>.
+        Dashes mean the panel RTC is unset — the timestamps are only ever as good as that clock.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section>
+  <div class="shead"><span class="snum">07</span><h2>Field checks — need the physical panel</h2>
+    <span class="badge open">outstanding</span></div>
+
+  <p class="sub" style="margin:0 0 1rem">Everything here was verified as <em>logic</em> over ADS —
+  by writing <code>GVL_IO.dIn[13..15]</code> and reading <code>GVL_App.bLed*</code> /
+  <code>bValve*</code>. What is unproven is the wiring: that a real press reaches the terminal and
+  a real coil moves metal.</p>
+
+  <div class="test" data-id="FLD1">
+    <div class="test-top"><span class="id">FLD1</span>
+      <h4>Physically press the green PB3</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>From <code>NOT_HOMED</code>, press the actual PB3 button.</dd>
+      <dt>Expect</dt><dd><code>START pressed</code> in the log, then the homing chain to
+        <code>IDLE</code>. Confirms <code>dIn[15]</code> is wired to the button you think it is —
+        note ADS-writing <code>GVL_App.bPb3</code> does <strong>not</strong> work, because
+        <code>PRG_IoMap</code> overwrites it from <code>dIn[15]</code> every 5 ms.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD2">
+    <div class="test-top"><span class="id">FLD2</span>
+      <h4>Real pistons follow the jog buttons in Manual</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>In Manual, hold PB1, then PB2, then PB3.</dd>
+      <dt>Expect</dt><dd>Grip L+R / Sep 1-3 / Push 1-3 extend while held and
+        <strong>retract on release</strong>. The command bits were confirmed to do exactly this;
+        the release behaviour comes from the <code>F_TRIG</code> branch, so watch it specifically.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD3">
+    <div class="test-top"><span class="id">FLD3</span>
+      <h4>Status lamps light — DO 12 green, DO 13 red</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Walk the states and watch the two machine lamps.</dd>
+      <dt>Expect</dt><dd><span class="lamp off">both off</span> in <code>NOT_HOMED</code> and Manual ·
+        <span class="lamp g">green steady</span> in <code>IDLE</code> ·
+        <span class="lamp g">green blinking</span> while cycling ·
+        <span class="lamp r">red only</span> in <code>ERR</code>.
+        Green and red must never be lit together.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD4">
+    <div class="test-top"><span class="id">FLD4</span>
+      <h4>PB LEDs — DO 7/8/9</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Watch PB3's LED in Auto while <code>NOT_HOMED</code>, then in Manual.</dd>
+      <dt>Expect</dt><dd>Auto + <code>NOT_HOMED</code> → PB3 <strong>blinks</strong> (press me to arm);
+        off once armed. In Manual → plain press mirror. PB1/PB2 are press mirrors in both modes.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD5">
+    <div class="test-top"><span class="id">FLD5</span>
+      <h4>Plate sensors, with the bypass OFF</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Un-tick <strong>Bypass plate sensors</strong>. Watch the L/R lamps on
+        <code>Main</code> as a plate is placed and removed.</dd>
+      <dt>Expect</dt><dd>Both lamps follow the plate; <code>WAIT_PLATE</code> advances as soon as
+        both are TRUE rather than waiting out <code>tPlateWaitTimeoutMs</code>.
+        With no plate it must still fault to <code>iErrorCode 9</code> — that path is already
+        proven, this confirms the sensors themselves.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD6">
+    <div class="test-top"><span class="id">FLD6</span>
+      <h4>A full cycle on real sensors, not timers</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Un-tick <strong>No sensors (timed steps)</strong> so the movement states wait
+        for actual proximity switches again.</dd>
+      <dt>Expect</dt><dd>Every state advances on its sensor, not on <code>tStepTimeoutMs</code>.
+        This is the one thing the whole bench run could not touch: with <code>bNoSensors</code> set,
+        error codes 1/3/4/5/6/7/8/10/11 are unreachable by construction, so <strong>no
+        movement-timeout path has ever been exercised</strong>. Re-check
+        <code>tStepTimeoutMs</code> is long enough for real travel.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="FLD7">
+    <div class="test-top"><span class="id">FLD7</span>
+      <h4>The real robot, not the mock</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Point the panel at the actual Dobot and run the arming sequence.</dd>
+      <dt>Expect</dt><dd>Same handshake as the mock: <code>STATE:40</code> → <code>CMD:0</code>,
+        arm, <code>STATE:0</code> → <code>CMD:1</code>, and on a fault <code>STATE:99</code> →
+        <code>CMD:2</code>. The mock is the reference; if the robot differs, the robot is wrong.</dd>
+    </dl>
+  </div>
+</section>
+
+<!-- ============================== 8 ============================== -->
+<section>
+  <div class="shead"><span class="snum">08</span><h2>Before this goes on the real machine</h2>
+    <span class="badge open">outstanding</span></div>
+
+  <div class="test" data-id="PRE1">
+    <div class="test-top"><span class="id">PRE1</span>
+      <h4>Re-enable EtherCAT and retarget the tsproj <span class="k">blocker</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd><code>167_01_Saad_PLC.tsproj</code> is currently bench-configured and
+        deliberately <strong>uncommitted</strong>: <code>TargetNetId</code> =
+        <code>5.79.93.36.1.1</code> and the EtherCAT device is <code>Disabled="true"</code>.
+        Re-enable it and retarget, or <code>git checkout</code> the file.</dd>
+      <dt>Expect</dt><dd>Deploying as-is would run the machine PLC with <strong>no fieldbus at
+        all</strong>. Check this before anything else in this section.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="PRE2">
+    <div class="test-top"><span class="id">PRE2</span>
+      <h4>Turn the bench flags back OFF <span class="k">safety</span></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>On the machine, un-tick <strong>No sensors (timed steps)</strong> and
+        <strong>Bypass plate sensors</strong>.</dd>
+      <dt>Expect</dt><dd>Both are <code>PERSISTENT</code>, so they survive a power cycle and a
+        download — a bench flag left on runs the real machine blind, advancing on timers and
+        closing the grippers without a plate. They are currently <strong>ON</strong> on the dev
+        panel.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="PRE3">
+    <div class="test-top"><span class="id">PRE3</span>
+      <h4>Set the robot IP on the machine panel</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Type the real robot's address on the <strong>Robot</strong> page.</dd>
+      <dt>Expect</dt><dd><code>sRobotHost</code> is <code>PERSISTENT</code>, so the new
+        <code>192.168.1.11</code> default in <code>GVL_Robot</code> will <strong>not</strong> reach an
+        already-commissioned panel — the stored value wins. Only the Robot page or Reset Origin
+        changes it.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="PRE4">
+    <div class="test-top"><span class="id">PRE4</span>
+      <h4>Commit the robot's <code>src2.lua</code></h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Commit the working <code>STATE</code>/<code>CMD</code> handler in
+        <code>167_01_Saad_Flower/Robot/167-01-Saad/</code>.</dd>
+      <dt>Expect</dt><dd>The committed <code>src2.lua</code> still has <strong>no STATE/CMD
+        handling at all</strong> — it answers <code>STATE:0</code> with <code>OK: SET STATE</code>.
+        Right now <code>mock_robot.py</code> is the only implementation of this protocol in version
+        control.</dd>
+    </dl>
+  </div>
+
+  <div class="test" data-id="PRE5">
+    <div class="test-top"><span class="id">PRE5</span>
+      <h4>FlowerPyHmi step names</h4>
+      <div class="verdict"></div></div>
+    <dl class="rows">
+      <dt>Do</dt><dd>Add <code>40: "NOT_HOMED"</code> — and <code>30: "MANUAL"</code>, already
+        missing — to <code>STEP_NAMES</code> in <code>flower_py_hmi/master_auto.py</code>.</dd>
+      <dt>Expect</dt><dd>Otherwise the engineering UI renders the new state as <code>?</code>.
+        <code>check_pyhmi_contract.py</code> cannot catch this — no symbol changed.</dd>
+    </dl>
+  </div>
+</section>
+
+<div class="signoff">
+  <h2>Result</h2>
+  <p>Use <strong>Copy results</strong> above to grab a summary, and paste it back with anything
+  that failed. Note the two open follow-ups this run does not cover:</p>
+  <p>· <code>src2.lua</code> on the real robot still needs the <code>STATE</code>/<code>CMD</code>
+  handler committed — the mock is currently the only implementation in version control.<br>
+  · FlowerPyHmi's <code>STEP_NAMES</code> (<code>flower_py_hmi/master_auto.py</code>) has no
+  <code>40</code> or <code>30</code>, so it will render <code>NOT_HOMED</code> and
+  <code>MANUAL</code> as <code>?</code>.</p>
+  <textarea id="notes" placeholder="Notes, deviations, anything that surprised you…"></textarea>
+</div>
+
+<footer>
+  Generated for branch <code>fix/robot-cmd1-deadlock</code> · verdicts and notes are saved in this
+  browser only · see <code>CLAUDE.md</code> → ARMING MODEL for the reasoning behind each check.
+</footer>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "flower-bench-arming-v2";
+
+  // Verdicts from the ADS bench run of 2026-07-29 against the dev CP6606.
+  // Seeded as defaults so the run is not repeated; any click overrides them, and
+  // Clear resets back to these rather than to blank.
+  var VERIFIED = {
+    P1: "pass", P2: "pass", P3: "pass", P4: "pass", P5: "pass",
+    A1: "pass", A2: "pass", A2b: "pass", A2c: "pass", A3: "pass",
+    A4: "blocked",                       // logic proven at dIn[15]; press is FLD1
+    C1: "pass", C2: "pass", C3: "pass", C4: "pass",
+    S1: "pass", S2: "pass", S3: "pass",
+    F1: "pass", F2: "pass", F3: "pass", F4: "pass",
+    M1: "pass", M2: "pass",
+    M3: "blocked",                       // command bits proven; motion is FLD2
+    L1: "pass", L2: "pass", L3: "pass", L4: "pass", L5: "pass", L6: "pass"
+  };
+
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { store = {}; }
+  Object.keys(VERIFIED).forEach(function (k) {
+    if (!(k in store)) { store[k] = VERIFIED[k]; }
+  });
+
+  var tests = Array.prototype.slice.call(document.querySelectorAll(".test"));
+  var STATES = [["pass", "Pass"], ["fail", "Fail"], ["blocked", "N/A"]];
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+  }
+
+  function refresh() {
+    var done = 0, failed = 0;
+    tests.forEach(function (t) {
+      var s = t.getAttribute("data-state");
+      if (s === "pass" || s === "blocked") { done++; }
+      if (s === "fail") { failed++; }
+    });
+    var pct = tests.length ? Math.round((done / tests.length) * 100) : 0;
+    document.getElementById("fill").style.width = pct + "%";
+    document.getElementById("tally").innerHTML =
+      "<b>" + done + "</b> / " + tests.length +
+      (failed ? ' <span class="bad">· ' + failed + " failed</span>" : "");
+  }
+
+  tests.forEach(function (t) {
+    var id = t.getAttribute("data-id");
+    var box = t.querySelector(".verdict");
+
+    STATES.forEach(function (pair) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.value = pair[0];
+      b.textContent = pair[1];
+      b.setAttribute("aria-label", pair[1] + " " + id);
+      b.addEventListener("click", function () {
+        var cur = t.getAttribute("data-state");
+        var next = cur === pair[0] ? "" : pair[0];
+        if (next) { t.setAttribute("data-state", next); store[id] = next; }
+        else { t.removeAttribute("data-state"); delete store[id]; }
+        save(); refresh();
+      });
+      box.appendChild(b);
+    });
+
+    if (store[id]) { t.setAttribute("data-state", store[id]); }
+  });
+
+  var notes = document.getElementById("notes");
+  notes.value = store.__notes || "";
+  notes.addEventListener("input", function () { store.__notes = notes.value; save(); });
+
+  document.getElementById("reset").addEventListener("click", function () {
+    if (!window.confirm("Reset to the 2026-07-29 bench results and clear notes?")) { return; }
+    store = {};
+    Object.keys(VERIFIED).forEach(function (k) { store[k] = VERIFIED[k]; });
+    save();
+    tests.forEach(function (t) {
+      var v = store[t.getAttribute("data-id")];
+      if (v) { t.setAttribute("data-state", v); } else { t.removeAttribute("data-state"); }
+    });
+    notes.value = "";
+    refresh();
+  });
+
+  // Outstanding-only filter: hides anything already scored, and any section left
+  // with nothing to show.
+  var openBtn = document.getElementById("openonly");
+  function applyFilter() {
+    var on = document.body.classList.contains("only-open");
+    openBtn.textContent = on ? "Show all" : "Show outstanding only";
+    document.querySelectorAll("section").forEach(function (sec) {
+      var all = sec.querySelectorAll(".test");
+      var done = sec.querySelectorAll(".test[data-state]");
+      sec.classList.toggle("all-done", on && all.length > 0 && all.length === done.length);
+    });
+  }
+  openBtn.addEventListener("click", function () {
+    document.body.classList.toggle("only-open");
+    applyFilter();
+  });
+
+  document.getElementById("copy").addEventListener("click", function () {
+    var lines = ["167_01 bench checklist - arming model (branch fix/robot-cmd1-deadlock)", ""];
+    var sections = document.querySelectorAll("section");
+    Array.prototype.forEach.call(sections, function (sec) {
+      lines.push(sec.querySelector("h2").textContent.trim());
+      Array.prototype.forEach.call(sec.querySelectorAll(".test"), function (t) {
+        var s = t.getAttribute("data-state") || "not run";
+        lines.push("  [" + s.toUpperCase() + "] " + t.getAttribute("data-id") +
+                   " " + t.querySelector("h4").textContent.trim());
+      });
+      lines.push("");
+    });
+    if (notes.value.trim()) { lines.push("Notes:", notes.value.trim()); }
+    var text = lines.join("\n");
+    var btn = this;
+    function flash(msg) { btn.textContent = msg; setTimeout(function () { btn.textContent = "Copy results"; }, 1400); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { flash("Copied"); },
+                                              function () { flash("Copy failed"); });
+    } else {
+      notes.value = text; notes.select(); flash("In the notes box");
+    }
+  });
+
+  var themeBtn = document.getElementById("theme");
+  if (store.__theme) { document.documentElement.setAttribute("data-theme", store.__theme); }
+  themeBtn.addEventListener("click", function () {
+    var root = document.documentElement;
+    var cur = root.getAttribute("data-theme");
+    if (!cur) {
+      cur = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    store.__theme = next; save();
+  });
+
+  refresh();
+}());
+</script>
+</body>
+</html>

@@ -23,17 +23,22 @@ VAR
     // former discrete-I/O handshake (STAND_SEQ_DO/DI) is retired.
     fbRobotTcp : FB_RobotTcpClient;
 
-    // Edge detectors on the robot's TCP command channel (nRobotCmd:
-    // 0=none, 1=start cycle, 2=reset error). Rising edge on =1 feeds
-    // fbMasterAutoCycle's start pulse; rising edge on =2 pulses the
-    // HMI-owned bReset flag which the FB's own R_TRIG then consumes.
-    fbTrigRobotStart : R_TRIG;
-    fbTrigRobotReset : R_TRIG;
+    // Robot TCP command channel (nRobotCmd: 0=none, 1=start cycle,
+    // 2=reset error). Consumed as a LEVEL and cleared on consumption --
+    // see the body for why edge-detecting it deadlocked the machine.
+    // bRobotStartPulse is the resulting one-scan pulse handed to
+    // fbMasterAutoCycle's bExtStartPulse.
+    bRobotStartPulse : BOOL;
 
-    // PB1 rising edge in Auto mode triggers a cycle start (bypass of the
-    // robot's CMD:1). Fed into stMasterAuto.bSimStartAssembly which the FB
-    // already OR-merges with the external start pulse and auto-clears.
-    fbTrigPb1 : R_TRIG;
+    // PB3 rising edge in Auto is the operator START: "home the pistons and arm
+    // the machine". Drives stMasterAuto.bStart, the same field as the HMI
+    // button. PB3 because it is the GREEN button (PB1 red, PB2 orange) and this
+    // is the go-ahead; it used to be PB1.
+    //
+    // Note it drives bStart, NOT bSimStartAssembly. Under the arming model
+    // START no longer runs a bulb cycle, and bSimStartAssembly keeps its own
+    // distinct job as the bench stand-in for the robot's CMD:1.
+    fbTrigPb3 : R_TRIG;
 
     // Scratch copies of the global machine mode, computed once per scan and
     // fanned out to all eight pistons (both eMode and bMode) just below.
@@ -149,18 +154,50 @@ fbMasterAutoCycle.bPlateSenR := GVL_App.bPlateSenR;
 GVL_HMI.bPlateSenL := GVL_App.bPlateSenL;
 GVL_HMI.bPlateSenR := GVL_App.bPlateSenR;
 
-(* Robot command edge detection. nRobotCmd is written by fbRobotTcp on
-   each CMD:<n> reply (see below). RESET pulse is fanned into the HMI
-   bReset flag so the operator- and robot-initiated resets share one
-   consumption path inside the FB. *)
-fbTrigRobotStart(CLK := GVL_Robot.stParams.nRobotCmd = 1);
-fbTrigRobotReset(CLK := GVL_Robot.stParams.nRobotCmd = 2);
-IF fbTrigRobotReset.Q THEN
-    GVL_HMI.stMasterAuto.bReset := TRUE;
+(* ==========================================
+   ROBOT COMMAND CONSUMPTION (nRobotCmd, written by fbRobotTcp on each
+   CMD:<n> reply -- see the fbRobotTcp call further down).
+
+   Consumed as a LEVEL and CLEARED here. The PLC clearing the field is the
+   acknowledgement; the robot zeroing it after the next state push is now
+   belt-and-braces rather than load-bearing.
+
+   This used to be a pair of R_TRIGs on nRobotCmd = 1 / = 2, and nothing on
+   the PLC side ever reset the field. That deadlocked the machine
+   (2026-07-28, found on the real machine): a CMD:1 arriving while the panel
+   was in Manual or latched in ERR fired the edge, the FB's IDLE branch
+   correctly refused it, and nRobotCmd stayed at 1 forever. The robot
+   re-asserts CMD:1 in every STATE reply until it sees the panel leave IDLE
+   -- but re-sending a value that is already 1 produces no rising edge. So
+   the robot waited for a state change while the PLC waited for an edge that
+   could never come, and the Robot page showed CMD:1 arriving happily the
+   whole time.
+
+   Clearing makes it self-healing. A request that cannot be honoured this
+   scan is dropped, and the robot's next keep-alive re-asserts it ~1 s
+   later. Repeat pulses are harmless: only FB_MasterAutoCycle's IDLE branch
+   consumes bExtStartPulse, and it is gated on bMachineAuto.
+
+   Diagnostic note: nRobotCmd now reads 0 almost always, because it is
+   consumed within a scan of arriving. The trace of a robot start is the
+   'External start pulse' entry on the Logs page, and stRobot.sLastMessage
+   still shows the raw CMD frame.
+
+   RESET is fanned into the HMI bReset flag so operator- and robot-initiated
+   resets share one consumption path inside the FB.
+   ========================================== *)
+bRobotStartPulse := FALSE;
+
+IF GVL_Robot.stParams.nRobotCmd = 1 THEN
+    bRobotStartPulse             := TRUE;
+    GVL_Robot.stParams.nRobotCmd := 0;
+ELSIF GVL_Robot.stParams.nRobotCmd = 2 THEN
+    GVL_HMI.stMasterAuto.bReset  := TRUE;
+    GVL_Robot.stParams.nRobotCmd := 0;
 END_IF
 
 fbMasterAutoCycle(
-    bExtStartPulse := fbTrigRobotStart.Q,
+    bExtStartPulse := bRobotStartPulse,
     bMachineAuto   := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode,
     stHmi          := GVL_HMI.stMasterAuto,
     stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
@@ -196,7 +233,9 @@ GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineA
    ========================================== *)
 GVL_App.bLedPb1 := GVL_App.bPb1;
 GVL_App.bLedPb2 := GVL_App.bPb2;
-GVL_App.bLedPb3 := GVL_App.bPb3;
+(* PB3's LED is no longer a press mirror in Auto -- it is the "press me to arm"
+   prompt. Assigned further down, after bBlink is refreshed, so the blink is
+   this scan's value rather than last scan's. *)
 
 (* ==========================================
    Machine status lamps (DO 12 green / DO 13 red).
@@ -224,7 +263,13 @@ END_IF
 
 GVL_App.bLedRed := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR);
 
-IF NOT bMachineAuto OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR THEN
+IF NOT bMachineAuto
+   OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR
+   OR GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.NOT_HOMED THEN
+    (* Off in NOT_HOMED as well as Manual/ERR: green means "the automatic cycle
+       is live and armed", and an un-homed machine is precisely not that. PB3's
+       own green LED is the "press me" signal in that state, so the two are not
+       competing for the operator's attention. *)
     GVL_App.bLedGreen := FALSE;
 ELSIF GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.IDLE THEN
     GVL_App.bLedGreen := TRUE;
@@ -232,9 +277,19 @@ ELSE
     GVL_App.bLedGreen := bBlink;
 END_IF
 
-fbTrigPb1(CLK := GVL_App.bPb1);
-IF bMachineAuto AND fbTrigPb1.Q THEN
-    GVL_HMI.stMasterAuto.bSimStartAssembly := TRUE;
+(* PB3 LED -- "press me to arm" prompt, blinking while the machine is in Auto
+   and un-homed. Falls back to a raw press mirror in Manual, where PB3 is the
+   Push jog button and the LED keeps its original wiring-diagnostic role.
+   PB1/PB2 LEDs stay dumb mirrors in both modes. *)
+IF bMachineAuto THEN
+    GVL_App.bLedPb3 := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.NOT_HOMED) AND bBlink;
+ELSE
+    GVL_App.bLedPb3 := GVL_App.bPb3;
+END_IF
+
+fbTrigPb3(CLK := GVL_App.bPb3);
+IF bMachineAuto AND fbTrigPb3.Q THEN
+    GVL_HMI.stMasterAuto.bStart := TRUE;
 END_IF;
 
 bManualMode := NOT bMachineAuto;
@@ -321,15 +376,15 @@ fbGripSolL(
     bOutSolenoid     => GVL_App.bValveGripExtendL
 );
 
-//fbGripSolR(
-//    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
-//    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
-//    bJogExtend       := bManualMode AND GVL_App.bPb1,
-//    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
-//    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
-//    stHmi            := GVL_HMI.stGripSolR,
-//    bOutSolenoid     => GVL_App.bValveGripExtendR
-//);
+fbGripSolR(
+    bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
+    bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
+    bJogExtend       := bManualMode AND GVL_App.bPb1,
+    bSwitchExtended  := GVL_App.bSensorGripExtendedR,
+    bSwitchRetracted := GVL_App.bSensorGripRetractedR,
+    stHmi            := GVL_HMI.stGripSolR,
+    bOutSolenoid     => GVL_App.bValveGripExtendR
+);
 
 (* ==========================================
    Robot TCP/IP client (TCP-only protocol, port 6001). Runs every scan;

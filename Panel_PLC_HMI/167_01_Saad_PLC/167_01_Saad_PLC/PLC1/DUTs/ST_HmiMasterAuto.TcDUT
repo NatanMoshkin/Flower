@@ -6,13 +6,22 @@ STRUCT
     // Display label ('MasterAuto'). Set from GVL_HMI init, never written by FB.
     Name             : STRING(30);
 
-    // HMI writes -- momentary command buttons (R_TRIG inside FB latches the rising edge)
+    // HMI writes -- momentary command buttons (R_TRIG inside FB latches the
+    // rising edge). NOTE bStart means "home the pistons and arm", NOT "run a
+    // bulb cycle" -- only the robot's CMD:1 starts a cycle. Also driven by the
+    // green PB3 in Automatic (see MAIN).
     bStart           : BOOL;
     bStop            : BOOL;
     bReset           : BOOL;
 
-    // FB writes -- status
-    eStep            : E_MasterAutoStep;
+    // FB writes -- status.
+    //
+    // Defaults to NOT_HOMED, and that default is what keeps the machine still
+    // after a power cycle: GVL_HMI is plain VAR_GLOBAL, so this initialiser is
+    // re-applied on every cold boot and every download. bAutoMode persists, so
+    // without it the panel would come back in Automatic reporting IDLE(0) and a
+    // running robot could command a cycle with the pistons anywhere.
+    eStep            : E_MasterAutoStep := E_MasterAutoStep.NOT_HOMED;
     sStepText        : STRING(20);   // human-readable mirror of eStep
     tElapsedS        : LREAL;        // seconds spent in the current step (0.0 on transition)
     iErrorCode       : INT;          // 0 = OK; see FB_MasterAutoCycle header for the code table

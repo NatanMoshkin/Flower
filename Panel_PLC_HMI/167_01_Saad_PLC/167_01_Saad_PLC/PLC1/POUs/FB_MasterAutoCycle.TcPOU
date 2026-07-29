@@ -17,13 +17,33 @@
                     Written by MAIN each scan, pushed by FB_RobotTcpClient
                     on change and as keep-alive.
 
-   The cycle starts on any rising edge of bExtStartPulse (robot cmd=1, one
-   scan wide), the HMI START button, or the sim-start flag.
+   TWO KINDS OF START, WITH DIFFERENT OWNERS (2026-07-29):
+
+     Operator START  = "home the pistons and arm the machine".
+                       stHmi.bStart, from the HMI button or the green PB3 in
+                       Automatic. Runs the INIT retract chain and stops in IDLE.
+                       It does NOT run a bulb cycle.
+     Robot CMD:1     = "run one bulb cycle". Arrives as bExtStartPulse. Valid
+                       only from IDLE, i.e. only once a human has armed the
+                       machine. bSimStartAssembly is its bench stand-in.
+
+   So the machine cannot move after a power cycle, after Manual, or after a
+   STOP until an operator presses START; and once armed, only the robot decides
+   when a bulb runs. stCfg.bContinuous is no longer consulted at all (MAIN also
+   force-clears it every scan) -- it was the last path that could start motion
+   with nothing external gating it.
 
    Sequence (all 3 Sep/Push pairs move in parallel; both grips move together):
 
-     IDLE                    START button OR bExtStartPulse pulse OR SimIdle
-                             OR bContinuous checked (level - keeps re-arming)
+     NOT_HOMED               In Automatic, NOT armed. Entered on power-up (the
+                             declared default of stHmi.eStep), on any time in
+                             Manual, and on operator STOP. Reports STATE:40,
+                             which the robot reads as "wait". Exits only on
+                             operator START -> INIT chain, bHomeThenIdle TRUE.
+     IDLE                    Armed. bExtStartPulse (robot CMD:1) OR
+                             SimStartAssembly OR SimIdle -> INIT chain with
+                             bHomeThenIdle FALSE (a bulb cycle).
+                             Operator START here re-homes (bHomeThenIdle TRUE).
      INIT_PUSH_RETRACTING    drive PushCmdRetract[1..3]; wait AND of all
                              PushIsRetracted. Guarantees pistons are home before
                              a cycle starts, even if a prior manual move left
@@ -36,6 +56,8 @@
                              GripIsRetracted. Defensive symmetry with the INIT
                              Sep/Push states, so a manual jog left extended
                              does not collide with the arriving plate.
+                             THE ONE PLACE THE TWO CALLERS DIVERGE: exits to
+                             IDLE when bHomeThenIdle, else to WAIT_PLATE.
      WAIT_PLATE              wait bPlateSenL AND bPlateSenR (robot has placed
                              the plate on the fixture). Latched at start only;
                              sensors are not monitored past this step.
@@ -57,9 +79,14 @@
      GRIP_RETRACTING         drive GripCmdRetract[1..2]; wait AND of all
                              GripIsRetracted. Releases the plate; increment
                              nCyclesCompleted; back to IDLE.
-     ERR                     latched; iErrorCode set to step code; bContinuous
-                             cleared so RESET does not restart motion.
-                             Reset on HMI RESET rising edge.
+     ERR                     latched; iErrorCode set to step code. Reports
+                             STATE:99, on which the robot answers CMD:2. RESET
+                             (that CMD:2, or the HMI button) clears the error and
+                             re-enters the INIT chain with bHomeThenIdle TRUE --
+                             NOT straight to IDLE. A fault leaves the pistons
+                             anywhere, so advertising IDLE(0) would claim ready
+                             while it is not, and RESET landing in IDLE with the
+                             robot still asking made RESET itself a start button.
 
    Error codes:
      0  = OK
@@ -74,7 +101,9 @@
           -- suppressed while stCfg.bBypassPlateSensors is set
     10  = GRIP_EXTENDING timed out
     11  = GRIP_RETRACTING timed out
-    99  = Operator STOP while running
+    99  = RETIRED (was 'Operator STOP while running'). STOP now disarms to
+          NOT_HOMED instead of faulting -- see Section 2. Do not reuse the
+          number: old log entries and CSV exports still carry it.
 
    The former WAIT_POS2 state (error code 2) is retired: the robot code
    (src0.lua PerformStandSequence) already moves the arm clear of the
@@ -170,10 +199,23 @@ VAR
     fbSim_SepRetDwell     : R_TRIG;
     fbSim_GripRet         : R_TRIG;
 
+    (* Which exit the INIT retract chain takes when it completes:
+         TRUE  -> IDLE         the chain was run to HOME the machine
+                               (operator START, or recovery from ERR)
+         FALSE -> WAIT_PLATE   the chain is the front of a bulb cycle
+                               (robot CMD:1)
+       Set by whoever ENTERS the chain, never from inside it -- the three INIT
+       states are shared by both callers and must not care which one they serve. *)
+    bHomeThenIdle         : BOOL;
+
     (* Per-step timer. Same TON, different PT depending on state. On DWELL
        states PT is the dwell; on wait states PT is the timeout. *)
     tonStep               : TON;
-    ePrevStep             : E_MasterAutoStep;   (* transition detect for timer reset *)
+
+    (* Transition detect for the timer reset and the transition log. Seeded to
+       NOT_HOMED to match stHmi.eStep's own default, so power-up does not log a
+       phantom 'IDLE -> NOT_HOMED' for a state the machine was never in. *)
+    ePrevStep             : E_MasterAutoStep := E_MasterAutoStep.NOT_HOMED;
 
     (* Loop index *)
     i                     : USINT;
@@ -276,29 +318,58 @@ bPlateOk          := bPlateSenL OR bPlateSenR;
    is handled robot-side; the PLC does not receive it in the discrete-IO
    interface. Operator must reset both sides after a fault.
    ========================================== *)
-IF fbTrigStop.Q AND stHmi.eStep <> E_MasterAutoStep.IDLE AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
-    stHmi.iErrorCode := 99;
-    stHmi.sErrorText := 'Operator STOP while running';
-    stHmi.eStep      := E_MasterAutoStep.ERR;
-    (* Drop Continuous on any ERR entry so RESET does not instantly
-       restart motion with the box still checked. *)
+IF fbTrigStop.Q AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
+    (* STOP DISARMS, it does not fault. Error code 99 ('Operator STOP while
+       running') is retired.
+
+       It used to latch ERR, which was harmless only while the CMD:1 latch bug
+       masked it. Now that a re-sent command is honoured, ERR means the robot
+       sees STATE:99, answers CMD:2, the PLC self-homes and reports IDLE, and
+       the robot immediately starts another bulb -- i.e. a deliberate operator
+       STOP would restart the machine within a couple of seconds.
+
+       Dropping to NOT_HOMED instead reports 'wait' rather than 'fault', so the
+       robot never tries to reset it, and the machine cannot move again until a
+       human presses START. It also restores the distinction that ERR means
+       something went WRONG, not that someone intervened.
+
+       Fires from IDLE too, which gives the operator an explicit disarm: STOP in
+       IDLE takes the machine out of the robot's reach. *)
+    stHmi.iErrorCode := 0;
+    stHmi.sErrorText := '';
+    stHmi.eStep      := E_MasterAutoStep.NOT_HOMED;
     stCfg.bContinuous := FALSE;
 END_IF;
 
 IF fbTrigReset.Q AND stHmi.eStep = E_MasterAutoStep.ERR THEN
+    (* RESET (operator button, or the robot's CMD:2 fanned in by MAIN) clears
+       the fault and HOMES -- it does not drop straight to IDLE any more.
+
+       Two reasons. A fault leaves the pistons in unknown positions, so going
+       to IDLE would advertise STATE:0 ('ready') while the machine is not; and
+       RESET landing in IDLE with the robot still asking for a bulb made RESET
+       itself a start button, ~1 s after the operator cleared the fault. Now
+       RESET only ever produces motion towards home, and the cycle starts on the
+       robot's own CMD:1 once IDLE is genuinely reached. *)
     stHmi.iErrorCode := 0;
     stHmi.sErrorText := '';
-    stHmi.eStep      := E_MasterAutoStep.IDLE;
+    bHomeThenIdle    := TRUE;
+    stHmi.eStep      := E_MasterAutoStep.INIT_PUSH_RETRACTING;
 END_IF;
 
-(* Global Auto/Manual hard interlock. Switching the machine to Manual (or
-   being in Manual) forces the cycle back to IDLE from any running state and
-   drops Continuous, so a stray robot start pulse cannot restart motion.
-   Not treated as a fault (no ERR/error code) — Manual is a normal operator
-   choice, not an alarm. ERR stays latched until RESET. *)
-IF NOT bMachineAuto AND stHmi.eStep <> E_MasterAutoStep.IDLE AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
+(* Global Auto/Manual hard interlock. Being in Manual forces the cycle out of
+   any running state and drops Continuous, so a stray robot start pulse cannot
+   restart motion. Not treated as a fault (no ERR/error code) — Manual is a
+   normal operator choice, not an alarm. ERR stays latched until RESET.
+
+   Parks in NOT_HOMED rather than IDLE, and THAT is the whole implementation of
+   "returning from Manual needs an operator START": manual jogging can leave the
+   pistons anywhere, so the machine must be un-armed when Auto comes back. No
+   Manual->Auto edge detection is needed — the state is simply already
+   NOT_HOMED, and the operator's START homes it. *)
+IF NOT bMachineAuto AND stHmi.eStep <> E_MasterAutoStep.NOT_HOMED AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
     stCfg.bContinuous := FALSE;
-    stHmi.eStep       := E_MasterAutoStep.IDLE;
+    stHmi.eStep       := E_MasterAutoStep.NOT_HOMED;
 END_IF;
 
 (* ==========================================
@@ -382,19 +453,61 @@ CASE stHmi.eStep OF
         stHmi.iErrorCode := 0;
         stHmi.sErrorText := '';
 
-        IF bMachineAuto AND (fbTrigStart.Q OR bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q OR stCfg.bContinuous) THEN
-            (* Robot (via TCP CMD:1 -> MAIN R_TRIG -> bExtStartPulse),
-               operator (fbTrigStart), or bench sim (fbTrigStartAssembly)
-               has requested a cycle. Gated by bMachineAuto: in Manual the
-               machine cannot start, even on a robot start pulse (no
-               double-control). While bContinuous is checked, IDLE starts
-               the next cycle immediately — no external edge needed.
+        (* ONLY THE ROBOT STARTS A BULB CYCLE.
 
-               Enter INIT_PUSH_RETRACTING first (not SEP_EXTENDING directly)
-               so pistons left extended by a prior manual move are driven
-               home before the cycle proper starts. If everything is already
-               retracted, the three INIT states self-satisfy on the next scan. *)
-            stHmi.eStep := E_MasterAutoStep.INIT_PUSH_RETRACTING;
+           fbTrigStart.Q (operator START) and stCfg.bContinuous were both
+           removed from this condition. That is the point of the whole arming
+           model: START means "home and arm", and Continuous would re-arm with
+           nothing external gating it at all. What is left is the robot's CMD:1
+           (arriving as bExtStartPulse), its bench stand-in
+           bSimStartAssembly, and the per-step sim flag.
+
+           Still gated by bMachineAuto: in Manual nothing starts, even on a
+           robot pulse (no double-control).
+
+           Enters the INIT chain rather than WAIT_PLATE directly so pistons left
+           somewhere unexpected are driven home first; with everything already
+           retracted the three INIT states self-satisfy on the next scan, so it
+           costs nothing per bulb. bHomeThenIdle FALSE routes the chain's exit
+           on to WAIT_PLATE and the rest of the cycle. *)
+        IF bMachineAuto AND (bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q) THEN
+            bHomeThenIdle := FALSE;
+            stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
+
+        ELSIF bMachineAuto AND fbTrigStart.Q THEN
+            (* Operator START while already armed: re-home and come back here.
+               Harmless (the INIT states self-satisfy when already retracted)
+               and it keeps START's meaning identical in every state. *)
+            bHomeThenIdle := TRUE;
+            stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
+        END_IF;
+
+    E_MasterAutoStep.NOT_HOMED:
+        (* In Automatic but NOT armed: entered on power-up (stHmi.eStep's
+           declared default), on any time spent in Manual, and on operator STOP.
+           nStateOut reports 40, which the robot treats as "wait" -- it is
+           neither IDLE(0) "send me a bulb" nor ERR(99) "reset me".
+
+           Nothing is driven and no timer runs (Section 3 falls to its ELSE, as
+           for IDLE). The ONLY exit is an operator START -- the HMI button or the
+           green PB3, which MAIN maps onto the same stHmi.bStart field. *)
+        FOR i := 1 TO 3 DO
+            bSepCmdExtend[i]   := FALSE;
+            bSepCmdRetract[i]  := FALSE;
+            bPushCmdExtend[i]  := FALSE;
+            bPushCmdRetract[i] := FALSE;
+        END_FOR;
+        FOR i := 1 TO 2 DO
+            bGripCmdExtend[i]  := FALSE;
+            bGripCmdRetract[i] := FALSE;
+        END_FOR;
+
+        stHmi.iErrorCode := 0;
+        stHmi.sErrorText := '';
+
+        IF bMachineAuto AND fbTrigStart.Q THEN
+            bHomeThenIdle := TRUE;
+            stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;
 
     E_MasterAutoStep.INIT_PUSH_RETRACTING:
@@ -460,7 +573,15 @@ CASE stHmi.eStep OF
         END_FOR;
 
         IF bAllGripRetracted OR fbSim_InitGripRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
-            stHmi.eStep := E_MasterAutoStep.WAIT_PLATE;
+            (* End of the shared retract chain -- the one place the two callers
+               diverge. Homing (operator START, or ERR recovery) stops here with
+               the machine armed; a robot-started cycle carries on into the bulb
+               sequence. Everything above this line is identical for both. *)
+            IF bHomeThenIdle THEN
+                stHmi.eStep := E_MasterAutoStep.IDLE;
+            ELSE
+                stHmi.eStep := E_MasterAutoStep.WAIT_PLATE;
+            END_IF;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 8;
             stHmi.sErrorText := 'INIT_GRIP_RETRACTING timed out';
