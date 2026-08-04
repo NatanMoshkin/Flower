@@ -951,6 +951,13 @@ Three points worth not undoing:
   press mirror in `ERR` for jog feedback, keeping its blink-to-arm prompt for
   `NOT_HOMED` only.
 
+`scripts/test_piston_jog_gate.py` ports the FB's solenoid ladder (Sections
+0/1/1a/1c/2) and asserts the gate — 17 cases including "Auto without the ERR
+window still ignores the PB", "releasing in ERR drops the coil", "the HMI radio
+buttons stay dead", and both leave-the-window-mid-press paths. Mutation-checked:
+regressing the release branch to the old Manual-only gate fails it. Run
+`python scripts/test_piston_jog_gate.py`.
+
 **Know this before relying on it: the robot closes the window in about a
 second.** `ERR` → `STATE:99` → robot `CMD:2` → the PLC clears the fault and
 homes. In production `ERR` is transient, so the jog is genuinely useful only
