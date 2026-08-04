@@ -46,6 +46,17 @@ VAR
     bManualMode  : BOOL;   // = NOT bMachineAuto; gates PB jogs
     eMachineMode : E_ControlMode;
 
+    // TRUE while the machine is in Automatic AND the master cycle is latched
+    // in ERR. Opens the panel push-button jogs so the operator can free a
+    // jammed piston in place, WITHOUT switching to Manual -- a mode switch
+    // parks the cycle in NOT_HOMED and throws away the arming.
+    //
+    // Passed to every piston FB as bJogEnable; see that declaration for why it
+    // is a dedicated input instead of forcing eMode := Manual during ERR.
+    //
+    // Read AFTER fbMasterAutoCycle has run this scan, so eStep is current.
+    bErrJogEnable : BOOL;
+
     // Flushes GVL_HmiPersistent to disk once the operator stops editing.
     // PERSISTENT alone never wrote anything on a power cut -- see the FB
     // header. Called last so it sees this scan's final config values.
@@ -84,10 +95,19 @@ END_VAR
    also why it was the one field the cold-boot block used to clear.
 
    bAutoMode is deliberately NOT touched (operator decision, 2026-07-27): the
-   panel comes back in Automatic and IDLE after a power cycle, still needing
-   a real start trigger. Consequence: in Auto it reports nStateOut = 0 (IDLE)
-   rather than 30 (MANUAL), so a robot already running may request a cycle
-   straight after power-up. That is the intended production behaviour.
+   panel comes back in Automatic after a power cycle, still needing a real
+   start trigger.
+
+   This block used to add that it therefore came back in IDLE reporting
+   nStateOut = 0, so "a robot already running may request a cycle straight
+   after power-up -- that is the intended production behaviour". SUPERSEDED
+   2026-07-29 and no longer true in either half. stHmi.eStep now DEFAULTS to
+   NOT_HOMED (40), and GVL_HMI is plain VAR_GLOBAL so that initialiser is
+   re-applied on every cold boot and download. A persisted bAutoMode = TRUE
+   brings the panel back in Automatic but UN-ARMED, reporting 40, which the
+   robot answers CMD:0 (wait). An operator START is required before anything
+   can move. bAutoMode persists; the arming does not. See the ARMING MODEL
+   section in CLAUDE.md.
 
    The timers, bNoSensors and bBypassPlateSensors are untouched too — they
    are operator config and persisting them is the point of the flush.
@@ -223,13 +243,26 @@ GVL_HMI.stGripSolL.eMode := eMachineMode;  GVL_HMI.stGripSolL.bMode := bMachineA
 GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineAuto;
 
 (* ==========================================
-   Panel push buttons.
-   * LED outputs mirror the raw PB press state (wiring diagnostic).
-   * PB1 in Auto mode: rising edge triggers a cycle-start bypass of the
-     robot's CMD:1 -- feed into the master cycle's own sim-start flag which
-     it OR-merges with the external start pulse.
-   * PB1/2/3 in Manual mode: hold to jog corresponding piston group. The
-     jog itself is passed through the piston FB's bJogExtend input below.
+   Panel push buttons. PB1 is RED, PB2 ORANGE, PB3 GREEN, and the colours
+   drive the assignment.
+
+   * PB3 in Auto: rising edge is the operator START -- "home the pistons and
+     arm the machine" -- driving stMasterAuto.bStart, the same field as the
+     HMI button. NOT a cycle-start bypass and NOT bSimStartAssembly: under
+     the arming model START does not run a bulb, only the robot's CMD:1 does.
+     Suppressed while latched in ERR, where PB3 is a jog instead (below).
+   * PB1 in Auto: nothing. PB2 in Auto: nothing.
+   * PB1/2/3 in Manual: hold to jog the corresponding piston group --
+     PB1 grip, PB2 Sep, PB3 Push. Momentary: releasing retracts.
+   * PB1/2/3 while latched in ERR (in Auto): the same three jogs, opened by
+     bErrJogEnable so a jam can be freed without leaving ERR. See the
+     bErrJogEnable declaration.
+
+   The jog itself is passed through each piston FB's bJogExtend input at the
+   call sites below; bJogEnable carries the ERR window.
+
+   * LED1 / LED2 mirror the raw PB press state (wiring diagnostic). LED3 does
+     not -- it is a state prompt in Auto, assigned further down.
    ========================================== *)
 GVL_App.bLedPb1 := GVL_App.bPb1;
 GVL_App.bLedPb2 := GVL_App.bPb2;
@@ -277,18 +310,31 @@ ELSE
     GVL_App.bLedGreen := bBlink;
 END_IF
 
+(* Operator jog window while latched in ERR. Computed here because it gates
+   both the PB3 LED and the START edge below, and is fanned out to all eight
+   piston FBs at their call sites. fbMasterAutoCycle already ran this scan, so
+   eStep is current. *)
+bErrJogEnable := bMachineAuto AND (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.ERR);
+
 (* PB3 LED -- "press me to arm" prompt, blinking while the machine is in Auto
-   and un-homed. Falls back to a raw press mirror in Manual, where PB3 is the
-   Push jog button and the LED keeps its original wiring-diagnostic role.
-   PB1/PB2 LEDs stay dumb mirrors in both modes. *)
-IF bMachineAuto THEN
+   and un-homed. Becomes a press mirror in ERR, where PB3 is the Push jog and
+   the operator needs press feedback, and in Manual, where PB3 is the Push jog
+   and the LED keeps its original wiring-diagnostic role.
+   PB1/PB2 LEDs stay dumb mirrors in every state. *)
+IF bErrJogEnable THEN
+    GVL_App.bLedPb3 := GVL_App.bPb3;
+ELSIF bMachineAuto THEN
     GVL_App.bLedPb3 := (GVL_HMI.stMasterAuto.eStep = E_MasterAutoStep.NOT_HOMED) AND bBlink;
 ELSE
     GVL_App.bLedPb3 := GVL_App.bPb3;
 END_IF
 
+(* START is suppressed in ERR: there PB3 is the Push jog, and letting the press
+   also set bStart would log a spurious 'START pressed' on every jog. bStart is
+   ignored by the ERR case anyway -- only bReset leaves ERR -- so nothing is
+   lost. Recovery from ERR is still HMI RESET or the robot's CMD:2. *)
 fbTrigPb3(CLK := GVL_App.bPb3);
-IF bMachineAuto AND fbTrigPb3.Q THEN
+IF bMachineAuto AND NOT bErrJogEnable AND fbTrigPb3.Q THEN
     GVL_HMI.stMasterAuto.bStart := TRUE;
 END_IF;
 
@@ -302,7 +348,8 @@ bManualMode := NOT bMachineAuto;
 fbSepSol1(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[1],
-    bJogExtend       := bManualMode AND GVL_App.bPb2,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb2,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorSepExtended1,
     bSwitchRetracted := GVL_App.bSensorSepRetracted1,
     stHmi            := GVL_HMI.stSepSol1,
@@ -312,7 +359,8 @@ fbSepSol1(
 fbSepSol2(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[2],
-    bJogExtend       := bManualMode AND GVL_App.bPb2,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb2,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorSepExtended2,
     bSwitchRetracted := GVL_App.bSensorSepRetracted2,
     stHmi            := GVL_HMI.stSepSol2,
@@ -322,7 +370,8 @@ fbSepSol2(
 fbSepSol3(
     bAutoCmdExtend   := fbMasterAutoCycle.bSepCmdExtend[3],
     bAutoCmdRetract  := fbMasterAutoCycle.bSepCmdRetract[3],
-    bJogExtend       := bManualMode AND GVL_App.bPb2,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb2,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorSepExtended3,
     bSwitchRetracted := GVL_App.bSensorSepRetracted3,
     stHmi            := GVL_HMI.stSepSol3,
@@ -335,7 +384,8 @@ fbSepSol3(
 fbPushSol1(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[1],
-    bJogExtend       := bManualMode AND GVL_App.bPb3,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb3,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorPushExtended1,
     bSwitchRetracted := GVL_App.bSensorPushRetracted1,
     stHmi            := GVL_HMI.stPushSol1,
@@ -345,7 +395,8 @@ fbPushSol1(
 fbPushSol2(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[2],
-    bJogExtend       := bManualMode AND GVL_App.bPb3,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb3,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorPushExtended2,
     bSwitchRetracted := GVL_App.bSensorPushRetracted2,
     stHmi            := GVL_HMI.stPushSol2,
@@ -355,7 +406,8 @@ fbPushSol2(
 fbPushSol3(
     bAutoCmdExtend   := fbMasterAutoCycle.bPushCmdExtend[3],
     bAutoCmdRetract  := fbMasterAutoCycle.bPushCmdRetract[3],
-    bJogExtend       := bManualMode AND GVL_App.bPb3,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb3,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorPushExtended3,
     bSwitchRetracted := GVL_App.bSensorPushRetracted3,
     stHmi            := GVL_HMI.stPushSol3,
@@ -369,7 +421,8 @@ fbPushSol3(
 fbGripSolL(
     bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[1],
     bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[1],
-    bJogExtend       := bManualMode AND GVL_App.bPb1,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb1,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorGripExtendedL,
     bSwitchRetracted := GVL_App.bSensorGripRetractedL,
     stHmi            := GVL_HMI.stGripSolL,
@@ -379,7 +432,8 @@ fbGripSolL(
 fbGripSolR(
     bAutoCmdExtend   := fbMasterAutoCycle.bGripCmdExtend[2],
     bAutoCmdRetract  := fbMasterAutoCycle.bGripCmdRetract[2],
-    bJogExtend       := bManualMode AND GVL_App.bPb1,
+    bJogExtend       := (bManualMode OR bErrJogEnable) AND GVL_App.bPb1,
+    bJogEnable       := bErrJogEnable,
     bSwitchExtended  := GVL_App.bSensorGripExtendedR,
     bSwitchRetracted := GVL_App.bSensorGripRetractedR,
     stHmi            := GVL_HMI.stGripSolR,

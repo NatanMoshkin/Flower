@@ -5,80 +5,63 @@
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
-### Robot tuning parameters — VISU exposure + range limits
+- **Solution target is Local + TC 4026 for bench development** (no panel
+  needed). Lives in the working tree across four files and **must never be
+  merged back**: `167_01_Saad_PLC.sln` (VS 17.10, real `TwinCAT OS (x64)`
+  build configs), `167_01_Saad_PLC.tsproj` (`TcVersion` 4026.25,
+  `TargetNetId` replaced by `Target64Bit="true"`, EtherCAT device
+  `Disabled="true"`), `PLC1.plcproj` (`ProgramVersion` 4026.25), and
+  `VisualizationManager.TcVMO` (hotkey `DevId`).
 
-The 11 `ST_RobotParams` tuning values have **documented valid ranges that
-nothing on the PLC side enforces**. Ranges and units were traced to the
-robot repo (`167_01_Saad_Flower/Robot/167-01-Saad/`, which is neither this
-repo nor FlowerPyHmi — easy to miss):
+  **The churn does not stop at those four.** Every `.TcPOU` / `.TcDUT` saved
+  by the 4026 IDE gets its `ProductVersion` attribute rewritten (the panel's
+  files are stamped `3.1.4024.16`) and its `LineIds` regenerated — inside the
+  same files as the logic, so it cannot be excluded by path. Check the
+  stamp before committing.
 
-- **Units are percentages.** `global.lua:44-48` `Init()` calls
-  `VelJ(J_SPEED)` / `VelL(L_SPEED)` — commented "Joint Speed %" / "Linear
-  Speed %" — plus `SpeedFactor(FACTOR_SPEED)` with `FACTOR_SPEED = 80`
-  scaling everything globally. `WAX_SPEED` / `WATER_SPEED` feed the `v=`
-  velocity-ratio option of `MovL` (`src0.lua:112,114,144,152`).
-- **Authoritative ranges**, from the vendor's own GUI which clamps to them
-  (`Robot/167-01-Saad/tcp client.py:14-21`, clamp at `:90`; byte-identical
-  copy at `RobotBridge/Client_working_example/tcp client.py`, pasted into
-  `readme.txt:27-32`):
+  **Unverified risk:** that TcXaeShell 4024 on the panel will still open a
+  project the 4026 IDE has saved. Confirm early, not at merge time.
 
-  | Param | Range |
-  |---|---|
-  | `J_SPEED`, `L_SPEED` | 1–100 |
-  | `WAX_SPEED`, `WATER_SPEED` | 0–100 |
-  | `REPEATS` | 1–10 |
-  | `START_WAIT`, `WATER_WAIT`, `STAND_WAIT`, `END_WAIT`, `WAX_WAIT_TIME_OUT` | 10–10000 |
-  | `WAX_WAIT_TIME_IN` | 0–10000 |
+- ~~Create branch for the next task~~ **Done 2026-08-04** —
+  `feat/err-manual-jog-and-io-docs`.
 
-Nothing validates these anywhere in our stack: `src2.lua:44-54` assigns
-`tonumber()` straight through with no clamp, `ST_RobotParams` is bare `INT`
-defaults, and `FB_RobotTcpClient` only marshals name/value. FlowerPyHmi now
-range-checks on write (rejects with a 400 rather than clamping silently, so
-the operator sees what was refused) — but it is only one of several possible
-writers.
+- ~~check the current Push Buttons actions~~ **Done 2026-08-04.** Behaviour
+  was correct and matches the IO list; **four comments were not** and are
+  fixed: `MAIN`'s PB block (still described PB1 as a cycle-start bypass),
+  `MAIN` section 0 (still claimed power-up comes back in IDLE and a robot may
+  start a cycle — the exact hazard closed on 2026-07-29), `PRG_IoMap`'s PB
+  note, and `FB_MasterAutoCycle`'s Section 2 header. The **IO table in this
+  file was wrong for all six Sep/Push pistons** since `fd49d4f` and is now
+  rebuilt from `docs/167_01_SAAD_PinPush_IO_List.xlsx`.
 
-**Current VISU state (updated 2026-07-26):** all 11 tuning values are now
-editable on `PLC1/VISU/Robot.TcVIS`, each with `InputBoxMin`/`InputBoxMax`
-set to the vendor range in the table above (`scripts/add_robot_params.py`).
-So the panel is bounded — **but per-control limits only protect the control
-they are set on**, which is why item 1 below still matters: FlowerPyHmi,
-any future ADS client, and the `bSetParam` escape hatch all bypass them.
+- ~~Operator recovery from a mid-cycle grip fault~~ **Partly done
+  2026-08-04.** PB jogs now work while latched in `ERR` without leaving Auto
+  (`bJogEnable`, see the PB section). Recovery still homes and runs a **fresh
+  bulb** — resuming the interrupted one was not built, and is not currently
+  possible: nothing durably records which step faulted (`ePrevStep` is
+  overwritten with `ERR` on the transition scan; only `iErrorCode` survives).
 
-Note the comment in `ST_RobotParams` ("All INT so the classic VISU HMI binds
-NumericInput directly") describes an intent that was never implemented.
+  **Two things to settle before trusting this on the machine:**
 
-To do, in preference order:
+  1. **The robot closes the jog window in ~1 s.** `ERR` → `STATE:99` → robot
+     `CMD:2` → the PLC clears the fault and homes. So `ERR` is *transient* in
+     production and the operator may never get to press anything. Switching to
+     **Manual** is what actually holds a fault open, because `nStateOut` then
+     reports `MANUAL (30)` and the robot answers `CMD:0` while `ERR` stays
+     latched. Options: leave it (jog is then only useful with the robot
+     stopped), or gate the `CMD:2` consumption behind an operator
+     acknowledgement.
+  2. **If the jam is real, homing faults too** — `INIT_GRIP_RETRACTING`
+     timeout, error 8 → `ERR` → `CMD:2` → retry, indefinitely. Each retry is
+     one `tStepTimeoutMs`. Not dangerous, but it will look like a loop.
 
-1. ~~Clamp in `FB_RobotTcpClient`.~~ **Done 2026-07-26.** `ClampParam` /
-   `ParamMin` / `ParamMax` bound every writer that reaches the robot through
-   this FB — the panel, FlowerPyHmi over ADS, any future ADS client, and the
-   `bSetParam` escape hatch (via `ParamIndex` reverse lookup; unknown names
-   pass through unclamped, which is the point of an escape hatch).
+- **Plate sensor L/R are swapped** between the field IO list and `PRG_IoMap`
+  (sheet: R on `dIn[21]`, L on `dIn[22]`; code: the reverse). Invisible while
+  `bPlateOk` is an OR, but the `L`/`R` lamps on `Main.TcVIS` are mislabelled.
+  Needs someone at the machine to say which physical side is which.
 
-   Two design points worth not undoing:
-   - The clamp **writes the bounded value back into `stParams`**
-     (`SetParamValue`). It is not cosmetic: the shadow is updated to the
-     value that was *sent*, so leaving an out-of-range number in the field
-     would keep it permanently different from its shadow and the FB would
-     re-send on every idle scan — a silent packet storm. Writing back
-     converges, and the panel then shows what the robot actually got.
-   - Clamping applies **only on the way out**, never to values arriving in a
-     `SYNC` reply. Rewriting a robot-sourced value would push our table back
-     at the robot, and if the table were ever wrong the two ends would fight.
-2. ~~Add the NumericInputs to `Robot.TcVIS` with `min`/`max`.~~ **Done
-   2026-07-26** — 11 editable fields, each range-clamped per the table.
-   (The open question of whether a panel operator *should* be able to change
-   robot speeds was answered by doing it; revisit if that turns out wrong.)
-3. ~~Replace the stale `ST_RobotParams` comment with the real units and
-   ranges.~~ **Done 2026-07-26** — the struct now documents percentages vs
-   milliseconds, cites `global.lua` for the units, carries the range per
-   field, and says outright that `INT` is an encoding detail. The old claim
-   that it was "all INT so the classic VISU HMI binds NumericInput directly"
-   described an intent that went unimplemented until the panel grid landed.
+- `Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.
 
-Keep `scripts/check_pyhmi_contract.py` in mind: if bounds move into the PLC,
-FlowerPyHmi's copy in `flower_py_hmi/robot.py` (`ParamField.lo/hi`) becomes a
-second source of truth that nothing keeps in step.
 
 
 ## SHIPPED: robot integration architecture — TCP-only (2026-07-26)
@@ -301,6 +284,37 @@ ERR (99)                Latched. iErrorCode = step's fault code.
                         while it is not; and RESET landing in IDLE with the
                         robot still asking made RESET itself a start button.
 ```
+
+**FIELD DEVIATION: grip and plate aggregation is OR, not AND (since
+`fd49d4f`, 2026-07-28; reaffirmed 2026-08-04).** Every "wait AND of all"
+above is accurate for Sep and Push, and **wrong for grip and plate**.
+`FB_MasterAutoCycle` Section 1 actually computes:
+
+```
+bAllGripExtended  := bGripIsExtended[1]  OR bGripIsExtended[2];
+bAllGripRetracted := bGripIsRetracted[1] OR bGripIsRetracted[2];
+bPlateOk          := bPlateSenL OR bPlateSenR;
+```
+
+**Why, and why it stays.** `GripSolR` has **no air supply** on the machine
+and its sensors are not confirmed wired (see the IO section), so only the
+left gripper actually works. Under AND, `GRIP_EXTENDING` and
+`GRIP_RETRACTING` could never be satisfied and every cycle would fault.
+Only one plate sensor is confirmed too. This is a deliberate operator
+decision to keep the machine producing on one gripper — **not an oversight
+to be "fixed"**.
+
+**What it costs you, and it is not small.** With `fbGripSolR` driven again
+(it was commented out when the OR went in), a *genuine* failure of one
+gripper is now invisible: `GRIP_EXTENDING` advances on either sensor, so the
+Sep/Push cycle can run on a plate clamped from one side only. Error 10 / 11
+can fire **only when both grippers fail**. So a reported "gripper did not
+reach the sensor, machine faulted" means *both* did — the single-gripper case
+is silent by construction.
+
+**Restore condition:** put the three ANDs back once `GripSolR` has air, its
+two sensors are confirmed, and the second plate sensor is confirmed. Until
+then, treat grip position as unverified in any fault analysis.
 
 A 17th sentinel value **MANUAL (30)** exists in the enum but is never
 assigned to `eStep`. `MAIN` reports it to the robot as `nStateOut = 30`
@@ -910,6 +924,42 @@ Button colours matter to the assignment: **PB1 red, PB2 orange, PB3 green.**
 | PB2 | dIn[14] | dOut[8] | Ignored. | **Momentary**: held → all 3 SepSol pistons extend, released → they retract. |
 | PB3 | dIn[15] | dOut[9] | **Operator START** — rising edge writes `stMasterAuto.bStart := TRUE`, i.e. "home the pistons and arm". Green button for the go-ahead. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
 
+**All three jogs also work in Automatic while the master cycle is latched in
+`ERR` (2026-08-04).** So an operator can free a jammed piston in place without
+switching to Manual — which would park the cycle in `NOT_HOMED` and throw away
+the arming. Same momentary behaviour: held extends, released retracts.
+
+Mechanism: `MAIN` computes `bErrJogEnable := bMachineAuto AND (eStep = ERR)`
+and passes it to all eight pistons as the new `FB_SolSpringPiston_2Pos`
+**`bJogEnable`** input, which opens the FB's three jog branches (extend,
+retract, release) while `eMode` is Automatic.
+
+Three points worth not undoing:
+
+- **It is a dedicated input, not `MAIN` forcing `eMode := Manual` during
+  `ERR`.** `eMode` is the machine-wide "no option to double control"
+  interlock driven from `bAutoMode`; making it depend on `eStep` as well would
+  give that interlock two owners. `bJogEnable` opens the jog path *only* —
+  `bTarget*` still comes from the Automatic branch, and Section 0 still
+  force-clears `bSelected*`, so the HMI Extend/Retract radio buttons stay dead.
+- **The release branch is gated on the same condition.** If a momentary PB can
+  energise the coil, letting go must be able to drop it, or the first press
+  strands the piston extended with the machine still faulted.
+- **PB3's START is suppressed while `ERR`** (`AND NOT bErrJogEnable`), or every
+  Push jog would also log a spurious `START pressed`. Nothing is lost — the
+  `ERR` case ignores `bStart`; only `bReset` leaves `ERR`. PB3's LED becomes a
+  press mirror in `ERR` for jog feedback, keeping its blink-to-arm prompt for
+  `NOT_HOMED` only.
+
+**Know this before relying on it: the robot closes the window in about a
+second.** `ERR` → `STATE:99` → robot `CMD:2` → the PLC clears the fault and
+homes. In production `ERR` is transient, so the jog is genuinely useful only
+with the robot stopped. What actually *holds* a fault open is switching to
+**Manual**, where `nStateOut` reports `MANUAL (30)`, the robot answers `CMD:0`,
+and `ERR` stays latched (the Manual re-park deliberately excludes `ERR`). If
+operator-paced recovery is wanted in production, the `CMD:2` consumption in
+`MAIN` needs an acknowledgement gate — not built.
+
 **START moved PB1 → PB3 (2026-07-29)** for two reasons: PB3 is the green
 button, and START changed meaning. It drives `bStart` (home + arm), **not**
 `bSimStartAssembly` — that flag keeps its own distinct job as the bench
@@ -1036,35 +1086,61 @@ Level 1 is the ceiling for this platform.
 ## DECISION: physical IO channel assignment
 
 `GVL_IO.dIn` sized `ARRAY[1..24] OF BOOL`, `GVL_IO.dOut` sized
-`ARRAY[1..16] OF BOOL`. All 8 pistons, the plate sensors, and the
-panel push-buttons + LEDs are wired. Mapping lives in `PRG_IoMap.TcPOU`
+`ARRAY[1..16] OF BOOL`. Mapping lives in `PRG_IoMap.TcPOU`
 (`ReadInputs` / `WriteOutputs` actions).
 
-| Actuator / signal | DI (Retract) | DI (Extend) | DO |
-|---|---|---|---|
-| SepSol1 | dIn[1] | dIn[2] | dOut[1] |
-| SepSol2 | dIn[3] | dIn[4] | dOut[2] |
-| SepSol3 | dIn[5] | dIn[6] | dOut[3] |
-| PushSol1 | dIn[7] | dIn[8] | dOut[4] |
-| PushSol2 | dIn[9] | dIn[10] | dOut[5] |
-| PushSol3 | dIn[11] | dIn[12] | dOut[6] |
-| PB1 (grip jog, red) | dIn[13] | — | dOut[7] LED1 |
-| PB2 (Sep jog) | dIn[14] | — | dOut[8] LED2 |
-| PB3 (Push jog) | dIn[15] | — | dOut[9] LED3 |
-| free | dIn[16] | — | — |
-| GripSolL | dIn[17] | dIn[18] | dOut[10] |
-| GripSolR | dIn[19] | dIn[20] | dOut[11] |
-| PlateSenL | dIn[21] | — | — |
-| PlateSenR | dIn[22] | — | — |
-| LED_GREEN (machine status) | — | — | dOut[12] |
-| LED_RED (machine status) | — | — | dOut[13] |
-| free | dIn[23..24] | — | dOut[14..16] |
+**Authority for this table is `docs/167_01_SAAD_PinPush_IO_List.xlsx`,
+sheet `IO`, column `NEW`** — the as-rewired field assignment (added
+2026-08-04). The `GVL_IO..[]` column in that sheet is the *old* pre-rewire
+numbering; do not read it by mistake. Terminals: DO 1-16 = `EL2809`,
+DI 1-16 = `EL1809-1`, DI 17-24 = `EL1008`.
 
-**Rewired 2026-07-27** to match the physical terminals — the PBs moved down
-to dIn[13..15] / dOut[7..9] (dIn[13] and dOut[7] were the channels freed by
-retiring the robot's discrete-I/O handshake), and grip + plate moved up.
-`dIn[16]` is a deliberate gap: it closes out the second 8-channel input
-terminal so the grip sensors start on a terminal boundary.
+| Actuator / signal | DI (Retract) | DI (Extend) | DO | Field status |
+|---|---|---|---|---|
+| SepSol1 | dIn[3] | dIn[4] | dOut[4] | ok |
+| SepSol2 | dIn[7] | dIn[8] | dOut[5] | ok |
+| SepSol3 | dIn[11] | dIn[12] | dOut[6] | ok |
+| PushSol1 | dIn[1] | dIn[2] | dOut[1] | ok |
+| PushSol2 | dIn[5] | dIn[6] | dOut[2] | ok |
+| PushSol3 | dIn[9] | dIn[10] | dOut[3] | ok |
+| PB1 (grip jog, **red**) | dIn[13] | — | dOut[7] LED1 | ok |
+| PB2 (Sep jog, **orange**) | dIn[14] | — | dOut[8] LED2 | ok |
+| PB3 (START / Push jog, **green**) | dIn[15] | — | dOut[9] LED3 | ok |
+| free | dIn[16] | — | — | — |
+| GripSolL | dIn[17] | dIn[18] | dOut[10] | ok |
+| GripSolR | dIn[19] | dIn[20] | dOut[11] | **no air**; both sensors unconfirmed |
+| PlateSen — sheet calls this **R** | dIn[21] | — | — | ok — but `PRG_IoMap` reads it into `bPlateSenL` |
+| PlateSen — sheet calls this **L** | dIn[22] | — | — | unconfirmed — `PRG_IoMap` reads it into `bPlateSenR` |
+| LED_GREEN (machine status) | — | — | dOut[12] | ok |
+| LED_RED (machine status) | — | — | dOut[13] | ok |
+| free | dIn[23..24] | — | dOut[14..16] | — |
+
+Sep and Push are **interleaved on the input side** (Push on 1/2, 5/6, 9/10;
+Sep on 3/4, 7/8, 11/12) and **swapped on the output side** (Push `dOut[1..3]`,
+Sep `dOut[4..6]`). That is not a mistake to be tidied up — it is the physical
+wiring. This table was wrong about all six of those pistons from the
+2026-07-28 rewire (`fd49d4f`) until 2026-08-04.
+
+`dIn[16]` is a deliberate gap so the grip sensors start on a terminal
+boundary: `dIn[1..16]` is one 16-channel `EL1809-1` and `dIn[17]` is channel 1
+of the `EL1008`.
+
+**Two known wiring discrepancies — read before trusting a plate lamp or a
+grip fault.**
+
+1. **The plate sensors are swapped between the sheet and the code.** The sheet
+   puts `PlateSensR` on DI 21 and `PlateSensL` on DI 22; `PRG_IoMap` does the
+   opposite. Functionally invisible today because `bPlateOk` is an OR (see the
+   grip/plate deviation note under FB_MasterAutoCycle), but the `L`/`R` lamps
+   on `Main.TcVIS` are therefore mislabelled, and the sensor the sheet marks
+   `ok` is the one the panel calls `L`. Settle which physical side is which
+   before swapping either end — the sheet's L/R may be from the opposite
+   viewpoint.
+2. **`GripSolR` has no air**, so the right gripper cannot move regardless of
+   what the PLC commands, and its two sensors (`dIn[19]`, `dIn[20]`) are not
+   confirmed wired. This is the reason for the OR aggregation deviation, and
+   it is a field condition, not a code state — `fbGripSolR` *is* called in
+   `MAIN` and *is* driven.
 
 Tag convention: `<Device>Sol<N>` = single Extend coil (SOL-Spring, spring
 retracts). Retract sensors still exist on the DI side — the
@@ -1074,6 +1150,84 @@ To add a new actuator, extend `GVL_IO` (already sized DI[1..24] /
 DO[1..16]; grow arrays if needed), add its GVL_App alias, wire it in
 `PRG_IoMap.ReadInputs` / `WriteOutputs`, then finish the EtherCAT link
 in the System Manager.
+
+## SHIPPED: robot tuning parameters — VISU exposure + range limits (2026-07-26)
+
+_All three items below are done. Kept for the traced ranges and the two
+design points under item 1, which are load-bearing._
+
+The 11 `ST_RobotParams` tuning values have **documented valid ranges that
+nothing on the PLC side enforces**. Ranges and units were traced to the
+robot repo (`167_01_Saad_Flower/Robot/167-01-Saad/`, which is neither this
+repo nor FlowerPyHmi — easy to miss):
+
+- **Units are percentages.** `global.lua:44-48` `Init()` calls
+  `VelJ(J_SPEED)` / `VelL(L_SPEED)` — commented "Joint Speed %" / "Linear
+  Speed %" — plus `SpeedFactor(FACTOR_SPEED)` with `FACTOR_SPEED = 80`
+  scaling everything globally. `WAX_SPEED` / `WATER_SPEED` feed the `v=`
+  velocity-ratio option of `MovL` (`src0.lua:112,114,144,152`).
+- **Authoritative ranges**, from the vendor's own GUI which clamps to them
+  (`Robot/167-01-Saad/tcp client.py:14-21`, clamp at `:90`; byte-identical
+  copy at `RobotBridge/Client_working_example/tcp client.py`, pasted into
+  `readme.txt:27-32`):
+
+  | Param | Range |
+  |---|---|
+  | `J_SPEED`, `L_SPEED` | 1–100 |
+  | `WAX_SPEED`, `WATER_SPEED` | 0–100 |
+  | `REPEATS` | 1–10 |
+  | `START_WAIT`, `WATER_WAIT`, `STAND_WAIT`, `END_WAIT`, `WAX_WAIT_TIME_OUT` | 10–10000 |
+  | `WAX_WAIT_TIME_IN` | 0–10000 |
+
+Nothing validates these anywhere in our stack: `src2.lua:44-54` assigns
+`tonumber()` straight through with no clamp, `ST_RobotParams` is bare `INT`
+defaults, and `FB_RobotTcpClient` only marshals name/value. FlowerPyHmi now
+range-checks on write (rejects with a 400 rather than clamping silently, so
+the operator sees what was refused) — but it is only one of several possible
+writers.
+
+**Current VISU state (updated 2026-07-26):** all 11 tuning values are now
+editable on `PLC1/VISU/Robot.TcVIS`, each with `InputBoxMin`/`InputBoxMax`
+set to the vendor range in the table above (`scripts/add_robot_params.py`).
+So the panel is bounded — **but per-control limits only protect the control
+they are set on**, which is why item 1 below still matters: FlowerPyHmi,
+any future ADS client, and the `bSetParam` escape hatch all bypass them.
+
+Note the comment in `ST_RobotParams` ("All INT so the classic VISU HMI binds
+NumericInput directly") describes an intent that was never implemented.
+
+To do, in preference order:
+
+1. ~~Clamp in `FB_RobotTcpClient`.~~ **Done 2026-07-26.** `ClampParam` /
+   `ParamMin` / `ParamMax` bound every writer that reaches the robot through
+   this FB — the panel, FlowerPyHmi over ADS, any future ADS client, and the
+   `bSetParam` escape hatch (via `ParamIndex` reverse lookup; unknown names
+   pass through unclamped, which is the point of an escape hatch).
+
+   Two design points worth not undoing:
+   - The clamp **writes the bounded value back into `stParams`**
+     (`SetParamValue`). It is not cosmetic: the shadow is updated to the
+     value that was *sent*, so leaving an out-of-range number in the field
+     would keep it permanently different from its shadow and the FB would
+     re-send on every idle scan — a silent packet storm. Writing back
+     converges, and the panel then shows what the robot actually got.
+   - Clamping applies **only on the way out**, never to values arriving in a
+     `SYNC` reply. Rewriting a robot-sourced value would push our table back
+     at the robot, and if the table were ever wrong the two ends would fight.
+2. ~~Add the NumericInputs to `Robot.TcVIS` with `min`/`max`.~~ **Done
+   2026-07-26** — 11 editable fields, each range-clamped per the table.
+   (The open question of whether a panel operator *should* be able to change
+   robot speeds was answered by doing it; revisit if that turns out wrong.)
+3. ~~Replace the stale `ST_RobotParams` comment with the real units and
+   ranges.~~ **Done 2026-07-26** — the struct now documents percentages vs
+   milliseconds, cites `global.lua` for the units, carries the range per
+   field, and says outright that `INT` is an encoding detail. The old claim
+   that it was "all INT so the classic VISU HMI binds NumericInput directly"
+   described an intent that went unimplemented until the panel grid landed.
+
+Keep `scripts/check_pyhmi_contract.py` in mind: if bounds move into the PLC,
+FlowerPyHmi's copy in `flower_py_hmi/robot.py` (`ParamField.lo/hi`) becomes a
+second source of truth that nothing keeps in step.
 
 ## Out of scope (Future)
 
