@@ -958,6 +958,23 @@ buttons stay dead", and both leave-the-window-mid-press paths. Mutation-checked:
 regressing the release branch to the old Manual-only gate fails it. Run
 `python scripts/test_piston_jog_gate.py`.
 
+**End-to-end PB test against a live PLC: `scripts/pb_test/`** (see its README).
+57 checks over ADS covering all three buttons in Manual, Auto/`NOT_HOMED`,
+Auto/`IDLE`, Auto/`ERR` and recovery; writes `docs/pb-test-report.html`. Ran
+57/57 on the local runtime 2026-08-04. Two things to know before using it:
+
+- Presses are simulated by writing **`GVL_IO.dIn[13..15]`**, not
+  `GVL_App.bPbN` — `PRG_IoMap.ReadInputs` overwrites the latter every 5 ms.
+  This is the general technique for bench-driving any input on a target with
+  the EtherCAT device disabled.
+- **Transition paths must come from `GVL_Log`, never from polling `eStep`.**
+  With retract sensors asserted the homing chain completes in ~3 scans (30 ms),
+  faster than ADS can sample, so a poll loop sees only the endpoint. An early
+  version of that script reported two false FAILures for exactly this reason.
+  `FB_MasterAutoCycle` Section 3 logs every `PREV -> NEW` from inside the scan,
+  so the ring is authoritative — with the one exception that entries *into*
+  `ERR` log `sErrorText` instead of a transition.
+
 **Know this before relying on it: the robot closes the window in about a
 second.** `ERR` → `STATE:99` → robot `CMD:2` → the PLC clears the fault and
 homes. In production `ERR` is transient, so the jog is genuinely useful only
