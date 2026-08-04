@@ -313,10 +313,21 @@ bPlateOk          := bPlateSenL OR bPlateSenR;
 
 (* ==========================================
    2. GLOBAL OVERRIDES — STOP and RESET
-   STOP while running latches error 99 and drops to ERR. HMI RESET clears
-   the error and returns to IDLE. The robot's own RESET_ALARM (robot DI 10)
-   is handled robot-side; the PLC does not receive it in the discrete-IO
-   interface. Operator must reset both sides after a fault.
+   Both were rewritten 2026-07-29; this header used to describe the old
+   behaviour ("STOP latches error 99 and drops to ERR, RESET returns to
+   IDLE", plus a discrete-IO RESET_ALARM on robot DI 10 that no longer
+   exists). What the three branches below actually do now:
+
+     STOP   -> NOT_HOMED, error cleared. DISARMS, does not fault. Fires from
+               IDLE too, giving the operator an explicit disarm.
+     RESET  -> clears the error and enters the INIT homing chain with
+               bHomeThenIdle TRUE. NOT straight to IDLE.
+     Manual -> parks in NOT_HOMED (ERR stays latched), which is the whole
+               implementation of "returning from Manual needs a START".
+
+   RESET arrives either as the HMI button or as the robot's CMD:2, which MAIN
+   fans into the same stHmi.bReset field — the robot resets the fault over
+   TCP now, so there is nothing for the operator to reset on the robot side.
    ========================================== *)
 IF fbTrigStop.Q AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
     (* STOP DISARMS, it does not fault. Error code 99 ('Operator STOP while

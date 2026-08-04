@@ -31,8 +31,9 @@ GVL_App.bSensorPushExtended2  := GVL_IO.dIn[6];
 GVL_App.bSensorPushRetracted3 := GVL_IO.dIn[9];
 GVL_App.bSensorPushExtended3  := GVL_IO.dIn[10];
 
-(* Panel push buttons Consumer logic lives in MAIN (mode-gated
-   jog OR cycle-start bypass). *)
+(* Panel push buttons. Consumer logic lives in MAIN and is mode-gated:
+   PB3 in Auto is the operator START (home + arm); PB1/PB2/PB3 jog the
+   grip / Sep / Push groups in Manual, and also while latched in ERR. *)
 GVL_App.bPb1 := GVL_IO.dIn[13];
 GVL_App.bPb2 := GVL_IO.dIn[14];
 GVL_App.bPb3 := GVL_IO.dIn[15];
@@ -43,8 +44,16 @@ GVL_App.bSensorGripExtendedL  := GVL_IO.dIn[18];
 GVL_App.bSensorGripRetractedR := GVL_IO.dIn[19];
 GVL_App.bSensorGripExtendedR  := GVL_IO.dIn[20];
 
-(* Plate-presence sensors —Both must be TRUE for WAIT_PLATE to
-   advance the cycle into GRIP_EXTENDING. *)
+(* Plate-presence sensors. NOTE: only ONE need be TRUE for WAIT_PLATE to
+   advance the cycle into GRIP_EXTENDING -- FB_MasterAutoCycle computes
+   bPlateOk as an OR, a field deviation kept because only one plate sensor is
+   confirmed wired. It is not the documented AND.
+
+   NOTE ALSO: docs/167_01_SAAD_PinPush_IO_List.xlsx assigns dIn[21] to
+   PlateSensR and dIn[22] to PlateSensL -- the OPPOSITE of the two lines
+   below. Harmless for the cycle gate while bPlateOk is an OR, but it means
+   the L / R lamps on Main.TcVIS are mislabelled. Settle which physical side
+   is which before swapping either end. *)
 GVL_App.bPlateSenL := GVL_IO.dIn[21];
 GVL_App.bPlateSenR := GVL_IO.dIn[22];
 
