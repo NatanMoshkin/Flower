@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auto state machine — with Pause / Continue</title>
+<style>
+:root{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#4a575d; --ink-3:#6f7c82; --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --c-arm-f:#dfe6e9;  --c-arm-s:#93a5ad;  --c-arm-t:#1e2a30;
+  --c-init-f:#f7ecd6; --c-init-s:#c79a3f; --c-init-t:#4a3608;
+  --c-cyc-f:#d8ece0;  --c-cyc-s:#5aa87b;  --c-cyc-t:#10371f;
+  --c-wait-f:#dae5f2; --c-wait-s:#7396c4; --c-wait-t:#152a45;
+  --c-flt-f:#f7dedc;  --c-flt-s:#c4342c;  --c-flt-t:#4d100c;
+  --c-new-f:#e7dcf3;  --c-new-s:#8360b8;  --c-new-t:#2b1550;
+  --c-gho-f:#eceff0;  --c-gho-s:#b8c3c7;  --c-gho-t:#6f7c82;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --c-arm-f:#2b363d;  --c-arm-s:#6d8189;  --c-arm-t:#dbe4e7;
+  --c-init-f:#3a2c12; --c-init-s:#c79a3f; --c-init-t:#f0dcae;
+  --c-cyc-f:#143724;  --c-cyc-s:#3fbb75; --c-cyc-t:#c7ecd6;
+  --c-wait-f:#17273b; --c-wait-s:#5f88bd; --c-wait-t:#cfe0f4;
+  --c-flt-f:#3d1d1b;  --c-flt-s:#f2726a; --c-flt-t:#f9d5d2;
+  --c-new-f:#2a1c42;  --c-new-s:#a382d6; --c-new-t:#e3d5f7;
+  --c-gho-f:#20282e;  --c-gho-s:#3f4c54; --c-gho-t:#7d8b92;
+}}
+:root[data-theme="dark"]{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --c-arm-f:#2b363d;  --c-arm-s:#6d8189;  --c-arm-t:#dbe4e7;
+  --c-init-f:#3a2c12; --c-init-s:#c79a3f; --c-init-t:#f0dcae;
+  --c-cyc-f:#143724;  --c-cyc-s:#3fbb75; --c-cyc-t:#c7ecd6;
+  --c-wait-f:#17273b; --c-wait-s:#5f88bd; --c-wait-t:#cfe0f4;
+  --c-flt-f:#3d1d1b;  --c-flt-s:#f2726a; --c-flt-t:#f9d5d2;
+  --c-new-f:#2a1c42;  --c-new-s:#a382d6; --c-new-t:#e3d5f7;
+  --c-gho-f:#20282e;  --c-gho-s:#3f4c54; --c-gho-t:#7d8b92;
+}
+:root[data-theme="light"]{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#4a575d; --ink-3:#6f7c82; --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --c-arm-f:#dfe6e9;  --c-arm-s:#93a5ad;  --c-arm-t:#1e2a30;
+  --c-init-f:#f7ecd6; --c-init-s:#c79a3f; --c-init-t:#4a3608;
+  --c-cyc-f:#d8ece0;  --c-cyc-s:#5aa87b;  --c-cyc-t:#10371f;
+  --c-wait-f:#dae5f2; --c-wait-s:#7396c4; --c-wait-t:#152a45;
+  --c-flt-f:#f7dedc;  --c-flt-s:#c4342c;  --c-flt-t:#4d100c;
+  --c-new-f:#e7dcf3;  --c-new-s:#8360b8;  --c-new-t:#2b1550;
+  --c-gho-f:#eceff0;  --c-gho-s:#b8c3c7;  --c-gho-t:#6f7c82;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font:16px/1.6 var(--sans);font-variant-numeric:tabular-nums}
+.wrap{max-width:74rem;margin:0 auto;padding:0 1.25rem 5rem}
+.theme{position:fixed;top:.9rem;right:.9rem;z-index:5;background:var(--surface);
+  color:var(--ink-2);border:1px solid var(--rule);border-radius:7px;
+  padding:.35rem .6rem;font:.72rem var(--mono);cursor:pointer}
+header.mast{padding:2.4rem 0 .5rem}
+.eyebrow{font:600 .7rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .7rem}
+h1{font-size:clamp(1.5rem,3.6vw,2.1rem);line-height:1.15;margin:0 0 .5rem;
+   text-wrap:balance;letter-spacing:-.01em}
+.sub{color:var(--ink-2);margin:0;max-width:66ch}
+nav.views{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.4rem 0 0}
+nav.views a{font:.8rem var(--sans);text-decoration:none;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+  padding:.32rem .8rem}
+nav.views a.here{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:600}
+h2{font-size:1.08rem;margin:2.2rem 0 .3rem;letter-spacing:-.005em}
+h3{font-size:.95rem;margin:1.5rem 0 .3rem}
+p{margin:.6rem 0}
+.diagram{margin:1.2rem 0 0;padding:1rem;background:var(--surface);
+  border:1px solid var(--rule);border-radius:11px;overflow-x:auto}
+.smsvg{display:block;max-width:100%;height:auto}
+.e{fill:none;stroke:var(--ink-3);stroke-width:1.6}
+.e-seq{stroke:var(--ink-2)}
+.e-fault{stroke:var(--fault);stroke-dasharray:5 4}
+.e-recover{stroke:var(--caution);stroke-dasharray:5 4}
+.e-op{stroke:var(--accent)}
+.e-new{stroke:var(--c-new-s);stroke-width:2.3}
+.ah{stroke:none;fill:var(--ink-2)}
+.ah-fault{fill:var(--fault)} .ah-recover{fill:var(--caution)}
+.ah-op{fill:var(--accent)} .ah-new{fill:var(--c-new-s)}
+.el{font:11px var(--mono);fill:var(--ink-3)}
+.el-fault{fill:var(--fault)} .el-recover{fill:var(--caution)}
+.el-op{fill:var(--accent)} .el-new{fill:var(--c-new-s)}
+.nl{font:600 13px var(--sans)}
+.ns{font:10.5px var(--mono);fill:var(--ink-3)}
+.nv{font:700 11px var(--mono);fill:var(--ink-3)}
+.nt{font:600 9.5px var(--mono);fill:var(--c-new-s);letter-spacing:.08em}
+.legend{display:flex;flex-wrap:wrap;gap:.45rem .9rem;margin:.9rem 0 0;
+  font:.76rem var(--mono);color:var(--ink-3)}
+.legend span{display:inline-flex;align-items:center;gap:.35rem}
+.sw{width:.85rem;height:.85rem;border-radius:3px;display:inline-block}
+.ln{width:1.5rem;height:0;border-top-width:2px;display:inline-block}
+.tblwrap{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;
+  background:var(--surface);margin:.9rem 0}
+table{width:100%;border-collapse:collapse;min-width:40rem}
+th,td{text-align:left;padding:.5rem .7rem;border-bottom:1px solid var(--rule);
+  vertical-align:top;font-size:.85rem}
+th{background:var(--surface-2);font:600 .68rem/1.3 var(--mono);
+  letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.m,.mono{font:.78rem var(--mono);color:var(--ink-2)}
+code{font:.86em var(--mono);background:var(--surface-2);padding:.1em .32em;
+  border-radius:3px}
+.callout{margin:1.3rem 0;padding:.95rem 1.15rem;border-radius:9px;
+  background:var(--surface);border:1px solid var(--rule);
+  border-left:5px solid var(--caution);font-size:.9rem}
+.callout.bad{border-left-color:var(--fault)}
+.callout.good{border-left-color:var(--accent)}
+.callout h3{margin:0 0 .3rem;font-size:.93rem}
+.callout p{margin:.4rem 0 0;color:var(--ink-2)}
+ul{margin:.5rem 0;padding-left:1.3rem}
+li{margin:.3rem 0;color:var(--ink-2)}
+footer{margin-top:3rem;padding-top:1.1rem;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:.79rem}
+</style>
+</head>
+<body>
+<button class="theme" id="t">theme: auto</button>
+<div class="wrap">
+<header class="mast">
+<p class="eyebrow">167_01 Saad — Flower · proposed variant</p>
+<h1>Auto state machine — with Pause / Continue</h1>
+<p class="sub">Pause and Continue on the orange PB2, which is unused in Automatic today. One hardware fact — spring-return pistons cannot stop mid-stroke — rules out a freeze and points at a much smaller change: finish the bulb, then hold at <code>IDLE</code>.</p>
+<nav class="views">
+<a href="auto-state-machine-current.html">Current</a>
+<a href="auto-state-machine-pause.html" class="here">+ Pause / Continue</a>
+<a href="auto-state-machine-retract-all.html">+ Separate Retract-all</a>
+</nav>
+</header>
+
+<h2>What changes</h2>
+<p>Exactly one guard, one flag and one wire value. Everything green, amber and
+blue below is unchanged from <a href="auto-state-machine-current.html">today</a>;
+the purple is the whole feature.</p>
+
+<div class="diagram"><svg class="smsvg" viewBox="0 0 1110 1572" width="1110" height="1572" role="img" xmlns="http://www.w3.org/2000/svg">
+<polyline class="e e-op" points="215,59.0 185,59.0 185,247.0 215,247.0"/>
+<polygon class="ah ah-op" points="215,247.0 208,242.66 208,251.34"/>
+<text class="el el-op" x="169" y="97.0" text-anchor="end">START</text>
+<polyline class="e e-seq" points="323.0,178 323.0,222"/>
+<polygon class="ah ah-seq" points="323.0,222 318.66,215 327.34,215"/>
+<text class="el el-seq" x="331.0" y="204.0" text-anchor="start">robot CMD:1</text>
+<polyline class="e e-op" points="431,153.0 811,153.0 811,247.0 431,247.0"/>
+<polygon class="ah ah-op" points="431,247.0 438,242.66 438,251.34"/>
+<text class="el el-op" x="827" y="191.0" text-anchor="start">START (re-home)</text>
+<polyline class="e e-seq" points="323.0,272 323.0,316"/>
+<polygon class="ah ah-seq" points="323.0,316 318.66,309 327.34,309"/>
+<text class="el el-seq" x="331.0" y="298.0" text-anchor="start">all 3 push retracted</text>
+<polyline class="e e-seq" points="323.0,366 323.0,410"/>
+<polygon class="ah ah-seq" points="323.0,410 318.66,403 327.34,403"/>
+<text class="el el-seq" x="331.0" y="392.0" text-anchor="start">all 3 sep retracted</text>
+<polyline class="e e-op" points="215,435.0 185,435.0 185,153.0 215,153.0"/>
+<polygon class="ah ah-op" points="215,153.0 208,148.66 208,157.34"/>
+<text class="el el-op" x="169" y="413.0" text-anchor="end">home → armed</text>
+<polyline class="e e-seq" points="323.0,460 323.0,504"/>
+<polygon class="ah ah-seq" points="323.0,504 318.66,497 327.34,497"/>
+<text class="el el-seq" x="331.0" y="486.0" text-anchor="start">→ run the bulb</text>
+<polyline class="e e-seq" points="323.0,554 323.0,598"/>
+<polygon class="ah ah-seq" points="323.0,598 318.66,591 327.34,591"/>
+<text class="el el-seq" x="331.0" y="580.0" text-anchor="start">bPlateOk   (L OR R)</text>
+<polyline class="e e-seq" points="323.0,648 323.0,692"/>
+<polygon class="ah ah-seq" points="323.0,692 318.66,685 327.34,685"/>
+<text class="el el-seq" x="331.0" y="674.0" text-anchor="start">grip extended   (L OR R)</text>
+<polyline class="e e-seq" points="323.0,742 323.0,786"/>
+<polygon class="ah ah-seq" points="323.0,786 318.66,779 327.34,779"/>
+<text class="el el-seq" x="331.0" y="768.0" text-anchor="start">all 3 sep extended</text>
+<polyline class="e e-seq" points="323.0,836 323.0,880"/>
+<polygon class="ah ah-seq" points="323.0,880 318.66,873 327.34,873"/>
+<text class="el el-seq" x="331.0" y="862.0" text-anchor="start">all 3 push extended</text>
+<polyline class="e e-seq" points="323.0,930 323.0,974"/>
+<polygon class="ah ah-seq" points="323.0,974 318.66,967 327.34,967"/>
+<text class="el el-seq" x="331.0" y="956.0" text-anchor="start">dwell elapsed</text>
+<polyline class="e e-seq" points="323.0,1024 323.0,1068"/>
+<polygon class="ah ah-seq" points="323.0,1068 318.66,1061 327.34,1061"/>
+<text class="el el-seq" x="331.0" y="1050.0" text-anchor="start">all 3 push retracted</text>
+<polyline class="e e-seq" points="323.0,1118 323.0,1162"/>
+<polygon class="ah ah-seq" points="323.0,1162 318.66,1155 327.34,1155"/>
+<text class="el el-seq" x="331.0" y="1144.0" text-anchor="start">dwell elapsed</text>
+<polyline class="e e-seq" points="323.0,1212 323.0,1256"/>
+<polygon class="ah ah-seq" points="323.0,1256 318.66,1249 327.34,1249"/>
+<text class="el el-seq" x="331.0" y="1238.0" text-anchor="start">all 3 sep retracted</text>
+<polyline class="e e-seq" points="323.0,1306 323.0,1350"/>
+<polygon class="ah ah-seq" points="323.0,1350 318.66,1343 327.34,1343"/>
+<text class="el el-seq" x="331.0" y="1332.0" text-anchor="start">dwell elapsed</text>
+<polyline class="e e-seq" points="215,1375.0 150,1375.0 150,167.0 215,167.0 215,153.0"/>
+<polygon class="ah ah-seq" points="215,153.0 210.66,160.0 219.34,160.0"/>
+<text class="el el-seq" x="134" y="1345.0" text-anchor="end">nCyclesCompleted + 1</text>
+<polyline class="e e-fault" points="431,247.0 468,247.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="245.0" text-anchor="end">6</text>
+<polyline class="e e-fault" points="431,341.0 468,341.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="339.0" text-anchor="end">7</text>
+<polyline class="e e-fault" points="431,435.0 468,435.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="433.0" text-anchor="end">8</text>
+<polyline class="e e-fault" points="431,529.0 468,529.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="527.0" text-anchor="end">9</text>
+<polyline class="e e-fault" points="431,623.0 468,623.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="621.0" text-anchor="end">10</text>
+<polyline class="e e-fault" points="431,717.0 468,717.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="715.0" text-anchor="end">1</text>
+<polyline class="e e-fault" points="431,811.0 468,811.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="809.0" text-anchor="end">3</text>
+<polyline class="e e-fault" points="431,999.0 468,999.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="997.0" text-anchor="end">4</text>
+<polyline class="e e-fault" points="431,1187.0 468,1187.0 468,1469.0 555,1469.0"/>
+<text class="el el-fault" x="452" y="1185.0" text-anchor="end">5</text>
+<polyline class="e e-fault" points="431,1375.0 468,1375.0 468,1469.0 555,1469.0"/>
+<polygon class="ah ah-fault" points="555,1469.0 548,1464.66 548,1473.34"/>
+<text class="el el-fault" x="452" y="1373.0" text-anchor="end">11</text>
+<polyline class="e e-op" points="555,59.0 431,59.0"/>
+<polygon class="ah ah-op" points="431,59.0 438,54.66 438,63.34"/>
+<text class="el el-op" x="493.0" y="54.0" text-anchor="middle">disarm</text>
+<polyline class="e e-op" points="555,341.0 461,341.0 461,59.0 431,59.0"/>
+<polygon class="ah ah-op" points="431,59.0 438,54.66 438,63.34"/>
+<text class="el el-op" x="507.0" y="336.0" text-anchor="middle">re-park</text>
+<polyline class="e e-recover" points="771,1469.0 815,1469.0 815,263.0 447,263.0 447,247.0 431,247.0"/>
+<polygon class="ah ah-recover" points="431,247.0 438,242.66 438,251.34"/>
+<text class="el el-recover" x="831" y="1455.0" text-anchor="start">RESET</text>
+<text class="el el-recover" x="831" y="1468.0" text-anchor="start">(HMI or CMD:2)</text>
+<polyline class="e e-new" points="431,153.0 555,153.0"/>
+<polygon class="ah ah-new" points="555,153.0 548,148.66 548,157.34"/>
+<text class="el el-new" x="493.0" y="148.0" text-anchor="middle">PB2 → bPause</text>
+<g class="n n-arm">
+<rect x="215" y="34" width="216" height="50" rx="9" ry="9" fill="var(--c-arm-f)" stroke="var(--c-arm-s)"/>
+<text class="nl" x="228" y="55.0" fill="var(--c-arm-t)">NOT_HOMED</text>
+<text class="ns" x="228" y="72.0">in Auto, NOT armed</text>
+<text class="nv" x="420" y="63.0" text-anchor="end">40</text>
+</g>
+<g class="n n-arm">
+<rect x="215" y="128" width="216" height="50" rx="9" ry="9" fill="var(--c-arm-f)" stroke="var(--c-arm-s)"/>
+<text class="nl" x="228" y="149.0" fill="var(--c-arm-t)">IDLE</text>
+<text class="ns" x="228" y="166.0">armed — robot may send CMD:1</text>
+<text class="nv" x="420" y="157.0" text-anchor="end">0</text>
+</g>
+<g class="n n-init">
+<rect x="215" y="222" width="216" height="50" rx="9" ry="9" fill="var(--c-init-f)" stroke="var(--c-init-s)"/>
+<text class="nl" x="228" y="252.0" fill="var(--c-init-t)">INIT_PUSH_RETRACTING</text>
+<text class="nv" x="420" y="251.0" text-anchor="end">10</text>
+</g>
+<g class="n n-init">
+<rect x="215" y="316" width="216" height="50" rx="9" ry="9" fill="var(--c-init-f)" stroke="var(--c-init-s)"/>
+<text class="nl" x="228" y="346.0" fill="var(--c-init-t)">INIT_SEP_RETRACTING</text>
+<text class="nv" x="420" y="345.0" text-anchor="end">11</text>
+</g>
+<g class="n n-init">
+<rect x="215" y="410" width="216" height="50" rx="9" ry="9" fill="var(--c-init-f)" stroke="var(--c-init-s)"/>
+<text class="nl" x="228" y="440.0" fill="var(--c-init-t)">INIT_GRIP_RETRACTING</text>
+<text class="nv" x="420" y="439.0" text-anchor="end">12</text>
+</g>
+<g class="n n-wait">
+<rect x="215" y="504" width="216" height="50" rx="9" ry="9" fill="var(--c-wait-f)" stroke="var(--c-wait-s)"/>
+<text class="nl" x="228" y="525.0" fill="var(--c-wait-t)">WAIT_PLATE</text>
+<text class="ns" x="228" y="542.0">tPlateWaitTimeoutMs</text>
+<text class="nv" x="420" y="533.0" text-anchor="end">20</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="598" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="628.0" fill="var(--c-cyc-t)">GRIP_EXTENDING</text>
+<text class="nv" x="420" y="627.0" text-anchor="end">21</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="692" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="722.0" fill="var(--c-cyc-t)">SEP_EXTENDING</text>
+<text class="nv" x="420" y="721.0" text-anchor="end">1</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="786" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="816.0" fill="var(--c-cyc-t)">PUSH_EXTENDING</text>
+<text class="nv" x="420" y="815.0" text-anchor="end">3</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="880" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="901.0" fill="var(--c-cyc-t)">DWELL_PUSH</text>
+<text class="ns" x="228" y="918.0">tDwellPushMs</text>
+<text class="nv" x="420" y="909.0" text-anchor="end">4</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="974" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="1004.0" fill="var(--c-cyc-t)">PUSH_RETRACTING</text>
+<text class="nv" x="420" y="1003.0" text-anchor="end">5</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="1068" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="1089.0" fill="var(--c-cyc-t)">PUSH_RETRACTED_DWELL</text>
+<text class="ns" x="228" y="1106.0">tPushRetractedDwellMs</text>
+<text class="nv" x="420" y="1097.0" text-anchor="end">6</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="1162" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="1192.0" fill="var(--c-cyc-t)">SEP_RETRACTING</text>
+<text class="nv" x="420" y="1191.0" text-anchor="end">7</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="1256" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="1277.0" fill="var(--c-cyc-t)">SEP_RETRACTED_DWELL</text>
+<text class="ns" x="228" y="1294.0">tSepRetractedDwellMs</text>
+<text class="nv" x="420" y="1285.0" text-anchor="end">8</text>
+</g>
+<g class="n n-cycle">
+<rect x="215" y="1350" width="216" height="50" rx="9" ry="9" fill="var(--c-cyc-f)" stroke="var(--c-cyc-s)"/>
+<text class="nl" x="228" y="1380.0" fill="var(--c-cyc-t)">GRIP_RETRACTING</text>
+<text class="nv" x="420" y="1379.0" text-anchor="end">22</text>
+</g>
+<g class="n n-ghost">
+<rect x="555" y="34" width="216" height="50" rx="9" ry="9" fill="var(--c-gho-f)" stroke="var(--c-gho-s)"/>
+<text class="nl" x="568" y="55.0" fill="var(--c-gho-t)">STOP  — global override</text>
+<text class="ns" x="568" y="72.0">from any state except ERR</text>
+</g>
+<g class="n n-ghost">
+<rect x="555" y="316" width="216" height="50" rx="9" ry="9" fill="var(--c-gho-f)" stroke="var(--c-gho-s)"/>
+<text class="nl" x="568" y="337.0" fill="var(--c-gho-t)">Manual  — global override</text>
+<text class="ns" x="568" y="354.0">except NOT_HOMED and ERR</text>
+</g>
+<g class="n n-fault">
+<rect x="555" y="1444" width="216" height="50" rx="9" ry="9" fill="var(--c-flt-f)" stroke="var(--c-flt-s)"/>
+<text class="nl" x="568" y="1465.0" fill="var(--c-flt-t)">ERR</text>
+<text class="ns" x="568" y="1482.0">latched — only RESET leaves</text>
+<text class="nv" x="760" y="1473.0" text-anchor="end">99</text>
+</g>
+<g class="n n-new">
+<rect x="555" y="128" width="216" height="50" rx="9" ry="9" fill="var(--c-new-f)" stroke="var(--c-new-s)"/>
+<text class="nl" x="568" y="149.0" fill="var(--c-new-t)">PAUSED — wire value only</text>
+<text class="ns" x="568" y="166.0">nStateOut override, NOT an eStep</text>
+<text class="nv" x="760" y="157.0" text-anchor="end">41</text>
+</g>
+</svg></div>
+<div class="legend">
+<span><i class="sw" style="background:var(--c-arm-f);border:1px solid var(--c-arm-s)"></i>not a sequence step</span>
+<span><i class="sw" style="background:var(--c-init-f);border:1px solid var(--c-init-s)"></i>retract / home chain</span>
+<span><i class="sw" style="background:var(--c-wait-f);border:1px solid var(--c-wait-s)"></i>waiting on something external</span>
+<span><i class="sw" style="background:var(--c-cyc-f);border:1px solid var(--c-cyc-s)"></i>bulb-cycle motion</span>
+<span><i class="sw" style="background:var(--c-flt-f);border:1px solid var(--c-flt-s)"></i>fault</span>
+<span><i class="sw" style="background:var(--c-new-f);border:1px solid var(--c-new-s)"></i>proposed / new</span>
+<span><i class="ln" style="border-top:2px solid var(--ink-2)"></i>normal advance</span>
+<span><i class="ln" style="border-top:2px solid var(--accent)"></i>operator action</span>
+<span><i class="ln" style="border-top:2px solid var(--fault)"></i>fault path</span>
+<span><i class="ln" style="border-top:2px solid var(--caution)"></i>recovery</span>
+</div>
+
+<div class="callout bad">
+<h3>The hardware fact that decides this design</h3>
+<p>All eight actuators are <code>FB_SolSpringPiston_2Pos</code>: <strong>single
+coil, spring return, no mid-position capability</strong>. Energised drives
+extended; de-energised lets the spring pull it home. There is no brake and no
+third position.</p>
+<p>So <strong>a pause can never stop a piston mid-stroke.</strong> Freezing the
+sequencer freezes the <em>sequencer</em> — the pneumatic already in flight
+completes its travel either way. &ldquo;Pause&rdquo; on this machine can only
+mean one of two things: finish the stroke then hold, or finish the bulb then
+hold.</p>
+<p>Worse, a mid-stroke freeze is actively bad in two states.
+<code>PUSH_EXTENDING</code> is the force stroke — holding the coil means full
+cylinder force on a partially-seated pin for as long as the operator is away, and
+if a jam is what made them reach for Pause, holding force is exactly the wrong
+response. <code>GRIP_RETRACTING</code> releases the plate, so pausing there leaves
+it loose in the fixture mid-cycle.</p>
+</div>
+
+<h2>Recommended: pause takes effect at IDLE</h2>
+<p>Press PB2 at any point; the current bulb <strong>runs to completion</strong>,
+increments the counter, returns to <code>IDLE</code> — and there declines the
+robot's next <code>CMD:1</code>. Continue clears the flag and the robot's next
+keep-alive starts the following bulb about a second later.</p>
+<ul>
+<li><strong>Zero mid-cycle physical risk.</strong> The plate is never left
+clamped, no pin is ever left loaded, the retract chain is never split, no timeout
+is ever stretched, no coil is held out of sequence.</li>
+<li><strong>One code site in the FB</strong> — the <code>IDLE</code> exit
+condition. Nothing else in the state machine is touched.</li>
+<li><strong>Nothing to restore.</strong> There is no interrupted state to
+remember, so there is no resume variable to get wrong.</li>
+<li><strong>Cost: latency.</strong> Worst case is roughly 5&ndash;8 s — grip, sep,
+push, the 2 s dwell, both retracts and two 0.5 s dwells. That is what most
+assembly cells do, and it is the honest meaning of &ldquo;pause&rdquo;.</li>
+</ul>
+<p>It is <em>not</em> a substitute for &ldquo;stop now&rdquo;. That intent is
+already served — <strong>STOP</strong> disarms immediately, and a fault leaves the
+three PB jogs live so a jam can be freed by hand.</p>
+
+<h2>Why the wire value is an override, not a state</h2>
+<p><code>eStep</code> stays at <code>IDLE</code> while paused. Only
+<code>MAIN</code>'s <code>nStateOut</code> computation reports <code>41</code>:</p>
+<div class="tblwrap"><table>
+<thead><tr><th>Condition</th><th>nStateOut</th></tr></thead>
+<tbody>
+<tr><td>NOT bAutoMode</td><td class="m">30  (MANUAL)</td></tr>
+<tr><td><strong>paused</strong></td><td class="m"><strong>41  (PAUSED)</strong> &larr; new</td></tr>
+<tr><td>otherwise</td><td class="m">TO_INT(eStep)</td></tr>
+</tbody></table></div>
+<p>Three reasons for that seam. <code>eStep</code> keeps meaning &ldquo;where in
+the sequence we are&rdquo;, so the transition log keeps showing real steps. No
+<code>eStep</code> write means no resume logic. And there is already precedent
+one line above: the <code>MANUAL = 30</code> sentinel is reported exactly this
+way and is likewise never assigned to <code>eStep</code>.</p>
+
+<div class="callout bad">
+<h3>Reporting anything else here breaks the machine</h3>
+<p><strong>Report 0 (IDLE)</strong> and the robot reads &ldquo;armed&rdquo;, sends
+<code>CMD:1</code> within a second, MAIN consumes-and-clears it, and the request is
+re-asserted forever — the July&nbsp;28 deadlock shape, inverted.</p>
+<p><strong>Report 99 (ERR)</strong> and the robot answers <code>CMD:2</code>, which
+MAIN turns into <code>bReset</code> — so the robot <em>un-pauses the machine by
+homing it</em>, about a second after the operator paused, while the red lamp shows
+a fault that does not exist.</p>
+<p><strong>Report 40 (NOT_HOMED)</strong> is robot-correct but panel-wrong: green
+goes out and PB3 starts its blink-to-arm prompt, telling the operator to press
+START on a machine that is armed and merely held — and pressing START discards the
+pause.</p>
+</div>
+
+
+<div class="tblwrap"><table>
+<thead><tr><th>STATE:&lt;n&gt;</th><th>Robot replies</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td class="m">0</td><td class="m">CMD:1</td><td>armed — start one bulb</td></tr>
+<tr><td class="m">99</td><td class="m">CMD:2</td><td>faulted — reset it</td></tr>
+<tr><td class="m">anything else</td><td class="m">CMD:0</td><td>wait</td></tr>
+</tbody></table></div>
+<p>That last row is why <strong>adding</strong> a state is nearly free — any value
+the robot does not recognise falls into &ldquo;wait&rdquo;, the safe default — and
+why <strong>renumbering</strong> one is not. It is also why <code>NOT_HOMED = 40</code>
+needed no robot-side change when it was introduced.</p>
+
+
+<h2>PB2's three roles do not collide</h2>
+<p>PB2 already carries two jobs, and Pause fits the remaining hole exactly. The
+arbitration term is the Boolean complement of the existing jog gate over the same
+two variables, so overlap is impossible by construction — a partition, not a
+priority scheme. PB3 already carries this identical split.</p>
+<div class="tblwrap"><table>
+<thead><tr><th>Machine condition</th><th>PB2 does</th><th>LED2 shows</th></tr></thead>
+<tbody>
+<tr><td>Manual</td><td>Sep jog (momentary, level)</td><td>raw press mirror</td></tr>
+<tr><td>Auto + ERR</td><td>Sep jog (momentary, level)</td><td>raw press mirror</td></tr>
+<tr><td><strong>Auto, not ERR</strong> — free today</td>
+    <td><strong>Pause / Continue</strong> (rising edge, toggles a latch)</td>
+    <td><strong>blink</strong> = will stop at end of bulb<br><strong>steady</strong> = paused</td></tr>
+</tbody></table></div>
+<p>Edge-toggle rather than hold-to-pause, for three reasons: you pause in order to
+walk away; hold-to-pause would collide with the same physical grip that jogs
+separators in Manual; and a level pause restarts the state's timeout budget on
+every release.</p>
+<p>The blink&rarr;steady distinction is what makes the deferred stop honest.
+Without it the operator presses again during the 5&ndash;8 s wait and cancels their
+own pause. One more lamp edit is easy to miss: green is currently
+<em>steady</em> in <code>IDLE</code>, so a paused machine would show steady green
+contradicting LED2 — green should be off while paused.</p>
+
+<h2>Rules that keep it safe</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>Rule</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>The flag lives in <code>GVL_HMI</code> — <strong>never</strong> in <code>GVL_HmiPersistent</code></td>
+    <td>The biggest risk in the whole feature is a pause that outlives the physical state it was taken in. Every spring-return piston retracts on power loss, guaranteed, and the plate is released. A persisted pause would resume a sequence whose assumptions are all void. Plain <code>VAR_GLOBAL</code> scrubs on every cold boot and download, so the machine returns un-armed and un-paused for free.</td></tr>
+<tr><td>STOP clears it</td>
+    <td>STOP's whole point is a state only a human START leaves. A pause surviving STOP means the operator STOPs, presses START, and the machine homes and then sits paused.</td></tr>
+<tr><td>Manual re-park clears it</td>
+    <td>In Manual PB2 reverts to the Sep jog, so a surviving flag would be unreachable from the panel.</td></tr>
+<tr><td>Entering ERR clears it</td>
+    <td>Same reason, and it makes RESET-while-paused a non-question. One site in Section 2 rather than eleven ERR entries.</td></tr>
+<tr><td>Rejected from <code>NOT_HOMED</code></td>
+    <td>Nothing is driven there. A flag set in <code>NOT_HOMED</code> that leaked through START &rarr; home &rarr; arm gives a machine that arms and then refuses to run with no visible reason.</td></tr>
+<tr><td>START clears it</td>
+    <td>START means &ldquo;home and arm&rdquo;; emerging from the retract chain still paused is incoherent. Also a second way out if LED2 has failed.</td></tr>
+</tbody></table></div>
+
+<div class="callout good">
+<h3>A bonus that falls out of it</h3>
+<p>Every PLC-detected fault in this FB is a timeout branch. Parked at
+<code>IDLE</code> no timer runs at all, so <strong>a fault cannot originate while
+paused</strong> — the entire &ldquo;paused three minutes, came back to a spurious
+timeout&rdquo; class disappears rather than being handled.</p>
+</div>
+
+<div class="callout">
+<h3>One thing Pause is not</h3>
+<p>Nothing here de-energises anything. Coils are <em>held</em>, the plate stays
+clamped, and in <code>WAIT_PLATE</code> the robot arm is still moving in the
+fixture. Pause is a process control, not a safety function, and must not be
+labelled, lamped or trained as one.</p>
+</div>
+
+<footer>Generated by <code>scripts/statediagram/build_state_diagrams.py</code>. Diagrams are hand-laid-out inline SVG — no external scripts, so these pages open straight from the filesystem.</footer>
+</div>
+<script>
+(function(){var r=document.documentElement,b=document.getElementById('t');
+function lbl(){var m=r.getAttribute('data-theme');b.textContent='theme: '+(m||'auto');}
+b.addEventListener('click',function(){var m=r.getAttribute('data-theme');
+var n=m==='dark'?'light':(m==='light'?null:'dark');
+if(n){r.setAttribute('data-theme',n);}else{r.removeAttribute('data-theme');}
+try{n?localStorage.setItem('smtheme',n):localStorage.removeItem('smtheme');}catch(e){}
+lbl();});
+try{var s=localStorage.getItem('smtheme');if(s)r.setAttribute('data-theme',s);}catch(e){}
+lbl();})();
+</script>
+</body>
+</html>
