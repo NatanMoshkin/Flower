@@ -5,7 +5,13 @@
 *.plcproj.bak
 *.plcproj.orig
 *.tpy
+# License response files. Bound to one target's System ID, so useless on any
+# other hardware -- and this repo is PUBLIC, so they are not published here.
 *.tclrs
+# ...and the matching license REQUEST files, same class of artifact. Without
+# this rule Panel_PLC_HMI/License/ shows up as untracked forever because the
+# .tclrq alongside the ignored responses is the only thing left visible.
+*.tclrq
 *.library
 *.compiled-library
 *.compileinfo
