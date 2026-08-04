@@ -18,6 +18,7 @@ SPECS = [
     ("sm_current", "auto-state-machine-current.html"),
     ("sm_pause", "auto-state-machine-pause.html"),
     ("sm_retract", "auto-state-machine-retract-all.html"),
+    ("sm_combined", "auto-state-machine-combined.html"),
 ]
 
 

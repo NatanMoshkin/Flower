@@ -6,7 +6,9 @@ and give fault recovery its own states so a failed recovery is distinguishable
 from a failed arming.
 """
 
-from sm_common import ROBOT_TABLE, core_edges, main_states, override_states
+from sm_common import (
+    ROBOT_TABLE, attach_info, core_edges, main_states, override_states,
+)
 from sm_render import BOX_W, Edge, State, legend_html, page, render_svg
 
 # Rename WITHOUT renumber: the wire contract stays byte-identical. Every name
@@ -31,11 +33,11 @@ for _k, _n, _v, _c, _r in RECOVER:
 def build_states():
     st = main_states(relabel=RENAME) + override_states()
     st.append(State("ERR", "ERR", 99, "fault", 1, 15,
-                    sub="latched — only RESET leaves"))
+                    sub="latched — RESET only"))
     for k, name, val, code, row in RECOVER:
         st.append(State(k, name, val, "new", 1, row,
-                        sub=f"timeout → error {code}", tag="NEW"))
-    return st
+                        sub=f"timeout → error {code}"))
+    return attach_info(st)
 
 
 def build_edges(states):
@@ -77,6 +79,7 @@ recovers by borrowing the amber chain.</p>
 
 {diagram}
 {legend}
+<p class="pophint">Click any state box for the commands it drives.</p>
 
 <h2>The problem being solved, stated honestly</h2>
 <p>Today one retract chain serves four callers, and a single boolean
@@ -212,4 +215,5 @@ def build():
         "Give fault recovery its own retract chain, so a failed recovery stops "
         "looking identical to a failed arming — and rename the shared chain to say "
         "what it actually is, keeping its wire values so the robot cannot notice.",
-        "auto-state-machine-retract-all.html", body)
+        "auto-state-machine-retract-all.html", body,
+        states_for_popups=states)

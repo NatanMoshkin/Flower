@@ -1,21 +1,58 @@
-"""VARIANT: Pause / Continue on the orange PB2.
+"""VARIANT: Pause / Continue from ANY step, on the orange PB2.
 
-The recommendation drawn here is "finish the bulb, then hold at IDLE", because of
-one hardware fact that rules out everything more ambitious — see the callout.
+Per the operator's requirement: pause is available from every step of the
+sequence, and Continue resumes that same step. The design that makes this both
+possible and safe on spring-return pistons is "hold at the step boundary" —
+pause takes effect the moment the current step's exit guard is satisfied, so
+every commanded motion has completed and been sensor-confirmed. See the callout.
 """
 
-from sm_common import ROBOT_TABLE, core_edges, main_states, override_states
+from sm_common import (
+    ROBOT_TABLE, attach_info, core_edges, main_states, override_states,
+)
 from sm_render import BOX_W, Edge, State, legend_html, page, render_svg
+
+# Extra popup rows added on this page only: what pausing in each state means.
+PAUSE_NOTES = {
+    "IDLE": [("pause here", "the start gate — declines the robot's CMD:1. "
+                            "Nothing is driven, nothing to hold.")],
+    "INIT_PUSH": [("pause here", "push confirmed home, sep and grip "
+                                 "uncommanded. Machine is part-homed.")],
+    "INIT_SEP": [("pause here", "push and sep both confirmed home. Part-homed.")],
+    "INIT_GRIP": [("pause here", "fully home and released — the safest hold "
+                                 "point in the whole machine.")],
+    "WAIT_PLATE": [("pause here", "plate present, grippers open, nothing "
+                                  "driven. Safe — but the robot arm may still "
+                                  "be in the fixture.")],
+    "GRIP_EXT": [("pause here", "plate clamped, coils held. Safe hold.")],
+    "SEP_EXT": [("pause here", "separators out and clamped. Safe hold.")],
+    "PUSH_EXT": [("pause here", "<strong>pins fully driven and held at full "
+                                "cylinder force.</strong> Mechanically at a "
+                                "hard stop, but see the caution below.")],
+    "DWELL_PUSH": [("pause here", "<strong>the dwell has already elapsed and "
+                                  "pin load stays applied indefinitely.</strong> "
+                                  "The one hold point that needs a cap.")],
+    "PUSH_RET": [("pause here", "push home, separators still out, plate "
+                                "clamped. Safe hold.")],
+    "PUSH_RET_DW": [("pause here", "push home, separators out, clamped. Safe.")],
+    "SEP_RET": [("pause here", "separators home, plate still clamped. Safe.")],
+    "SEP_RET_DW": [("pause here", "sep and push home, only the clamp holding. "
+                                  "Safe.")],
+    "GRIP_RET": [("pause here", "plate released and the cycle already counted. "
+                                "Effectively 'about to re-arm'.")],
+    "NOT_HOMED": [("pause here", "rejected — nothing is driven, and PB2 is a "
+                                 "manual jog in this state.")],
+    "ERR": [("pause here", "rejected — PB2 is a manual jog in this state.")],
+}
 
 
 def build_states():
-    # PAUSED goes at column 1 row 1 — directly beside IDLE, because that is the
-    # only state it applies to. The Manual ghost moves down to row 3 to free it.
-    return main_states() + override_states(manual_row=3) + [
-        State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — only RESET leaves"),
+    states = main_states() + override_states(manual_row=3) + [
+        State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — RESET only"),
         State("PAUSED", "PAUSED — wire value only", 41, "new", 1, 1,
-              sub="nStateOut override, NOT an eStep"),
+              sub="nStateOut only"),
     ]
+    return attach_info(states, extras=PAUSE_NOTES)
 
 
 def build_edges(states):
@@ -31,151 +68,199 @@ def build_edges(states):
                   label_at=(by["ERR"].x + BOX_W + 52, by["ERR"].cy - 18),
                   label_side="r"))
 
-    # The whole feature: PB2 latches a flag, IDLE's start gate consults it, and
-    # nStateOut reports 41 instead of 0 so the robot stops asking. Straight
-    # horizontal hop, label above it in the clear.
-    e.append(Edge("IDLE:e", "PAUSED:w", kind="new", label="PB2 → bPause",
-                  label_at=((by["IDLE"].x + BOX_W + by["PAUSED"].x) / 2,
-                            by["IDLE"].cy - 9), label_side="c"))
+    # PAUSED is a wire value, not a state: eStep keeps holding the interrupted
+    # step, so the arrow means "this is what the robot is told", not a
+    # transition. Drawn from IDLE only because that is where the box sits; the
+    # bracket note on the page says it applies to every step.
+    e.append(Edge("IDLE:e", "PAUSED:w", kind="new", label="PB2",
+                  label_at=(by["PAUSED"].x - 26, by["IDLE"].cy - 9),
+                  label_side="l"))
     return e
 
 
 BODY = """
-<h2>What changes</h2>
-<p>Exactly one guard, one flag and one wire value. Everything green, amber and
-blue below is unchanged from <a href="auto-state-machine-current.html">today</a>;
-the purple is the whole feature.</p>
+<h2>Pause from any step, Continue resumes that step</h2>
+<p>Every green, amber and blue state below is pausable. <code>eStep</code> does
+not change while paused — it keeps holding the interrupted step, which is what
+makes Continue trivially correct. Only the value on the wire changes.</p>
 
 {diagram}
 {legend}
+<p class="pophint">Click any state box for the commands it drives <em>and</em>
+what a pause in that state physically means.</p>
 
-<div class="callout bad">
-<h3>The hardware fact that decides this design</h3>
-<p>All eight actuators are <code>FB_SolSpringPiston_2Pos</code>: <strong>single
-coil, spring return, no mid-position capability</strong>. Energised drives
-extended; de-energised lets the spring pull it home. There is no brake and no
-third position.</p>
-<p>So <strong>a pause can never stop a piston mid-stroke.</strong> Freezing the
-sequencer freezes the <em>sequencer</em> — the pneumatic already in flight
-completes its travel either way. &ldquo;Pause&rdquo; on this machine can only
-mean one of two things: finish the stroke then hold, or finish the bulb then
-hold.</p>
-<p>Worse, a mid-stroke freeze is actively bad in two states.
-<code>PUSH_EXTENDING</code> is the force stroke — holding the coil means full
-cylinder force on a partially-seated pin for as long as the operator is away, and
-if a jam is what made them reach for Pause, holding force is exactly the wrong
-response. <code>GRIP_RETRACTING</code> releases the plate, so pausing there leaves
-it loose in the fixture mid-cycle.</p>
+<div class="callout good">
+<h3>The rule that makes per-step pause safe: hold at the step boundary</h3>
+<p>Pause does not freeze the machine wherever it happens to be. It is
+<strong>requested</strong> on the PB2 press and <strong>takes effect the moment
+the current step's exit guard is satisfied</strong> — the machine simply does not
+advance. One extra term per state:</p>
+<p class="mono">IF &lt;exit guard&gt; AND NOT bPause THEN advance</p>
+<p>Because the guard is satisfied, every motion that step commanded has already
+completed <em>and been sensor-confirmed</em>. Nothing is ever held mid-stroke.
+That matters because all eight actuators are <code>FB_SolSpringPiston_2Pos</code>
+— single coil, spring return, <strong>no mid-position capability and no
+brake</strong>. A naive freeze could not have stopped a stroke anyway; this
+design does not need to.</p>
+<p>Worst-case latency is therefore one step, not one bulb — typically well under
+a second, or the remainder of a dwell.</p>
 </div>
 
-<h2>Recommended: pause takes effect at IDLE</h2>
-<p>Press PB2 at any point; the current bulb <strong>runs to completion</strong>,
-increments the counter, returns to <code>IDLE</code> — and there declines the
-robot's next <code>CMD:1</code>. Continue clears the flag and the robot's next
-keep-alive starts the following bulb about a second later.</p>
-<ul>
-<li><strong>Zero mid-cycle physical risk.</strong> The plate is never left
-clamped, no pin is ever left loaded, the retract chain is never split, no timeout
-is ever stretched, no coil is held out of sequence.</li>
-<li><strong>One code site in the FB</strong> — the <code>IDLE</code> exit
-condition. Nothing else in the state machine is touched.</li>
-<li><strong>Nothing to restore.</strong> There is no interrupted state to
-remember, so there is no resume variable to get wrong.</li>
-<li><strong>Cost: latency.</strong> Worst case is roughly 5&ndash;8 s — grip, sep,
-push, the 2 s dwell, both retracts and two 0.5 s dwells. That is what most
-assembly cells do, and it is the honest meaning of &ldquo;pause&rdquo;.</li>
-</ul>
-<p>It is <em>not</em> a substitute for &ldquo;stop now&rdquo;. That intent is
-already served — <strong>STOP</strong> disarms immediately, and a fault leaves the
-three PB jogs live so a jam can be freed by hand.</p>
+<div class="callout bad">
+<h3>The timer is the trap</h3>
+<p>Nine states run <code>tStepTimeoutMs</code> (default 10 s). Hold a state with
+its timer running and the machine faults in ten seconds with an error code that
+<em>lies</em> — <code>PUSH_EXTENDING timed out</code> when in fact the operator
+paused. So a pause <strong>must</strong> drive <code>tonStep(IN := FALSE)</code>.</p>
+<p>Conveniently that is also the right behaviour: a TON <em>resets</em> its
+elapsed time when <code>IN</code> goes FALSE rather than holding it, so Continue
+gives the step its full timeout budget again. No snapshot-and-restore machinery
+is needed. The only casualty is <code>tElapsedS</code> reading 0.0 while paused;
+a separate timer would be needed to show "how long paused".</p>
+<p>Second-order benefit: with the timer stopped, <strong>a fault cannot originate
+while paused at all</strong> — every PLC-detected fault in this FB is a timeout
+branch. The whole "paused for three minutes, came back to a spurious timeout"
+class disappears rather than being handled.</p>
+</div>
 
-<h2>Why the wire value is an override, not a state</h2>
-<p><code>eStep</code> stays at <code>IDLE</code> while paused. Only
-<code>MAIN</code>'s <code>nStateOut</code> computation reports <code>41</code>:</p>
+<h2>Two hold points that need a decision</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>State</th><th>Concern</th><th>Suggested</th></tr></thead>
+<tbody>
+<tr><td class="m">DWELL_PUSH</td>
+    <td>The guard is "dwell elapsed", so a pause here holds
+    <strong>full pin load on the bulb assembly indefinitely</strong>. The
+    2 s squeeze becomes unbounded.</td>
+    <td>Either exclude this one state from pause (advance to
+    <code>PUSH_RETRACTING</code> and hold there instead — one step later, and
+    push is then home), or cap the hold and auto-continue. Excluding is
+    simpler and loses almost nothing.</td></tr>
+<tr><td class="m">PUSH_EXTENDING</td>
+    <td>Pins fully driven, coils held. Mechanically at a hard stop so it is not
+    a runaway, but it is the same sustained-force question one step earlier.</td>
+    <td>Safe to allow. If a jam is what made the operator reach for Pause, note
+    that the guard will not be satisfied — so the pause simply never takes
+    effect and the step times out into <code>ERR</code> as it does today. That
+    is correct behaviour, but it must be explained to operators or Pause will
+    look broken exactly when they need it.</td></tr>
+<tr><td class="m">the retract chain</td>
+    <td>Pausing between links leaves the machine <strong>part-homed</strong> —
+    each group at a confirmed limit, nothing loaded, but not "home".</td>
+    <td>Allow. Nothing is in motion and nothing is clamped. Worth showing
+    distinctly on the panel so it is not mistaken for a completed home.</td></tr>
+</tbody></table></div>
+
+<div class="callout bad">
+<h3>The one case where Pause cannot help</h3>
+<p>Pause waits for the exit guard. If the guard is never satisfied — a jammed
+piston, a sensor that never makes — then the pause <strong>never takes
+effect</strong> and the step times out into <code>ERR</code> on schedule. Pause
+is not an abort. The abort is <strong>STOP</strong>, which disarms immediately
+from any state, and from <code>ERR</code> the manual commands are live so the jam
+can be freed by hand.</p>
+</div>
+
+<h2>What the robot is told</h2>
+<p><code>eStep</code> keeps holding the interrupted step, so the wire value must
+come from an override in <code>MAIN</code>'s <code>nStateOut</code> computation,
+not from writing <code>eStep</code>:</p>
 <div class="tblwrap"><table>
 <thead><tr><th>Condition</th><th>nStateOut</th></tr></thead>
 <tbody>
 <tr><td>NOT bAutoMode</td><td class="m">30  (MANUAL)</td></tr>
-<tr><td><strong>paused</strong></td><td class="m"><strong>41  (PAUSED)</strong> &larr; new</td></tr>
+<tr><td><strong>paused (any step)</strong></td>
+    <td class="m"><strong>41  (PAUSED)</strong> &larr; new</td></tr>
 <tr><td>otherwise</td><td class="m">TO_INT(eStep)</td></tr>
 </tbody></table></div>
 <p>Three reasons for that seam. <code>eStep</code> keeps meaning &ldquo;where in
-the sequence we are&rdquo;, so the transition log keeps showing real steps. No
-<code>eStep</code> write means no resume logic. And there is already precedent
-one line above: the <code>MANUAL = 30</code> sentinel is reported exactly this
-way and is likewise never assigned to <code>eStep</code>.</p>
+the sequence we are&rdquo;, so Continue is a single flag clear and the transition
+log keeps showing real steps. Nothing needs a resume variable. And there is
+already precedent one line above — the <code>MANUAL = 30</code> sentinel is
+reported exactly this way and is likewise never assigned to <code>eStep</code>.</p>
+<p>In practice most paused steps already report a value the robot treats as
+&ldquo;wait&rdquo;, so the override only strictly matters for <code>IDLE</code>.
+Reporting 41 for all of them anyway is what makes a paused machine visible as
+paused rather than as merely busy.</p>
 
 <div class="callout bad">
-<h3>Reporting anything else here breaks the machine</h3>
-<p><strong>Report 0 (IDLE)</strong> and the robot reads &ldquo;armed&rdquo;, sends
-<code>CMD:1</code> within a second, MAIN consumes-and-clears it, and the request is
-re-asserted forever — the July&nbsp;28 deadlock shape, inverted.</p>
-<p><strong>Report 99 (ERR)</strong> and the robot answers <code>CMD:2</code>, which
-MAIN turns into <code>bReset</code> — so the robot <em>un-pauses the machine by
-homing it</em>, about a second after the operator paused, while the red lamp shows
-a fault that does not exist.</p>
-<p><strong>Report 40 (NOT_HOMED)</strong> is robot-correct but panel-wrong: green
-goes out and PB3 starts its blink-to-arm prompt, telling the operator to press
-START on a machine that is armed and merely held — and pressing START discards the
-pause.</p>
+<h3>Reporting anything else breaks the machine</h3>
+<p><strong>0 (IDLE)</strong> — the robot reads &ldquo;armed&rdquo;, sends
+<code>CMD:1</code> within a second, MAIN consumes-and-clears it, and the request
+is re-asserted forever: the July&nbsp;28 deadlock shape, inverted.</p>
+<p><strong>99 (ERR)</strong> — the robot answers <code>CMD:2</code>, MAIN turns it
+into <code>bReset</code>, and the robot <em>un-pauses the machine by homing
+it</em> about a second after the operator paused, with the red lamp showing a
+fault that does not exist.</p>
+<p><strong>40 (NOT_HOMED)</strong> — robot-correct but panel-wrong: green goes
+out and PB3 starts its blink-to-arm prompt, telling the operator to press START
+on a machine that is armed and merely held.</p>
 </div>
 
 {robot}
 
-<h2>PB2's three roles do not collide</h2>
-<p>PB2 already carries two jobs, and Pause fits the remaining hole exactly. The
-arbitration term is the Boolean complement of the existing jog gate over the same
-two variables, so overlap is impossible by construction — a partition, not a
-priority scheme. PB3 already carries this identical split.</p>
+<h2>PB2's roles stay disjoint</h2>
 <div class="tblwrap"><table>
 <thead><tr><th>Machine condition</th><th>PB2 does</th><th>LED2 shows</th></tr></thead>
 <tbody>
-<tr><td>Manual</td><td>Sep jog (momentary, level)</td><td>raw press mirror</td></tr>
-<tr><td>Auto + ERR</td><td>Sep jog (momentary, level)</td><td>raw press mirror</td></tr>
-<tr><td><strong>Auto, not ERR</strong> — free today</td>
-    <td><strong>Pause / Continue</strong> (rising edge, toggles a latch)</td>
-    <td><strong>blink</strong> = will stop at end of bulb<br><strong>steady</strong> = paused</td></tr>
+<tr><td>Manual</td><td>Sep jog — momentary, level</td><td>raw press mirror</td></tr>
+<tr><td>Auto + <code>ERR</code></td><td>Sep jog — momentary, level</td>
+    <td>raw press mirror</td></tr>
+<tr><td>Auto + <code>NOT_HOMED</code></td><td>Sep jog — momentary, level</td>
+    <td>raw press mirror</td></tr>
+<tr><td><strong>Auto, armed or running</strong></td>
+    <td><strong>Pause / Continue</strong> — rising edge, toggles a latch</td>
+    <td><strong>blink</strong> = pause requested, waiting for the step to
+    finish<br><strong>steady</strong> = paused and holding</td></tr>
 </tbody></table></div>
-<p>Edge-toggle rather than hold-to-pause, for three reasons: you pause in order to
-walk away; hold-to-pause would collide with the same physical grip that jogs
-separators in Manual; and a level pause restarts the state's timeout budget on
-every release.</p>
-<p>The blink&rarr;steady distinction is what makes the deferred stop honest.
-Without it the operator presses again during the 5&ndash;8 s wait and cancels their
-own pause. One more lamp edit is easy to miss: green is currently
-<em>steady</em> in <code>IDLE</code>, so a paused machine would show steady green
-contradicting LED2 — green should be off while paused.</p>
+<p>Still a partition rather than a priority scheme: the jog condition and the
+pause condition are Boolean complements over the same two variables, so overlap
+is impossible by construction. PB3 already carries this identical split.</p>
+<p>Edge-toggle, not hold-to-pause: you pause in order to walk away, hold-to-pause
+would collide with the same physical grip that jogs separators in Manual, and a
+level pause would restart the step's timeout budget on every release.</p>
+<p>The blink&rarr;steady distinction is what makes the wait honest — without it an
+operator whose step has not finished yet presses again and cancels their own
+pause. And green is currently <em>steady</em> in <code>IDLE</code>, so a paused
+machine would show steady green contradicting LED2: <strong>green should be off
+while paused</strong>.</p>
 
 <h2>Rules that keep it safe</h2>
 <div class="tblwrap"><table>
 <thead><tr><th>Rule</th><th>Why</th></tr></thead>
 <tbody>
-<tr><td>The flag lives in <code>GVL_HMI</code> — <strong>never</strong> in <code>GVL_HmiPersistent</code></td>
-    <td>The biggest risk in the whole feature is a pause that outlives the physical state it was taken in. Every spring-return piston retracts on power loss, guaranteed, and the plate is released. A persisted pause would resume a sequence whose assumptions are all void. Plain <code>VAR_GLOBAL</code> scrubs on every cold boot and download, so the machine returns un-armed and un-paused for free.</td></tr>
+<tr><td>The flag lives in <code>GVL_HMI</code> — <strong>never</strong> in
+    <code>GVL_HmiPersistent</code></td>
+    <td>The biggest risk in the feature is a pause that outlives the physical
+    state it was taken in. Every spring-return piston retracts on power loss,
+    guaranteed, and the plate is released — so a persisted pause would resume a
+    step whose assumptions are all void. Plain <code>VAR_GLOBAL</code> scrubs it
+    on every cold boot and download, so the machine returns un-armed and
+    un-paused for free.</td></tr>
 <tr><td>STOP clears it</td>
-    <td>STOP's whole point is a state only a human START leaves. A pause surviving STOP means the operator STOPs, presses START, and the machine homes and then sits paused.</td></tr>
+    <td>STOP's whole point is a state only a human START leaves. A pause
+    surviving STOP means the operator STOPs, presses START, and the machine homes
+    and then sits paused.</td></tr>
 <tr><td>Manual re-park clears it</td>
-    <td>In Manual PB2 reverts to the Sep jog, so a surviving flag would be unreachable from the panel.</td></tr>
+    <td>In Manual PB2 reverts to the Sep jog, so a surviving flag would be
+    unreachable from the panel.</td></tr>
 <tr><td>Entering ERR clears it</td>
-    <td>Same reason, and it makes RESET-while-paused a non-question. One site in Section 2 rather than eleven ERR entries.</td></tr>
-<tr><td>Rejected from <code>NOT_HOMED</code></td>
-    <td>Nothing is driven there. A flag set in <code>NOT_HOMED</code> that leaked through START &rarr; home &rarr; arm gives a machine that arms and then refuses to run with no visible reason.</td></tr>
+    <td>Makes RESET-while-paused a non-question, in one site rather than eleven.</td></tr>
 <tr><td>START clears it</td>
-    <td>START means &ldquo;home and arm&rdquo;; emerging from the retract chain still paused is incoherent. Also a second way out if LED2 has failed.</td></tr>
+    <td>START means &ldquo;home and arm&rdquo;; emerging from the retract chain
+    still paused is incoherent. Also a second way out if LED2 has failed.</td></tr>
+<tr><td>Rejected from <code>NOT_HOMED</code> and <code>ERR</code></td>
+    <td>Nothing is driven in either, and PB2 is a manual jog in both.</td></tr>
+<tr><td>No manual commands while paused</td>
+    <td>Pause holds a specific coil pattern; letting the operator jog would
+    fight it and change the physical state the resumed step assumes. STOP first
+    if hands-on work is needed — that reaches <code>NOT_HOMED</code>, where
+    manual is allowed.</td></tr>
 </tbody></table></div>
-
-<div class="callout good">
-<h3>A bonus that falls out of it</h3>
-<p>Every PLC-detected fault in this FB is a timeout branch. Parked at
-<code>IDLE</code> no timer runs at all, so <strong>a fault cannot originate while
-paused</strong> — the entire &ldquo;paused three minutes, came back to a spurious
-timeout&rdquo; class disappears rather than being handled.</p>
-</div>
 
 <div class="callout">
 <h3>One thing Pause is not</h3>
 <p>Nothing here de-energises anything. Coils are <em>held</em>, the plate stays
-clamped, and in <code>WAIT_PLATE</code> the robot arm is still moving in the
+clamped, and in <code>WAIT_PLATE</code> the robot arm may still be moving in the
 fixture. Pause is a process control, not a safety function, and must not be
 labelled, lamped or trained as one.</p>
 </div>
@@ -188,10 +273,10 @@ def build():
     body = BODY.format(diagram=f'<div class="diagram">{svg}</div>',
                        legend=legend_html(), robot=ROBOT_TABLE)
     return page(
-        "Auto state machine — with Pause / Continue",
+        "Auto state machine — Pause / Continue from any step",
         "167_01 Saad — Flower · proposed variant",
-        "Pause and Continue on the orange PB2, which is unused in Automatic today. "
-        "One hardware fact — spring-return pistons cannot stop mid-stroke — rules "
-        "out a freeze and points at a much smaller change: finish the bulb, then "
-        "hold at <code>IDLE</code>.",
-        "auto-state-machine-pause.html", body)
+        "Pause available from every step and Continue resuming that same step, on "
+        "the orange PB2. The design point that makes it safe on spring-return "
+        "pistons: the pause takes effect at the <em>step boundary</em>, once the "
+        "exit guard is satisfied — so nothing is ever held mid-stroke.",
+        "auto-state-machine-pause.html", body, states_for_popups=states)

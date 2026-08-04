@@ -5,7 +5,9 @@ several places; the disagreements are listed on the page because a diagram that
 quietly matched the stale docs would be worse than no diagram at all.
 """
 
-from sm_common import ROBOT_TABLE, core_edges, main_states, override_states
+from sm_common import (
+    ROBOT_TABLE, attach_info, core_edges, main_states, override_states,
+)
 from sm_render import Edge, State, legend_html, page, render_svg
 
 
@@ -14,9 +16,9 @@ def build_states():
     # a row that aligns with no state. At ERR's old mid-column row the trunk's
     # horizontal stub lined up with DWELL_PUSH, which cannot fault — it read as
     # DWELL_PUSH's own edge.
-    return main_states() + override_states() + [
-        State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — only RESET leaves"),
-    ]
+    return attach_info(main_states() + override_states() + [
+        State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — RESET only"),
+    ])
 
 
 def build_edges(states):
@@ -42,6 +44,8 @@ red fault bus are <code>iErrorCode</code> values.</p>
 
 {diagram}
 {legend}
+<p class="pophint">Click any state box (marked <strong>i</strong>) for the exact
+commands it drives, what it holds by omission, its exit guard and its timer.</p>
 
 <div class="callout">
 <h3>The one thing to take away: one chain, four callers</h3>
@@ -162,4 +166,4 @@ def build():
         "guards, the fault paths and the two global overrides — read from the ST "
         "source rather than from the documentation, which disagrees with it in six "
         "places listed below.",
-        "auto-state-machine-current.html", body)
+        "auto-state-machine-current.html", body, states_for_popups=states)

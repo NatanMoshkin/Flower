@@ -28,7 +28,7 @@ MAIN_ROWS = [
 
 SUBS = {
     "NOT_HOMED": "in Auto, NOT armed",
-    "IDLE": "armed — robot may send CMD:1",
+    "IDLE": "armed — awaiting CMD:1",
     "WAIT_PLATE": "tPlateWaitTimeoutMs",
     "DWELL_PUSH": "tDwellPushMs",
     "PUSH_RET_DW": "tPushRetractedDwellMs",
@@ -138,6 +138,212 @@ def override_states(stop_row=0, manual_row=1):
         State("MANUAL_IL", "Manual  — global override", None, "ghost", 1,
               manual_row, sub="except NOT_HOMED and ERR"),
     ]
+
+
+def _on(t):
+    return f'<span class="cmd on">{t}</span>'
+
+
+def _off(t):
+    return f'<span class="cmd off">{t}</span>'
+
+
+def _hold(t):
+    return f'<span class="cmd hold">{t}</span>'
+
+
+# Per-state command detail for the click-to-open popups. Transcribed directly
+# from FB_MasterAutoCycle Section 4's CASE bodies — including the states that
+# HOLD a command by simply not writing it, which is the detail that matters
+# most when reasoning about a pause.
+NONE_DRIVEN = _off("all 10 commands FALSE")
+
+COMMANDS = {
+    "NOT_HOMED": [
+        ("drives", NONE_DRIVEN),
+        ("clears", "iErrorCode := 0, sErrorText := ''"),
+        ("timer", "none — falls to the Section 3 ELSE"),
+        ("physically", "everything at its spring-return home, nothing energised"),
+    ],
+    "IDLE": [
+        ("drives", NONE_DRIVEN),
+        ("clears", "iErrorCode := 0, sErrorText := ''"),
+        ("timer", "none"),
+        ("physically", "at rest and armed; the robot may command a bulb"),
+    ],
+    "INIT_PUSH": [
+        ("drives", _on("bPushCmdRetract[1..3] := TRUE")),
+        ("clears", _off("Sep ext/ret, Push ext, Grip ext/ret")),
+        ("exit", "bAllPushRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 6"),
+        ("physically", "push pins driving home on their springs"),
+    ],
+    "INIT_SEP": [
+        ("drives", _on("bSepCmdRetract[1..3] := TRUE")),
+        ("clears", _off("Sep ext, Push ext/ret, Grip ext/ret")),
+        ("exit", "bAllSepRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 7"),
+        ("physically", "push already home; separators retracting"),
+    ],
+    "INIT_GRIP": [
+        ("drives", _on("bGripCmdRetract[1..2] := TRUE")),
+        ("clears", _off("all Sep/Push, Grip ext")),
+        ("exit", "bAllGripRetracted — <strong>OR</strong>, not AND"),
+        ("timer", "tStepTimeoutMs → error 8"),
+        ("physically", "releasing the grippers; sep and push confirmed home"),
+    ],
+    "WAIT_PLATE": [
+        ("drives", NONE_DRIVEN),
+        ("exit", "bPlateOk = bPlateSenL <strong>OR</strong> bPlateSenR"),
+        ("timer", "tPlateWaitTimeoutMs → error 9, suppressed by "
+                  "bBypassPlateSensors (which then advances instead)"),
+        ("physically", "nothing driven — but the robot arm is inside the "
+                       "fixture placing the plate"),
+    ],
+    "GRIP_EXT": [
+        ("drives", _on("bGripCmdExtend[1..2] := TRUE") + _off("Grip ret := FALSE")),
+        ("holds", _hold("Sep/Push not written — held FALSE from WAIT_PLATE")),
+        ("exit", "bAllGripExtended — <strong>OR</strong>, not AND"),
+        ("timer", "tStepTimeoutMs → error 10"),
+        ("physically", "grippers closing on the plate"),
+    ],
+    "SEP_EXT": [
+        ("drives", _on("bSepCmdExtend[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE  (hold clamp)")
+                   + _off("Sep ret := FALSE")),
+        ("holds", _hold("Push not written; Grip ret not written")),
+        ("exit", "bAllSepExtended (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 1"),
+        ("physically", "separator pins driving into the clamped plate"),
+    ],
+    "PUSH_EXT": [
+        ("drives", _on("bSepCmdExtend[1..3] := TRUE  (hold out)")
+                   + _on("bPushCmdExtend[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE")
+                   + _off("Push ret := FALSE")),
+        ("holds", _hold("Sep ret and Grip ret not written")),
+        ("exit", "bAllPushExtended (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 3"),
+        ("physically", "<strong>the force stroke</strong> — pins being driven "
+                       "into the bulb base"),
+    ],
+    "DWELL_PUSH": [
+        ("drives", _on("bSepCmdExtend, bPushCmdExtend, bGripCmdExtend all TRUE")),
+        ("holds", _hold("no retract command is written at all")),
+        ("exit", "tDwellPushMs elapsed"),
+        ("timer", "tDwellPushMs — a dwell, not a timeout. No error path."),
+        ("physically", "everything held out against hard stops, full pin load"),
+    ],
+    "PUSH_RET": [
+        ("drives", _on("bSepCmdExtend[1..3] := TRUE  (sep stays out)")
+                   + _on("bPushCmdRetract[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE")
+                   + _off("Push ext := FALSE")),
+        ("holds", _hold("Sep ret and Grip ret not written")),
+        ("exit", "bAllPushRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 4"),
+        ("physically", "push retracting on its springs, separators still out"),
+    ],
+    "PUSH_RET_DW": [
+        ("drives", _on("bSepCmdExtend[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE")
+                   + _off("Push ext/ret := FALSE")),
+        ("exit", "tPushRetractedDwellMs elapsed"),
+        ("timer", "dwell, no error path"),
+        ("physically", "push home, separators held out, plate clamped"),
+    ],
+    "SEP_RET": [
+        ("drives", _on("bSepCmdRetract[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE")
+                   + _off("Sep ext := FALSE")),
+        ("holds", _hold("Push not written at all; Grip ret not written")),
+        ("exit", "bAllSepRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → error 5"),
+        ("physically", "separators retracting, plate still clamped"),
+    ],
+    "SEP_RET_DW": [
+        ("drives", _on("bGripCmdExtend[1..2] := TRUE")
+                   + _off("all Sep/Push cleared")),
+        ("exit", "tSepRetractedDwellMs elapsed"),
+        ("timer", "dwell, no error path"),
+        ("physically", "sep and push home; only the clamp still holding"),
+    ],
+    "GRIP_RET": [
+        ("drives", _on("bGripCmdRetract[1..2] := TRUE")
+                   + _off("all Sep/Push cleared, Grip ext := FALSE")),
+        ("exit", "bAllGripRetracted — <strong>OR</strong>, not AND. "
+                 "Then nCyclesCompleted + 1"),
+        ("timer", "tStepTimeoutMs → error 11"),
+        ("physically", "releasing the plate — last motion of the bulb"),
+    ],
+    "ERR": [
+        ("drives", NONE_DRIVEN),
+        ("exit", "only Section 2 RESET — HMI button or robot CMD:2"),
+        ("timer", "none"),
+        ("physically", "coils dropped, so every piston has spring-returned "
+                       "home. The plate is released."),
+    ],
+}
+
+
+# Proposed states have no source to transcribe, so their popups describe what
+# they WOULD drive — flagged as proposed so nobody mistakes them for existing
+# behaviour.
+PROPOSED = {
+    "REC_PUSH": [
+        ("proposed", "<strong>New state — does not exist yet.</strong>"),
+        ("drives", "bPushCmdRetract[1..3] := TRUE  (same motion as RETRACT_ALL_PUSH)"),
+        ("exit", "bAllPushRetracted"),
+        ("timer", "tStepTimeoutMs → <strong>error 12</strong>, distinct from "
+                  "arming's error 6"),
+        ("why", "identical motion, different identity — so a failed recovery is "
+                "no longer indistinguishable from a failed arming"),
+    ],
+    "REC_SEP": [
+        ("proposed", "<strong>New state — does not exist yet.</strong>"),
+        ("drives", "bSepCmdRetract[1..3] := TRUE"),
+        ("exit", "bAllSepRetracted"),
+        ("timer", "tStepTimeoutMs → <strong>error 13</strong>"),
+    ],
+    "REC_GRIP": [
+        ("proposed", "<strong>New state — does not exist yet.</strong>"),
+        ("drives", "bGripCmdRetract[1..2] := TRUE"),
+        ("exit", "bAllGripRetracted (OR) → IDLE, armed"),
+        ("timer", "tStepTimeoutMs → <strong>error 14</strong>"),
+        ("escalates", "on the 3rd consecutive failed attempt: latch ERR and "
+                      "refuse the robot's CMD:2, so the operator's window stays "
+                      "open indefinitely"),
+    ],
+    "PAUSED": [
+        ("proposed", "<strong>Wire value only — never assigned to eStep.</strong>"),
+        ("drives", "nothing of its own. The interrupted step keeps asserting its "
+                   "own coil pattern every scan."),
+        ("emitted by", "MAIN's nStateOut computation, exactly like the existing "
+                       "MANUAL = 30 sentinel"),
+        ("robot sees", "STATE:41 → falls into &ldquo;anything else&rdquo; → CMD:0 "
+                       "(wait). No robot-side branch needed."),
+        ("leaves on", "PB2 again (Continue), START, STOP, Manual, or entering ERR"),
+    ],
+}
+
+
+def info_for(key, extra=None):
+    """Popup payload for a state, optionally with variant-specific extra rows."""
+    rows = list(COMMANDS.get(key) or PROPOSED.get(key) or [])
+    if extra:
+        rows += extra
+    return {"rows": [[a, b] for a, b in rows]} if rows else {}
+
+
+def attach_info(states, extras=None):
+    """Bolt popup data onto every state that has any. Mutates and returns."""
+    extras = extras or {}
+    for s in states:
+        data = info_for(s.key, extras.get(s.key))
+        if data:
+            data["title"] = s.label
+            s.info = data
+    return states
 
 
 ROBOT_TABLE = """

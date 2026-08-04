@@ -23,6 +23,9 @@ COL_DX, ROW_DY = 340, 94
 # the left of column 0.
 PAD_X, PAD_Y = 215, 34
 R = 9
+# Sub-line budget when a state carries a popup marker: the 'i' glyph starts at
+# BOX_W-36, leaving ~159 px, and the sub font is 10.5 px mono (~6.3 px/char).
+SUB_MAX_WITH_INFO = 25
 
 # Shared lane geometry, so all three diagrams put the same thing in the same
 # place and the only visual difference between pages is the actual change.
@@ -44,10 +47,12 @@ CLASSES = {
 
 
 class State:
-    def __init__(self, key, label, value, cls, col, row, sub="", tag=""):
+    def __init__(self, key, label, value, cls, col, row, sub="", tag="", info=None):
         self.key, self.label, self.value = key, label, value
         self.cls, self.col, self.row = cls, col, row
         self.sub, self.tag = sub, tag
+        # dict rendered into the click-to-open detail popup; see popup_data().
+        self.info = info or {}
 
     @property
     def x(self):
@@ -151,7 +156,22 @@ def render_svg(states_list, edges, width=None, height=None):
 
     for s in states_list:
         f, st, tx = CLASSES[s.cls]
-        o.append(f'<g class="n n-{s.cls}">')
+        # The info marker sits at BOX_W-36, so a long sub-line runs under it.
+        # Assert rather than clip: silent overlap is exactly the kind of thing
+        # that survives a screenshot review.
+        if s.info and len(s.sub) > SUB_MAX_WITH_INFO:
+            raise ValueError(
+                f"{s.key}: sub is {len(s.sub)} chars, max "
+                f"{SUB_MAX_WITH_INFO} when the state has a popup marker — "
+                f"it would render underneath the 'i' glyph. Shorten it: {s.sub!r}")
+        if s.info:
+            # Focusable + role=button so the popup is reachable by keyboard and
+            # not only by pointer. `has-info` is what the page JS binds to.
+            o.append(f'<g class="n n-{s.cls} has-info" data-key="{_esc(s.key)}" '
+                     f'tabindex="0" role="button" '
+                     f'aria-label="{_esc(s.label)} — show commands">')
+        else:
+            o.append(f'<g class="n n-{s.cls}">')
         o.append(f'<rect x="{s.x}" y="{s.y}" width="{BOX_W}" height="{BOX_H}" '
                  f'rx="{R}" ry="{R}" fill="var(--{f})" stroke="var(--{st})"/>')
         ty = s.cy + (- 4 if s.sub else 5)
@@ -166,6 +186,14 @@ def render_svg(states_list, edges, width=None, height=None):
         if s.tag:
             o.append(f'<text class="nt" x="{s.x + BOX_W - 11}" y="{s.y - 6}" '
                      f'text-anchor="end">{_esc(s.tag)}</text>')
+        if s.info:
+            # Affordance: without a visible marker nobody discovers the popup.
+            # Sits LEFT of the value badge, not above it — a 50 px box has no
+            # vertical room for both on the right edge.
+            o.append(f'<circle class="ni" cx="{s.x + BOX_W - 36}" '
+                     f'cy="{s.cy}" r="7.5"/>')
+            o.append(f'<text class="nim" x="{s.x + BOX_W - 36}" '
+                     f'y="{s.cy + 3.5}" text-anchor="middle">i</text>')
         o.append("</g>")
 
     o.append("</svg>")
@@ -274,6 +302,36 @@ p{margin:.6rem 0}
 .ns{font:10.5px var(--mono);fill:var(--ink-3)}
 .nv{font:700 11px var(--mono);fill:var(--ink-3)}
 .nt{font:600 9.5px var(--mono);fill:var(--c-new-s);letter-spacing:.08em}
+/* ---- clickable state boxes + command popup ---- */
+.has-info{cursor:pointer}
+.has-info rect{transition:filter .12s}
+.has-info:hover rect,.has-info:focus rect{filter:brightness(1.06)}
+.has-info:focus{outline:none}
+.has-info:focus rect{stroke-width:2.5}
+.has-info:focus-visible rect{stroke-width:2.5}
+.ni{fill:none;stroke:var(--ink-3);stroke-width:1.2}
+.nim{font:700 10px var(--mono);fill:var(--ink-3)}
+.has-info:hover .ni,.has-info:focus .ni{stroke:var(--accent)}
+.has-info:hover .nim,.has-info:focus .nim{fill:var(--accent)}
+.diagram{position:relative}
+.pop{position:absolute;z-index:20;width:23rem;max-width:calc(100% - 1rem);
+  background:var(--surface);border:1px solid var(--rule);border-radius:10px;
+  box-shadow:0 10px 34px rgba(0,0,0,.22);padding:.85rem .95rem;display:none;
+  font-size:.83rem}
+.pop.open{display:block}
+.pop h4{margin:0 0 .1rem;font:700 .9rem var(--sans)}
+.pop .pv{font:700 .72rem var(--mono);color:var(--ink-3);margin:0 0 .55rem}
+.pop dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.28rem .6rem}
+.pop dt{font:600 .68rem var(--mono);letter-spacing:.05em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.12rem}
+.pop dd{margin:0;color:var(--ink-2)}
+.pop dd .cmd{font:.76rem var(--mono);display:block}
+.pop dd .on{color:var(--accent)}
+.pop dd .off{color:var(--ink-3)}
+.pop dd .hold{color:var(--caution)}
+.pop .close{position:absolute;top:.35rem;right:.5rem;background:none;border:0;
+  color:var(--ink-3);font:1.1rem/1 var(--sans);cursor:pointer;padding:.2rem .3rem}
+.pophint{margin:.55rem 0 0;font:.76rem var(--mono);color:var(--ink-3)}
 .legend{display:flex;flex-wrap:wrap;gap:.45rem .9rem;margin:.9rem 0 0;
   font:.76rem var(--mono);color:var(--ink-3)}
 .legend span{display:inline-flex;align-items:center;gap:.35rem}
@@ -313,12 +371,73 @@ try{n?localStorage.setItem('smtheme',n):localStorage.removeItem('smtheme');}catc
 lbl();});
 try{var s=localStorage.getItem('smtheme');if(s)r.setAttribute('data-theme',s);}catch(e){}
 lbl();})();
+
+/* ---- per-state command popup ---------------------------------------- */
+(function(){
+  var DATA = window.SM_STATE_INFO || {};
+  var wrap = document.querySelector('.diagram');
+  if(!wrap) return;
+  var pop = document.createElement('div');
+  pop.className = 'pop'; pop.setAttribute('role','dialog');
+  wrap.appendChild(pop);
+  var openKey = null;
+
+  function rows(d){
+    var out = '';
+    (d.rows||[]).forEach(function(r){
+      out += '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>';
+    });
+    return out;
+  }
+  function close(){ pop.classList.remove('open'); openKey = null; }
+  function open(g){
+    var k = g.getAttribute('data-key'), d = DATA[k];
+    if(!d){ return; }
+    if(openKey === k){ close(); return; }
+    pop.innerHTML = '<button class="close" aria-label="Close">&times;</button>'
+      + '<h4>' + d.title + '</h4>'
+      + (d.value !== undefined && d.value !== null
+          ? '<p class="pv">STATE:' + d.value + '</p>' : '<p class="pv">&nbsp;</p>')
+      + '<dl>' + rows(d) + '</dl>';
+    pop.querySelector('.close').addEventListener('click', function(e){
+      e.stopPropagation(); close();
+    });
+    pop.classList.add('open'); openKey = k;
+
+    /* Position beside the box, in the .diagram's own coordinate space, and
+       flip to the left when it would spill past the scroll container. */
+    var rb = g.getBoundingClientRect(), rw = wrap.getBoundingClientRect();
+    var top = rb.top - rw.top + wrap.scrollTop + rb.height + 8;
+    var left = rb.left - rw.left + wrap.scrollLeft;
+    if(left + pop.offsetWidth > wrap.scrollWidth - 8){
+      left = Math.max(4, wrap.scrollWidth - pop.offsetWidth - 8);
+    }
+    if(top + pop.offsetHeight > wrap.scrollHeight - 4){
+      top = Math.max(4, rb.top - rw.top + wrap.scrollTop - pop.offsetHeight - 8);
+    }
+    pop.style.top = top + 'px'; pop.style.left = left + 'px';
+  }
+
+  wrap.querySelectorAll('g.has-info').forEach(function(g){
+    g.addEventListener('click', function(e){ e.stopPropagation(); open(g); });
+    g.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); open(g); }
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(!pop.contains(e.target)) close();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') close();
+  });
+})();
 """
 
 VIEWS = [
     ("auto-state-machine-current.html", "Current"),
     ("auto-state-machine-pause.html", "+ Pause / Continue"),
     ("auto-state-machine-retract-all.html", "+ Separate Retract-all"),
+    ("auto-state-machine-combined.html", "★ Combined target"),
 ]
 
 LEGEND = [
@@ -350,12 +469,30 @@ def legend_html(show_new=True):
     return "\n".join(o)
 
 
-def page(title, eyebrow, lede, here, body_html):
+def popup_data(states_list):
+    """JSON payload consumed by the popup JS. Emitted as a script tag rather
+    than inlined per element so the SVG markup stays readable."""
+    import json
+    out = {}
+    for s in states_list:
+        if not s.info:
+            continue
+        out[s.key] = {
+            "title": s.info.get("title", s.label),
+            "value": s.value,
+            "rows": s.info.get("rows", []),
+        }
+    return ("<script>window.SM_STATE_INFO = "
+            + json.dumps(out, ensure_ascii=False) + ";</script>")
+
+
+def page(title, eyebrow, lede, here, body_html, states_for_popups=None):
     nav = ['<nav class="views">']
     for fn, label in VIEWS:
         cls = ' class="here"' if fn == here else ""
         nav.append(f'<a href="{fn}"{cls}>{_esc(label)}</a>')
     nav.append("</nav>")
+    data = popup_data(states_for_popups) if states_for_popups else ""
     return "\n".join([
         "<!DOCTYPE html>", '<html lang="en">', "<head>", '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
@@ -366,6 +503,7 @@ def page(title, eyebrow, lede, here, body_html):
         "</header>", body_html,
         '<footer>Generated by <code>scripts/statediagram/build_state_diagrams.py</code>. '
         "Diagrams are hand-laid-out inline SVG — no external scripts, so these pages "
-        "open straight from the filesystem.</footer>",
-        "</div>", f"<script>{JS}</script>", "</body>", "</html>",
+        "open straight from the filesystem. Click any state box marked "
+        "<strong>i</strong> for the commands it drives.</footer>",
+        "</div>", data, f"<script>{JS}</script>", "</body>", "</html>",
     ])
