@@ -11,6 +11,21 @@ STRUCT
     // bulb cycle" -- only the robot's CMD:1 starts a cycle. Also driven by the
     // green PB3 in Automatic (see MAIN).
     bStart           : BOOL;
+    (* Operator "run ONE bulb from IDLE" -- the HMI parallel to holding the
+       orange PB2 + green PB3 combo, and to the robot's CMD:1. Momentary:
+       FB_MasterAutoCycle detects the rising edge and clears it.
+
+       Deliberately a SEPARATE field from bStart. bStart means "home and
+       arm" and is accepted in NOT_HOMED only; making it also mean "run a
+       bulb" in IDLE would give one symbol two meanings that differ by
+       state, which is exactly the shape that let a green-before-orange
+       combo press silently lose its bulb request (fixed 2026-08-05 by
+       removing START from IDLE -- do not put it back).
+
+       Also separate from bSimStartAssembly, which is the documented BENCH
+       stand-in for the robot. Two fields keep "an operator started a bulb"
+       and "someone simulated the robot" distinguishable in the log ring. *)
+    bStartCycle      : BOOL;
     bStop            : BOOL;
     bReset           : BOOL;
 
@@ -50,6 +65,13 @@ STRUCT
     bSimStep_SepRet        : BOOL;
     bSimStep_SepRetDwell   : BOOL;
     bSimStep_GripRet       : BOOL;
+    (* The RECOVER chain wants sim flags for the same reason the INIT chain
+       has them: all three are sensor-waiting states, so without these a
+       recovery cannot be stepped on a bench whose sensors are not wired.
+       Added 2026-08-05; the RECOVER states themselves shipped without them. *)
+    bSimStep_RecoverPushRet : BOOL;
+    bSimStep_RecoverSepRet  : BOOL;
+    bSimStep_RecoverGripRet : BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -62,7 +62,7 @@
             </o>
             <o>
               <v n="TextID">"1106"</v>
-              <v n="TextDefault">"Continuous"</v>
+              <v n="TextDefault">"START"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
@@ -667,7 +667,7 @@
             </o>
             <o>
               <v n="TextID">"1103"</v>
-              <v n="TextDefault">"START"</v>
+              <v n="TextDefault">"ENABLE AUTO"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
@@ -677,9 +677,9 @@
             </o>
           </l>
           <l n="Languages" t="ArrayList" />
-          <v n="GuidInit">{a42fae01-6bca-49b4-b1d5-488e4b25d278}</v>
-          <v n="GuidReInit">{5129e53a-a014-407c-afbc-dc2ed88930fe}</v>
-          <v n="GuidExitX">{8539b68f-34c2-460e-ae70-a848aabadd58}</v>
+          <v n="GuidInit">{a6002d15-623e-4faf-8ae5-e9be102d2cf2}</v>
+          <v n="GuidReInit">{0deb8ed5-e012-44f0-a003-854d03a1c3cf}</v>
+          <v n="GuidExitX">{3b4504fe-a0b4-4ace-8b97-a53cc8ba5169}</v>
         </o>
       </Data>
       <TypeList>

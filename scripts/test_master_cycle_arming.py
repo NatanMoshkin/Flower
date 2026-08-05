@@ -4,6 +4,7 @@ The 2026-07-29 change split "start" into two things with different owners:
 
     operator START  -> home the pistons and ARM      (stHmi.bStart, HMI or PB3)
     robot CMD:1     -> run ONE bulb cycle            (bExtStartPulse, IDLE only)
+    operator START  -> run ONE bulb cycle            (bStartCycle, IDLE only)
 
 so the machine cannot move after power-up, after Manual, or after a STOP until a
 human presses START, and once armed only the robot decides when a bulb runs.
@@ -78,7 +79,8 @@ class Fb:
         return Step.MANUAL if not bMachineAuto else self.eStep
 
     def scan(self, bMachineAuto=True, bExtStartPulse=False,
-             bStart=False, bStop=False, bReset=False, fault=False):
+             bStart=False, bStartCycle=False, bStop=False, bReset=False,
+             fault=False):
         """One PLC scan. bStart/bStop/bReset arrive already edge-detected, which
         is what the FB's R_TRIGs + auto-clear produce."""
 
@@ -119,7 +121,11 @@ class Fb:
             self.iErrorCode = 0
             # Only the robot (or its bench stand-in) starts a bulb. Note bStart
             # and bContinuous are NOT in this condition any more.
-            if bMachineAuto and bExtStartPulse:
+            # bStartCycle (2026-08-05) is the operator's own "run one bulb",
+            # the HMI parallel to the PB2+PB3 hold. It is a SEPARATE field from
+            # bStart precisely so that admitting it here does not re-create the
+            # two-meanings-one-symbol problem that got START removed.
+            if bMachineAuto and (bExtStartPulse or bStartCycle):
                 self.bHomeThenIdle = False
                 self.eStep = Step.INIT_PUSH_RETRACTING
             # bStart is IGNORED here since 2026-08-05. It used to re-home and
@@ -354,12 +360,67 @@ def t_chain_exit_follows_flag():
             f"bHomeThenIdle={flag} exited to {NAME[fb.eStep]}, want {NAME[target]}"
 
 
+def t_start_cycle_runs_a_bulb_from_idle():
+    """bStartCycle from IDLE runs a bulb -- the operator's parallel to CMD:1."""
+    fb = Fb()
+    fb.scan(bStart=True)
+    assert until(fb, Step.IDLE), "could not arm"
+    fb.scan(bStartCycle=True)
+    assert fb.eStep == Step.INIT_PUSH_RETRACTING, (
+        f"bStartCycle from IDLE went to {NAME[fb.eStep]}")
+    assert fb.bHomeThenIdle is False, "a bulb must not exit the chain at IDLE"
+    assert until(fb, Step.CHECK_PLATE), "did not carry on into the bulb"
+
+
+def t_start_cycle_refused_when_unarmed():
+    """...and does NOTHING from NOT_HOMED. Same rule as the robot's CMD:1: an
+    un-armed machine has pistons in unknown positions, so a bulb request has to
+    be refused no matter who sends it. This is the check that stops bStartCycle
+    quietly becoming a second arming command."""
+    fb = Fb()
+    assert fb.eStep == Step.NOT_HOMED
+    for _ in range(5):
+        fb.scan(bStartCycle=True)
+        assert fb.eStep == Step.NOT_HOMED, (
+            f"bStartCycle moved an un-armed machine to {NAME[fb.eStep]}")
+
+
+def t_start_cycle_refused_in_manual():
+    """And nothing starts in Manual, however the request arrives (no double
+    control -- bMachineAuto gates every arm of the IDLE condition)."""
+    fb = Fb()
+    fb.scan(bStart=True)
+    assert until(fb, Step.IDLE), "could not arm"
+    for _ in range(5):
+        fb.scan(bMachineAuto=False, bStartCycle=True)
+    assert fb.eStep == Step.NOT_HOMED, (
+        f"Manual should re-park at NOT_HOMED, got {NAME[fb.eStep]}")
+
+
+def t_start_cycle_refused_in_err():
+    """A bulb request must not clear a fault. Only RESET leaves ERR."""
+    fb = Fb()
+    fb.scan(bStart=True)
+    assert until(fb, Step.IDLE), "could not arm"
+    fb.scan(bExtStartPulse=True)
+    fb.scan(fault=True)
+    assert fb.eStep == Step.ERR, f"could not fault, at {NAME[fb.eStep]}"
+    for _ in range(5):
+        fb.scan(bStartCycle=True)
+        assert fb.eStep == Step.ERR, (
+            f"bStartCycle escaped ERR to {NAME[fb.eStep]}")
+
+
 TESTS = [
     ("boots into NOT_HOMED", t_boots_not_homed),
     ("robot cannot start an un-armed machine", t_robot_cannot_start_unarmed),
     ("operator START homes to IDLE", t_operator_start_homes_to_idle),
     ("START never runs a bulb cycle", t_start_never_runs_a_cycle),
     ("START is ignored in IDLE", t_start_is_ignored_in_idle),
+    ("bStartCycle runs a bulb from IDLE", t_start_cycle_runs_a_bulb_from_idle),
+    ("bStartCycle refused when un-armed", t_start_cycle_refused_when_unarmed),
+    ("bStartCycle refused in Manual", t_start_cycle_refused_in_manual),
+    ("bStartCycle refused in ERR", t_start_cycle_refused_in_err),
     ("robot runs a cycle once armed", t_robot_runs_cycle_once_armed),
     ("stays armed across consecutive cycles", t_stays_armed_across_cycles),
     ("bContinuous cannot start a cycle", t_continuous_cannot_start),

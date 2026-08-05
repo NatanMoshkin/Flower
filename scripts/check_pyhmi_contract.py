@@ -118,6 +118,17 @@ def pyhmi_symbols():
     # Write-only symbols never appear in the poll cycle.
     write += [rb.robot_param_symbol(f) for f in rb.ROBOT_REQUEST_FLAGS.values()]
     write += [rb.robot_param_symbol(f) for f in ("bSetParam", "sSetName", "nSetVal")]
+
+    # Master-auto commands and per-step sim flags. These were MISSING until
+    # 2026-08-05, and the omission mattered: they are this app's entire write
+    # path to the master cycle, so a renamed or retyped one of them is exactly
+    # the failure this script exists to catch. Nothing polls them, so nothing
+    # else would notice -- a sim button would just silently stop working, and
+    # pytest cannot see it because the mock has no PLC symbols at all.
+    write += [ma.master_auto_symbol(f) for f in
+              ("bStart", "bStop", "bReset",
+               ma.SIM_START_ASSEMBLY_FIELD, ma.START_CYCLE_FIELD)]
+    write += [ma.master_auto_symbol(f"bSimStep_{k}") for k, _ in ma.SIM_STEPS]
     return read, write
 
 

@@ -40,9 +40,12 @@
                              Manual, and on operator STOP. Reports STATE:40,
                              which the robot reads as "wait". Exits only on
                              operator START -> INIT chain, bHomeThenIdle TRUE.
-     IDLE                    Armed. bExtStartPulse (robot CMD:1) OR
-                             SimStartAssembly OR SimIdle -> INIT chain with
-                             bHomeThenIdle FALSE (a bulb cycle).
+     IDLE                    Armed. Any of bExtStartPulse (robot CMD:1, and also
+                             how the PB2+PB3 operator hold arrives), bStartCycle
+                             (operator "run one bulb" from an HMI), bSimStartAssembly
+                             (bench stand-in for the robot) or SimIdle -> INIT chain
+                             with bHomeThenIdle FALSE (a bulb cycle). Four ways in,
+                             logged distinctly so the ring says which.
                              Operator START here is IGNORED (2026-08-05).
                              It used to re-home and come back, which was a no-op
                              in outcome and let a green-before-orange press of
@@ -221,6 +224,7 @@ VAR
     fbTrigStop            : R_TRIG;
     fbTrigReset           : R_TRIG;
     fbTrigStartAssembly   : R_TRIG;
+    fbTrigStartCycle      : R_TRIG;
 
     (* Rising-edge detectors for per-step Sim flags. *)
     fbSim_Idle            : R_TRIG;
@@ -237,6 +241,9 @@ VAR
     fbSim_SepRet          : R_TRIG;
     fbSim_SepRetDwell     : R_TRIG;
     fbSim_GripRet         : R_TRIG;
+    fbSim_RecoverPushRet  : R_TRIG;
+    fbSim_RecoverSepRet   : R_TRIG;
+    fbSim_RecoverGripRet  : R_TRIG;
 
     (* Which exit the INIT retract chain takes when it completes:
          TRUE  -> IDLE         the chain was run to HOME the machine
@@ -276,6 +283,7 @@ fbTrigStart        (CLK := stHmi.bStart);
 fbTrigStop         (CLK := stHmi.bStop);
 fbTrigReset        (CLK := stHmi.bReset);
 fbTrigStartAssembly(CLK := stHmi.bSimStartAssembly);
+fbTrigStartCycle   (CLK := stHmi.bStartCycle);
 
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
 fbSim_InitPushRet (CLK := stHmi.bSimStep_InitPushRet);
@@ -291,6 +299,9 @@ fbSim_PushRetDwell(CLK := stHmi.bSimStep_PushRetDwell);
 fbSim_SepRet      (CLK := stHmi.bSimStep_SepRet);
 fbSim_SepRetDwell (CLK := stHmi.bSimStep_SepRetDwell);
 fbSim_GripRet     (CLK := stHmi.bSimStep_GripRet);
+fbSim_RecoverPushRet(CLK := stHmi.bSimStep_RecoverPushRet);
+fbSim_RecoverSepRet (CLK := stHmi.bSimStep_RecoverSepRet);
+fbSim_RecoverGripRet(CLK := stHmi.bSimStep_RecoverGripRet);
 
 (* ==========================================
    0b. AUTO-CLEAR ONE-SHOT FLAGS ON RISING EDGE
@@ -319,6 +330,16 @@ END_IF;
 IF fbTrigStartAssembly.Q THEN
     stHmi.bSimStartAssembly := FALSE;
     F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'Sim start pressed');
+END_IF;
+(* Operator cycle start. Logged with its own message so the ring tells you
+   WHO asked for the bulb: this, 'Sim start pressed' (bench stand-in for the
+   robot), 'External start pulse' (the real robot, or the PB2+PB3 hold, both
+   arriving as bExtStartPulse) and 'START pressed' (arming) are four
+   different events and a fault report needs to tell them apart. *)
+IF fbTrigStartCycle.Q THEN
+    stHmi.bStartCycle := FALSE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name,
+               sMsg := 'Operator cycle start');
 END_IF;
 IF bExtStartPulse THEN
     F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'External start pulse');
@@ -507,8 +528,16 @@ CASE stHmi.eStep OF
            removed from this condition. That is the point of the whole arming
            model: START means "home and arm", and Continuous would re-arm with
            nothing external gating it at all. What is left is the robot's CMD:1
-           (arriving as bExtStartPulse), its bench stand-in
+           (arriving as bExtStartPulse -- which is also how the PB2+PB3 hold
+           arrives), the operator's own bStartCycle, its bench stand-in
            bSimStartAssembly, and the per-step sim flag.
+
+           bStartCycle is a SEPARATE field from bStart on purpose, and the
+           distinction is the whole reason START was removed from here: bStart
+           means "home and arm" in NOT_HOMED, so overloading it to also mean
+           "run a bulb" in IDLE would restore the two-meanings-one-symbol
+           problem that let a green-before-orange combo press lose its
+           request. A separate command cannot be misread by state.
 
            Still gated by bMachineAuto: in Manual nothing starts, even on a
            robot pulse (no double-control).
@@ -518,7 +547,8 @@ CASE stHmi.eStep OF
            retracted the three INIT states self-satisfy on the next scan, so it
            costs nothing per bulb. bHomeThenIdle FALSE routes the chain's exit
            on to CHECK_PLATE and the rest of the cycle. *)
-        IF bMachineAuto AND (bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q) THEN
+        IF bMachineAuto AND (bExtStartPulse OR fbTrigStartCycle.Q
+                             OR fbTrigStartAssembly.Q OR fbSim_Idle.Q) THEN
             bHomeThenIdle := FALSE;
             stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;
@@ -829,7 +859,7 @@ CASE stHmi.eStep OF
             bPushCmdRetract[i] := TRUE;
         END_FOR;
 
-        IF bAllPushRetracted OR (stCfg.bNoSensors AND tonStep.Q) THEN
+        IF bAllPushRetracted OR fbSim_RecoverPushRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.RECOVER_SEP_RETR;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 12;
@@ -844,7 +874,7 @@ CASE stHmi.eStep OF
             bSepCmdRetract[i] := TRUE;
         END_FOR;
 
-        IF bAllSepRetracted OR (stCfg.bNoSensors AND tonStep.Q) THEN
+        IF bAllSepRetracted OR fbSim_RecoverSepRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.RECOVER_GRIP_RETR;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 13;
@@ -859,7 +889,7 @@ CASE stHmi.eStep OF
             bGripCmdRetract[i] := TRUE;
         END_FOR;
 
-        IF bAllGripRetracted OR (stCfg.bNoSensors AND tonStep.Q) THEN
+        IF bAllGripRetracted OR fbSim_RecoverGripRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.eStep := E_MasterAutoStep.IDLE;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 14;

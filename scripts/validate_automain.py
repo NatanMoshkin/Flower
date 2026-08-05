@@ -27,7 +27,12 @@ M_TAP = "1186196937L"      # Button: tap input bool
 # label -> (element type, bound variable or None, member id holding it)
 EXPECTED = {
     "Auto Main":                ("VisuFbElemSimple", None,                       None),
-    "START":                    ("VisuFbElemButton", "stMasterAutoCycle.bStart", M_TAP),
+    # START was split in two on 2026-08-05. The caption moved, the symbol did
+    # not: bStart still means "home and arm" and is accepted in NOT_HOMED only,
+    # so the button that writes it now reads ENABLE AUTO. The button captioned
+    # START writes the new bStartCycle and runs one bulb from IDLE.
+    "ENABLE AUTO":              ("VisuFbElemButton", "stMasterAutoCycle.bStart", M_TAP),
+    "START":                    ("VisuFbElemButton", "stMasterAutoCycle.bStartCycle", M_TAP),
     "STOP":                     ("VisuFbElemButton", "stMasterAutoCycle.bStop",  M_TAP),
     "RESET":                    ("VisuFbElemButton", "stMasterAutoCycle.bReset", M_TAP),
     # No "Continuous" row. That checkbox was deliberately deleted on 2026-07-27

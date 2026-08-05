@@ -65,9 +65,73 @@
 
   </details>
 
-- **Rename START → ENABLE AUTO on both HMIs, and add a real START that runs a
-  bulb from `IDLE` (the HMI equivalent of the two-PB combo).** Applies to
-  FlowerPyHmi *and* the panel's classic VISU.
+- ~~**Rename START → ENABLE AUTO on both HMIs, and add a real START that runs
+  a bulb from `IDLE`.**~~ **IMPLEMENTED 2026-08-05, NOT YET COMPILED** — done
+  together with the RECOVER sim flags below, so the panel needs **one** build
+  rather than two.
+
+  | Layer | What changed |
+  |---|---|
+  | `ST_HmiMasterAuto` | new `bStartCycle` (operator "run one bulb") |
+  | `FB_MasterAutoCycle` | `fbTrigStartCycle` OR-ed into `IDLE`'s exit; auto-clear + its own `'Operator cycle start'` log line |
+  | `AutoMain.TcVIS` | `bStart` button relabelled **ENABLE AUTO**; new **START** button → `bStartCycle` at (300,255), by `scripts/add_automain_start_cycle_button.py` |
+  | FlowerPyHmi | captions, `START_CYCLE_FIELD`, `/api/master_auto/start_cycle`, mock, docs |
+
+  **The symbol did NOT move — only the caption.** `bStart` still means "home
+  and arm" and is still accepted in `NOT_HOMED` only. Renaming the symbol
+  would have broken every binding, the contract check and the tests, for a
+  label.
+
+  **Why a new field instead of re-admitting `fbTrigStart.Q` to `IDLE`:** one
+  symbol meaning "arm" in one state and "run a bulb" in another is exactly
+  the shape that let a green-before-orange combo press silently lose its bulb
+  request. This restores the capability without restoring the defect. Four
+  cases in `test_master_cycle_arming.py` guard it (20/20): runs a bulb from
+  `IDLE`, refused when un-armed, refused in Manual, refused in `ERR`.
+
+  Two side findings, both recorded in their own right:
+
+  - **`check_pyhmi_contract.py` was not checking the write path at all.** Its
+    write-only set covered robot symbols only — never the master-auto
+    commands and never *any* of the 15 `bSimStep_*` symbols. So a renamed sim
+    symbol would have sailed straight through the one check that exists to
+    catch that, and `pytest` cannot see it because the mock has no PLC symbols.
+    Now covered: **254/254**, write-only 5 → 27.
+  - `validate_automain.py` **caught the relabel**, which is what it is for.
+    Its table now expects `ENABLE AUTO` → `bStart` and `START` →
+    `bStartCycle`. 24 elements.
+
+  The new VISU button reuses `TextID 1106`, orphaned when the Continuous
+  checkbox was deleted on 2026-07-27 — verified unreferenced first; 1107 and
+  1108 are live.
+
+- **Sim-step flags for the `RECOVER_*` chain.** **IMPLEMENTED 2026-08-05, NOT
+  YET COMPILED** — same build as the START split above.
+
+  The `RECOVER_*` states shipped on 2026-08-05 **without** sim flags, which was
+  an omission rather than a decision: all three are sensor-waiting states exactly
+  like the `INIT_*` chain, which has them. The consequence was that a recovery
+  could not be stepped at all on a bench with unwired sensors — the only options
+  were setting `bNoSensors` or asserting the retract sensors over ADS by hand
+  (which is what `tools/live_api_check.py` has to do).
+
+  Three `bSimStep_Recover{Push,Sep,Grip}Ret` fields, three `R_TRIG`s, three guard
+  terms, three FlowerPyHmi buttons (`REC PUSH RET` / `REC SEP RET` /
+  `REC GRIP RET`, placed at the end of the sim row rather than in cycle order,
+  because the chain is only reachable by RESET out of `ERR`).
+
+  **Answering the question that prompted this:** FlowerPyHmi's sim buttons were
+  *already* current — 14 buttons for the 15 flags the PLC declared, correctly
+  omitting the retired `bSimStep_WaitPos2`. The gap was in the PLC, not the HMI.
+
+  Guard edits had to be scoped to Section 4: Section 3's timer `CASE` groups the
+  three `RECOVER_*` labels on one line, and its **last** label is followed by a
+  colon too — so a whole-file search for `RECOVER_GRIP_RETR:` lands on the timer
+  entry instead of the state body. Worth knowing for any future per-state edit.
+
+  A new live check covers each flag where it cannot be confused with a sensor:
+  emulator paused, push retract sensors withheld, chain stuck — so if it advances,
+  the flag was honoured.
 
   **Label-only on the rename — do not rename the PLC symbol.** The field stays
   `stHmi.bStart`; only the button text becomes `ENABLE AUTO`. Same trap as
