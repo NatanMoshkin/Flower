@@ -34,16 +34,10 @@ _(active TODOs land here; deferred items go under "Out of scope
 
   **Two operator-facing consequences worth knowing:**
 
-  1. **Press ORANGE before GREEN for the combo — and it is not cosmetic.** The
-     standalone PB3 START edge is suppressed while PB2 is held, so the combo
-     cannot fire a START on its way in. Green-first does fire one, and the
-     machine re-homes; what happens to the cycle request then depends on how
-     long that takes. **Both outcomes measured on the PLC 2026-08-05:** if
-     homing finishes inside the hold (bench, ~30 ms) you get a pointless
-     re-home *and then* the cycle; if it is still homing when the hold
-     completes (measured 2.33 s chain vs 1 s hold) the pulse lands in
-     `INIT_SEP_RETRACTING`, is **silently dropped**, and no bulb runs. See the
-     next TODO.
+  1. **Button order for the combo does not matter.** `START` in `IDLE` is
+     ignored, so a stray green press cannot move the machine and the combo's
+     pulse always lands in the branch that consumes it. That was not true until
+     2026-08-05 — see the PANEL HARDWARE section for the defect it fixed.
   2. **PB1's LED blinks while the STOP hold counts**, so a hold-to-act button
      is not silent guesswork.
 
@@ -120,23 +114,16 @@ _(active TODOs land here; deferred items go under "Out of scope
   generates them and nothing should be read from them.
   `docs/index.html` links everything with a status badge per entry.
 
-- **The PB2+PB3 combo request can be silently lost.** `bComboStartPulse` is a
-  one-scan pulse and `bExtStartPulse` is consumed **only** by the `IDLE` branch,
-  so a pulse that lands while the machine is anywhere else is dropped. Because
-  `fbTrigPbCombo` is an `R_TRIG` on the hold timer, it fires **once per press** —
-  holding longer does not re-offer it. Reproduced on the live PLC: with homing
-  slowed to 2.33 s against a 1 s hold, green-first gave `IDLE → INIT_* → IDLE`
-  and no cycle.
+- ~~The PB2+PB3 combo request can be silently lost~~ **FIXED 2026-08-05 by
+  removing `START` in `IDLE`.** `bComboStartPulse` is still a one-scan pulse and
+  `bExtStartPulse` is still consumed only by the `IDLE` branch — but nothing can
+  now move the machine out of `IDLE` except a genuine start, so the pulse cannot
+  land somewhere that ignores it. Fixed at the cause rather than by latching the
+  pulse, which was the other option considered.
 
-  Nothing is unsafe about it — a lost request means nothing happens — but it is
-  a fumbled gesture with no feedback, which operators will read as a broken
-  button. Contrast the robot's `CMD:1`, which self-heals because the robot
-  re-asserts it on every keep-alive.
-
-  Fix, if wanted: latch the request while both buttons remain held and consume
-  it when `IDLE` is next reached, rather than pulsing once. That is the same
-  level-consume-and-clear shape MAIN already uses for `nRobotCmd`. Cheap, but it
-  changes a start path, so it wants its own commit and a `pb_test` case.
+  Worth keeping in mind if a future change ever adds a way to leave `IDLE`
+  without a start: the pulse would become droppable again, and the latch would
+  then be the right fix.
 
 - **`scripts/validate_automain.py` is stale** — it fails on
   `missing element 'Continuous'`, but that checkbox was deliberately deleted on
@@ -449,7 +436,7 @@ section below for the reasoning; the short version:
 
 | Trigger | Means | Valid from |
 |---|---|---|
-| operator START (`stHmi.bStart`, HMI button or green **PB3** in Auto) | home the pistons and **arm** | `NOT_HOMED`, `IDLE` |
+| operator START (`stHmi.bStart`, HMI button or green **PB3** in Auto) | home the pistons and **arm** | `NOT_HOMED` only — ignored in `IDLE` since 2026-08-05 |
 | robot `CMD:1` (`bExtStartPulse`) | run **one bulb cycle** | `IDLE` only |
 
 **Sixteen-state state machine** (`E_MasterAutoStep`; `WAIT_POS2` value
@@ -466,8 +453,11 @@ NOT_HOMED (40)          In Automatic but NOT armed. Entered on power-up (the
 IDLE (0)                Armed. Waits for bExtStartPulse (robot CMD:1) OR
                         bSimStartAssembly OR bSimStep_Idle -> INIT chain with
                         bHomeThenIdle FALSE (a bulb cycle). Operator START here
-                        re-homes instead (bHomeThenIdle TRUE), which is harmless
-                        and keeps START's meaning identical everywhere.
+                        is IGNORED (2026-08-05) -- logged by Section 0b and
+                        nothing else. It used to re-home and come back; that was
+                        a no-op in outcome and it let a green-before-orange combo
+                        press lose the bulb request. See the PANEL HARDWARE
+                        section.
                         nStateOut = 0 so the robot sees "armed, send me a bulb".
                         NOTE fbTrigStart.Q and stCfg.bContinuous were both
                         REMOVED from this exit condition — that is what makes
@@ -861,7 +851,7 @@ worked. The latch bug had been masking them.
 
 | Trigger | Means | Valid from |
 |---|---|---|
-| operator START — `stHmi.bStart`, HMI button or green PB3 in Auto | home the pistons and **arm** | `NOT_HOMED`, `IDLE` |
+| operator START — `stHmi.bStart`, HMI button or green PB3 in Auto | home the pistons and **arm** | `NOT_HOMED` only — ignored in `IDLE` since 2026-08-05 |
 | robot `CMD:1` — `bExtStartPulse` | run **one bulb cycle** | `IDLE` only |
 
 So the machine cannot move after power-up, after Manual, or after a STOP until a
@@ -1202,11 +1192,21 @@ time; `.Q` is a level, so each is edge-detected to fire once per press. Both
 durations live in `stMasterAutoCfg` and are editable on `AutoMain` (rows y=375
 and y=415, added by `scripts/add_automain_pb_timers.py`).
 
-**PRESS ORANGE BEFORE GREEN.** The standalone PB3 START edge is suppressed
-while PB2 is held (`AND NOT GVL_App.bPb2`), so the combo cannot fire a START on
-its way in. Pressing green first gives a plain START, which from `IDLE` is a
-harmless re-home rather than a bulb. Verified on the PLC — `G3` is PB3 alone
-re-homing, `G4` is the combo entering `CHECK_PLATE`.
+**BUTTON ORDER NO LONGER MATTERS — and removing the reason is why.** Until
+2026-08-05, `START` in `IDLE` re-homed and came back. Pressing GREEN before
+ORANGE therefore fired a START, and the combo's one-scan `bExtStartPulse` could
+land while `eStep` was mid `INIT_*` chain — where **nothing consumes it** — so
+the bulb request was **silently dropped**. Measured on the PLC: with homing
+slowed to 2.33 s against a 1 s hold, the chain was `IDLE → INIT_* → IDLE` and no
+cycle ran.
+
+`START` in `IDLE` is now **ignored**, so a stray green press cannot move the
+machine out of `IDLE` and the pulse always lands where something consumes it.
+Either order works. `pb_test` `G5` is the regression guard.
+
+MAIN still suppresses the standalone START edge while PB2 is held
+(`AND NOT GVL_App.bPb2`). That is now only about keeping the log clean — one
+combo press, no spurious `START pressed` entry.
 
 **NO manual jog in ANY Automatic state (operator decision, 2026-08-05).** An
 `ERR` jog window shipped on 2026-08-04 and was removed the next day: manual

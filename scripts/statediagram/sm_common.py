@@ -64,7 +64,8 @@ def main_states(relabel=None, reclass=None):
             for k, lb, v, c, r in MAIN_ROWS]
 
 
-def core_edges(by, err_key="ERR", fault_arrow_on=None):
+def core_edges(by, err_key="ERR", fault_arrow_on=None,
+               idle_start_rehome=True):
     """Everything common to all three diagrams: the homing chain, the bulb
     cycle, the cycle return, the fault bus and the two global overrides."""
     e = []
@@ -77,10 +78,15 @@ def core_edges(by, err_key="ERR", fault_arrow_on=None):
 
     # the two IDLE exits — the reason bHomeThenIdle exists
     e.append(Edge("IDLE:s", "INIT_PUSH:n", kind="seq", label="robot CMD:1"))
-    e.append(Edge("IDLE:e", "INIT_PUSH:e", kind="op", label="START (re-home)",
-                  via=[(COL1_X + BOX_W + 40, by["IDLE"].cy),
-                       (COL1_X + BOX_W + 40, by["INIT_PUSH"].cy)],
-                  label_at=(COL1_X + BOX_W + 48, by["IDLE"].cy + 34), label_side="r"))
+    # Removed from the machine 2026-08-05: START in IDLE now does nothing. The
+    # archived proposal pages still show it, because it existed when they were
+    # written.
+    if idle_start_rehome:
+        e.append(Edge("IDLE:e", "INIT_PUSH:e", kind="op", label="START (re-home)",
+                      via=[(COL1_X + BOX_W + 40, by["IDLE"].cy),
+                           (COL1_X + BOX_W + 40, by["INIT_PUSH"].cy)],
+                      label_at=(COL1_X + BOX_W + 48, by["IDLE"].cy + 34),
+                      label_side="r"))
 
     e.append(Edge("INIT_PUSH:s", "INIT_SEP:n", label="all 3 push retracted"))
     e.append(Edge("INIT_SEP:s", "INIT_GRIP:n", label="all 3 sep retracted"))
@@ -342,7 +348,7 @@ OPERATOR = {
          + _NO_COMBO)],
     "IDLE": [
         (_pb("PB2+PB3 held → run ONE bulb (= robot CMD:1)")
-         + _pb("PB3 alone → START: re-home, NOT a bulb")
+         + _pbno("PB3 alone → logs 'START pressed', no effect: already armed")
          + _STOP_WORKS + _NO_RESET)],
     "ERR": [
         (_pb("PB2 → RESET: enter the RECOVER chain")

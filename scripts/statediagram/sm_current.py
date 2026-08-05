@@ -34,7 +34,8 @@ def build_states():
 
 def build_edges(states):
     by = {s.key: s for s in states}
-    e = core_edges(by)
+    # START in IDLE was removed 2026-08-05, so that edge is gone here.
+    e = core_edges(by, idle_start_rehome=False)
     e.append(Edge("ERR:s", "REC_PUSH:n", kind="recover",
                   label="RESET — HMI, orange PB2, or robot CMD:2"))
     e.append(Edge("REC_PUSH:s", "REC_SEP:n", kind="recover", label="push retracted"))
@@ -87,8 +88,11 @@ as &ldquo;wait&rdquo;.</p>
 <h3>The <code>INIT_*</code> chain still has three callers</h3>
 <p>Arming from <code>NOT_HOMED</code>, re-homing from <code>IDLE</code>, and the
 front half of every bulb cycle. <code>bHomeThenIdle</code> still picks which of
-the two exits <code>INIT_GRIP_RETRACTING</code> takes — but it is down from four
-writers to three, because fault recovery no longer borrows this chain.</p>
+the two exits <code>INIT_GRIP_RETRACTING</code> takes — but it is down from four writers to
+<strong>two</strong>: fault recovery no longer borrows this chain, and START in
+<code>IDLE</code> no longer enters it. What remains is
+<code>FALSE</code> = a bulb (from <code>IDLE</code>) and <code>TRUE</code> =
+arming (from <code>NOT_HOMED</code>).</p>
 <p>It still has <strong>no initialiser</strong>, so its cold-boot value
 <code>FALSE</code> is the &ldquo;run a bulb&rdquo; direction. Nothing is broken —
 all three entry points write it — but the fail-safe default points the wrong way.
@@ -109,7 +113,8 @@ a brushed sleeve. Durations are editable on <code>AutoMain</code>.</p>
         <code>NOT_HOMED</code>. LED1 blinks while the hold counts.</td>
     <td>in <code>ERR</code>: <strong>RESET</strong> (edge).<br>
         with PB3: half of the start combo.</td>
-    <td><strong>START</strong> (edge) — home and arm.</td></tr>
+    <td><strong>START</strong> (edge) — home and arm. Ignored once armed,
+        and ignored mid-cycle.</td></tr>
 <tr><td><strong>PB2 + PB3 together</strong></td>
     <td colspan="3"><strong>held <code>tPbStartHoldMs</code> from
     <code>IDLE</code></strong> → run ONE bulb. The operator's parallel to the
@@ -117,27 +122,24 @@ a brushed sleeve. Durations are editable on <code>AutoMain</code>.</p>
     input.</td></tr>
 </tbody></table></div>
 <div class="callout">
-<h3>Press ORANGE before GREEN — and it is not merely cosmetic</h3>
-<p>The standalone PB3 START edge is suppressed while PB2 is held, so the combo
-cannot fire a START on its way in. Press green first, though, and the START fires
-before PB2 arrives: the machine re-homes. What happens to the cycle request then
-depends on timing, and <strong>both outcomes were measured on the PLC</strong>:</p>
-<ul>
-<li><strong>Homing finishes before the hold completes</strong> (bench case, ~30 ms
-with the pistons already home): the combo pulse lands while <code>eStep</code> is
-back at <code>IDLE</code>, so you get a pointless re-home <em>and then</em> the
-cycle. Observed chain:
-<code>IDLE → INIT_* → IDLE → INIT_* → CHECK_PLATE</code>.</li>
-<li><strong>Homing is still running when the hold completes</strong> (measured with
-a 2.33 s chain against a 1 s hold): the pulse fires while <code>eStep</code> is
-<code>INIT_SEP_RETRACTING</code>. <code>bExtStartPulse</code> is consumed
-<em>only</em> by the <code>IDLE</code> branch, so it is <strong>silently
-dropped</strong> — and because the combo's <code>R_TRIG</code> fires once per
-press, holding longer does not help. Observed chain:
-<code>IDLE → INIT_* → IDLE</code>, no bulb.</li>
-</ul>
-<p>On the machine, with real strokes, the second case is the one to expect. That
-makes the button order functional rather than cosmetic.</p>
+<h3>Button order no longer matters — and that is the point</h3>
+<p>Until 2026-08-05 <code>START</code> in <code>IDLE</code> re-homed and came
+back. That was a no-op in outcome — nothing can disturb a piston while the
+machine sits in <code>IDLE</code> — but it cost a real defect: pressing GREEN
+before ORANGE fired a START, and the combo's one-scan
+<code>bExtStartPulse</code> could then land while <code>eStep</code> was mid
+<code>INIT_*</code> chain, where nothing consumes it. The bulb request was
+<strong>silently dropped</strong>. Measured on the PLC: with homing slowed to
+2.33&nbsp;s against a 1&nbsp;s hold, the observed chain was
+<code>IDLE → INIT_* → IDLE</code> and no cycle ran.</p>
+<p><strong>START in <code>IDLE</code> is now ignored</strong>, so the machine
+cannot leave <code>IDLE</code> on a stray green press and the pulse always lands
+in the branch that consumes it. Either button order works. The press is still
+logged as <code>START pressed</code>, so it is visible without being
+mysterious.</p>
+<p>MAIN still suppresses the standalone START edge while PB2 is held. That is now
+only about keeping the log clean — one combo press, no spurious
+<code>START pressed</code> entry.</p>
 </div>
 <p><strong>Manual moves are available in Manual mode only.</strong> An ERR jog
 window existed briefly (2026-08-04) and was removed the next day by operator
@@ -154,8 +156,9 @@ decision. <code>scripts/test_piston_jog_gate.py</code> and
     <td class="m">bMachineAuto AND (bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q)</td>
     <td class="m">INIT_PUSH_RETRACTING</td>
     <td class="m">bHomeThenIdle := <strong>FALSE</strong></td></tr>
-<tr><td class="m">IDLE</td><td class="m">bMachineAuto AND fbTrigStart.Q</td>
-    <td class="m">INIT_PUSH_RETRACTING</td><td class="m">bHomeThenIdle := TRUE</td></tr>
+<tr><td class="m">IDLE</td><td class="m">fbTrigStart.Q</td>
+    <td class="m"><strong>&mdash; ignored</strong></td>
+    <td class="m">logged only; removed 2026-08-05</td></tr>
 <tr><td class="m">INIT_GRIP_RETRACTING</td>
     <td class="m">grip retracted AND bHomeThenIdle</td>
     <td class="m">IDLE</td><td class="m">—</td></tr>

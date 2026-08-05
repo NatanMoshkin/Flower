@@ -215,16 +215,22 @@ def run(net_id):
         jog_group_moves(p, 2, "D2", False, "in Auto/IDLE")
         jog_group_moves(p, 3, "D3", False, "in Auto/IDLE")
 
+        # START in IDLE is IGNORED since 2026-08-05 -- it used to re-home. The
+        # press is still logged, so "logged but no transition" is the pass.
         idx0 = p.log_idx()
         p.press(3)
         p.release(3)
-        reached = p.wait_step(0, timeout=5)
+        time.sleep(0.4)
         entries = p.log_since(idx0)
-        want = ["IDLE"] + HOMING + ["IDLE"]
         got = transitions(entries)
-        record("D4", "PB3 in IDLE re-homes, it does NOT run a bulb cycle",
-               " -> ".join(want), " -> ".join(got) or "(no transition logged)",
-               reached and got == want, evidence=fmt_log(entries))
+        logged = any("START" in e["msg"].upper() for e in entries)
+        record("D4", "PB3 in IDLE does NOTHING (no re-home, no bulb)",
+               "IDLE throughout, press logged",
+               f"{p.step_name()}, transitions: "
+               f"{' -> '.join(got) if got else 'none'}, "
+               f"logged: {logged}",
+               p.step_name() == "IDLE" and not got and logged,
+               evidence=fmt_log(entries))
 
         # ================================================================
         group("E", "Automatic + ERR — manual moves must be REFUSED",
@@ -313,14 +319,18 @@ def run(net_id):
         p.release(3)
         assert p.wait_step(0), "could not re-arm with PB3"
 
+        # PB3 alone must not move the machine. THAT is what makes the combo
+        # reliable: a green-before-orange press cannot leave IDLE, so the
+        # combo's one-scan pulse always lands where something consumes it.
         idx0 = p.log_idx()
         p.press(3)
         p.release(3)
-        p.wait_step(0, timeout=5)
+        time.sleep(0.4)
         got = transitions(p.log_since(idx0))
-        want = ["IDLE"] + HOMING + ["IDLE"]
-        record("G3", "PB3 alone from IDLE re-homes, it does NOT run a bulb",
-               " -> ".join(want), " -> ".join(got) or "(none)", got == want)
+        record("G3", "PB3 alone from IDLE does nothing — no state change",
+               "IDLE, no transitions", f"{p.step_name()}, "
+               f"{' -> '.join(got) if got else 'no transitions'}",
+               p.step_name() == "IDLE" and not got)
 
         # The claim under test is "the combo starts a BULB, not a re-home".
         # Entering CHECK_PLATE is exactly that claim: it is the bulb-cycle exit
@@ -342,6 +352,36 @@ def run(net_id):
         record("G4", "PB2+PB3 held starts a BULB from IDLE, not a re-home",
                " -> ".join(want) + " ...", " -> ".join(got) or "(none)",
                reached and got[:len(want)] == want, evidence=fmt_log(entries))
+
+        # G5 -- the regression that removing START-in-IDLE was for. Pressing
+        # GREEN first used to fire a re-home, and the combo pulse could then
+        # land mid-chain where nothing consumes it, silently losing the bulb.
+        p.release_all_pbs()
+        p.park_all_home()
+        p.set_plate(True)
+        if p.step() == 99:
+            p.w("GVL_HMI.stMasterAuto.bReset", True, BOOL)
+            p.wait_step(0, timeout=10)
+        if p.step_name() != "IDLE":
+            p.w("GVL_HMI.stMasterAuto.bStop", True, BOOL)
+            time.sleep(0.3)
+            p.press(3)
+            p.release(3)
+            p.wait_step(0, timeout=10)
+        idx0 = p.log_idx()
+        p.w("GVL_IO.dIn[%d]" % PB_DI[3], True, BOOL)     # GREEN first
+        time.sleep(0.2)
+        p.w("GVL_IO.dIn[%d]" % PB_DI[2], True, BOOL)     # then ORANGE
+        time.sleep(hold_start + 0.4)
+        p.release_all_pbs()
+        reached = p.wait_step([20, 21], timeout=15)
+        entries = p.log_since(idx0)
+        got = transitions(entries)
+        record("G5", "GREEN-before-ORANGE still starts the bulb (no lost request)",
+               "reaches CHECK_PLATE with no spurious re-home first",
+               " -> ".join(got) or "(none)",
+               reached and got[:1] == ["IDLE"] and "CHECK_PLATE" in got,
+               evidence=fmt_log(entries))
 
         log_tail = p.log_head(20)
 

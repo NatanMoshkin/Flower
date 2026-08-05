@@ -63,9 +63,10 @@ def blocks():
                "החזק כדי להוציא את <strong>פיני ההפרדה</strong>.")],
              [(GRN, GRN_H),
               ("Press once to <strong>START</strong> — the machine homes itself "
-               "and is then ready.",
+               "and is then ready. Once it is ready, pressing it again does "
+               "nothing.",
                "לחץ פעם אחת כדי <strong>להתחיל</strong> — המכונה מאפסת את "
-               "מקומה ואז מוכנה."),
+               "מקומה ואז מוכנה. לאחר שהיא מוכנה, לחיצה נוספת אינה עושה דבר."),
               ("Hold to move the <strong>push pins</strong> out.",
                "החזק כדי להוציא את <strong>פיני הדחיפה</strong>.")],
              [(ORG + " + " + GRN, ORG_H + " + " + GRN_H),
@@ -237,19 +238,15 @@ def blocks():
           f"מ<code>IDLE</code> (נורית ירוקה קבועה), <strong>החזק {ORG_H} "
           f"ו{GRN_H} יחד שנייה אחת</strong>. המכונה מבצעת מחזור אחד בדיוק "
           "וחוזרת למצב מוכן."),
-        Note("warn", "Press ORANGE first, then GREEN",
-             "לחץ קודם על הכתום, אחר כך על הירוק",
-             f"Pressing {GRN} first is read as a plain START, so the machine "
-             "re-homes. What happens next depends on how long that takes: if it "
-             "finishes quickly the cycle still runs afterwards, but if it is "
-             "still homing when the hold completes, <strong>your request is "
-             "lost</strong> and nothing runs. Release both and press again, "
-             "orange first.",
-             f"לחיצה על {GRN_H} תחילה נקראת כהתחלה רגילה, ולכן המכונה מאפסת "
-             "מקום. מה שקורה אחר כך תלוי בכמה זמן זה לוקח: אם זה מסתיים מהר "
-             "המחזור עדיין ירוץ אחר כך, אך אם המכונה עדיין מאפסת מקום כשההחזקה "
-             "מסתיימת, <strong>הבקשה שלך אובדת</strong> ושום דבר לא ירוץ. שחרר "
-             "את שניהם ולחץ שוב, כתום קודם."),
+        Note("info", "Either order works",
+             "כל סדר לחיצה עובד",
+             f"Press them in whichever order suits you — what matters is that "
+             f"<strong>both are held together</strong> for the full second. "
+             f"Pressing {GRN} on its own while the machine is already ready does "
+             "nothing at all.",
+             f"לחץ עליהם בכל סדר שנוח לך — מה שחשוב הוא ש<strong>שניהם יוחזקו "
+             f"יחד</strong> למשך שנייה שלמה. לחיצה על {GRN_H} לבד כשהמכונה כבר "
+             "מוכנה אינה עושה דבר."),
 
         # ---------------------------------------------------------------- 9
         H("9 &middot; Safety", "9 &middot; בטיחות", anchor="safety"),

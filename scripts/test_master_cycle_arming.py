@@ -122,9 +122,10 @@ class Fb:
             if bMachineAuto and bExtStartPulse:
                 self.bHomeThenIdle = False
                 self.eStep = Step.INIT_PUSH_RETRACTING
-            elif bMachineAuto and bStart:
-                self.bHomeThenIdle = True          # re-home, harmless
-                self.eStep = Step.INIT_PUSH_RETRACTING
+            # bStart is IGNORED here since 2026-08-05. It used to re-home and
+            # come back; that was a no-op in outcome and it let a green-before-
+            # orange combo press drop the bulb request, because leaving IDLE
+            # meant nothing consumed the one-scan pulse. See the FB comment.
 
         elif self.eStep == Step.INIT_GRIP_RETRACTING:
             # The one place the two callers diverge.
@@ -198,6 +199,24 @@ def t_operator_start_homes_to_idle():
     assert fb.eStep == Step.INIT_PUSH_RETRACTING
     assert until(fb, Step.IDLE), f"homing did not reach IDLE ({NAME[fb.eStep]})"
     assert fb.nCyclesCompleted == 0, "homing must not count as a bulb"
+
+
+def t_start_is_ignored_in_idle():
+    """START in IDLE must do NOTHING -- not even a harmless re-home.
+
+    This is what makes the PB2+PB3 bulb-start combo reliable: if a stray green
+    press cannot move the machine out of IDLE, the combo's one-scan pulse always
+    lands in the one branch that consumes it."""
+    fb = Fb()
+    fb.scan(bStart=True)
+    assert until(fb, Step.IDLE), "could not arm"
+    for _ in range(5):
+        fb.scan(bStart=True)
+        assert fb.eStep == Step.IDLE,             f"START moved an armed machine to {NAME[fb.eStep]}"
+    # ...and the robot can still start a bulb straight afterwards
+    fb.scan(bExtStartPulse=True)
+    assert fb.eStep == Step.INIT_PUSH_RETRACTING
+    assert fb.bHomeThenIdle is False, "a bulb must take the CHECK_PLATE exit"
 
 
 def t_start_never_runs_a_cycle():
@@ -340,6 +359,7 @@ TESTS = [
     ("robot cannot start an un-armed machine", t_robot_cannot_start_unarmed),
     ("operator START homes to IDLE", t_operator_start_homes_to_idle),
     ("START never runs a bulb cycle", t_start_never_runs_a_cycle),
+    ("START is ignored in IDLE", t_start_is_ignored_in_idle),
     ("robot runs a cycle once armed", t_robot_runs_cycle_once_armed),
     ("stays armed across consecutive cycles", t_stays_armed_across_cycles),
     ("bContinuous cannot start a cycle", t_continuous_cannot_start),

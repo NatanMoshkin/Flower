@@ -482,14 +482,37 @@ CASE stHmi.eStep OF
         IF bMachineAuto AND (bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q) THEN
             bHomeThenIdle := FALSE;
             stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
-
-        ELSIF bMachineAuto AND fbTrigStart.Q THEN
-            (* Operator START while already armed: re-home and come back here.
-               Harmless (the INIT states self-satisfy when already retracted)
-               and it keeps START's meaning identical in every state. *)
-            bHomeThenIdle := TRUE;
-            stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;
+
+        (* OPERATOR START IS IGNORED HERE (2026-08-05). It used to re-home and
+           come back, justified as "harmless, and it keeps START's meaning
+           identical in every state". Removed for two reasons.
+
+           It was a no-op in outcome. Nothing can disturb a piston while we sit
+           in IDLE: each valve output has exactly one writer -- its piston FB's
+           bOutSolenoid -- and in Automatic the auto commands are all FALSE here,
+           the HMI Extend/Retract selections are force-cleared every scan, and
+           the PB jogs are not available in any Auto state. IDLE is only reached
+           from INIT_GRIP_RETRACTING, GRIP_RETRACTING or RECOVER_GRIP_RETR, all
+           of which end with everything retracted. So the pistons were already
+           home and the INIT chain self-satisfied.
+
+           And it cost a real defect. Because the re-home left IDLE, an operator
+           pressing GREEN before ORANGE for the PB2+PB3 bulb-start combo could
+           have the combo's one-scan bExtStartPulse land while eStep was still in
+           the INIT chain -- where nothing consumes it -- so the request was
+           silently dropped and no bulb ran. Measured on the machine. With START
+           ignored here the machine never leaves IDLE, so that pulse always lands
+           somewhere that consumes it. This removes the cause rather than
+           tolerating it.
+
+           The position-proof the re-home offered is still reachable, just
+           deliberately: STOP (red PB held) drops to NOT_HOMED, and START from
+           there homes and re-arms.
+
+           fbTrigStart.Q is still consumed by Section 0b -- it is cleared and
+           logged as 'START pressed' -- so a press here is visible in the log
+           and simply has no effect, exactly like a press during a cycle. *)
 
     E_MasterAutoStep.NOT_HOMED:
         (* In Automatic but NOT armed: entered on power-up (stHmi.eStep's
