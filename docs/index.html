@@ -1,161 +1,220 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-lang="en">
 <head>
 <meta charset="utf-8">
-<title>Flower — Documentation Index</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation — תיעוד</title>
 <style>
-  :root {
-    --bg: #1e1e1e; --bg2: #252526; --bg3: #2d2d30; --border: #3e3e42;
-    --text: #e0e0e0; --muted: #a0a0a0;
-    --accent: #4fc3f7; --accent2: #81c784; --warn: #ffb74d; --danger: #e57373;
-    --plc: #ce93d8; --hmi: #4fc3f7; --bridge: #81c784; --robot: #f48fb1;
-    --ops: #ffd54f; --issues: #e57373;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.5 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
-  header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 28px 40px; }
-  header h1 { margin: 0 0 6px 0; font-size: 26px; color: var(--accent); }
-  header .sub { color: var(--muted); font-size: 14px; }
-  header .sub a { color: var(--accent); text-decoration: none; }
-  header .sub a:hover { text-decoration: underline; }
-  header .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 20px; max-width: 900px; }
-  header .stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-  header .stat .n { font-size: 22px; font-weight: 700; color: var(--accent); }
-  header .stat .l { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  main { padding: 32px 40px; max-width: 1400px; }
-  section.cat { margin-bottom: 40px; }
-  section.cat h2 { margin: 0 0 6px 0; color: var(--accent); font-size: 18px; display: flex; align-items: center; gap: 12px; }
-  section.cat p.desc { margin: 0 0 16px 0; color: var(--muted); font-size: 13px; max-width: 900px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-  a.card {
-    display: block; background: var(--bg2); border: 1px solid var(--border);
-    border-left: 4px solid var(--accent); border-radius: 8px;
-    padding: 16px 20px; text-decoration: none; color: var(--text);
-    transition: transform 0.08s ease, background 0.08s ease;
-  }
-  a.card:hover { transform: translateY(-1px); background: var(--bg3); }
-  a.card[data-c=config]  { border-left-color: var(--hmi); }
-  a.card[data-c=ops]     { border-left-color: var(--ops); }
-  a.card[data-c=issues]  { border-left-color: var(--issues); }
-  a.card .title { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
-  a.card .kind {
-    display: inline-block; padding: 1px 8px; border-radius: 3px;
-    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--bg); background: var(--accent);
-  }
-  a.card .desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 6px 0 0 0; }
-  a.card .path { font-family: 'Consolas', monospace; font-size: 10px; color: var(--muted); margin-top: 8px; }
-  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
-  .dot.config { background: var(--hmi); }
-  .dot.ops    { background: var(--ops); }
-  .dot.issues { background: var(--issues); }
-  footer { padding: 24px 40px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); background: var(--bg2); margin-top: 30px; }
-  footer a { color: var(--accent); text-decoration: none; }
-  .tldr { background: rgba(129, 199, 132, 0.08); border-left: 4px solid var(--accent2); padding: 14px 18px; margin: 18px 0 24px 0; border-radius: 4px; font-size: 13px; max-width: 1000px; }
-  .tldr b { color: var(--accent2); }
-  .tldr code { background: var(--bg); padding: 1px 6px; border-radius: 3px; color: var(--accent); }
+:root{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#44515700; --ink-2:#445157; --ink-3:#6f7c82;
+  --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --heb:"Segoe UI","Arial Hebrew","Noto Sans Hebrew",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}}
+:root[data-theme="dark"]{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}
+:root[data-theme="light"]{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#445157; --ink-3:#6f7c82; --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font:16px/1.65 var(--sans);font-variant-numeric:tabular-nums}
+:root[data-lang="he"] body{font-family:var(--heb)}
+
+/* ---- language switching: both languages ship in the DOM ---- */
+[data-l="he"]{display:none}
+:root[data-lang="he"] [data-l="en"]{display:none}
+:root[data-lang="he"] [data-l="he"]{display:revert}
+
+.wrap{max-width:56rem;margin:0 auto;padding:0 1.25rem 5rem}
+.bar{position:sticky;top:0;z-index:10;background:var(--ground);
+  border-bottom:1px solid var(--rule);padding:.55rem 0;margin-bottom:1.5rem}
+.bar .in{max-width:56rem;margin:0 auto;padding:0 1.25rem;display:flex;
+  gap:.5rem;align-items:center;flex-wrap:wrap}
+.bar .sp{flex:1}
+button.sw{background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);
+  border-radius:7px;padding:.35rem .7rem;font:.78rem var(--mono);cursor:pointer}
+button.sw[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:700}
+.docnav a{font:.78rem var(--sans);text-decoration:none;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+  padding:.3rem .75rem;margin-inline-end:.35rem}
+.docnav a.here{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:600}
+
+header.mast{padding:.5rem 0 .5rem}
+.eyebrow{font:600 .7rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .6rem;direction:ltr;unicode-bidi:isolate;
+  text-align:start}
+h1{font-size:clamp(1.5rem,4vw,2.15rem);line-height:1.15;margin:0 0 .4rem;
+   text-wrap:balance}
+.hd h2{font-size:1.2rem;margin:2.2rem 0 .4rem;padding-bottom:.3rem;
+  border-bottom:2px solid var(--accent-soft)}
+.hd h3{font-size:1rem;margin:1.6rem 0 .3rem}
+p{margin:.65rem 0}
+ul,ol{margin:.6rem 0;padding-inline-start:1.4rem}
+li{margin:.35rem 0}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+code{font:.86em var(--mono);background:var(--surface-2);padding:.1em .34em;
+  border-radius:3px;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+kbd{font:.8em var(--mono);border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:4px;padding:.12em .4em;background:var(--surface);
+  direction:ltr;unicode-bidi:isolate}
+strong{color:var(--ink)}
+
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;
+  background:var(--surface);margin:1rem 0}
+table{width:100%;border-collapse:collapse;min-width:30rem}
+th,td{text-align:start;padding:.55rem .7rem;border-bottom:1px solid var(--rule);
+  vertical-align:top;font-size:.9rem}
+th{background:var(--surface-2);font:600 .72rem/1.35 var(--mono);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+:root[data-lang="he"] th{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.8rem}
+tr:last-child td{border-bottom:0}
+
+.note{margin:1.2rem 0;padding:.85rem 1.1rem;border-radius:9px;
+  background:var(--surface);border:1px solid var(--rule);
+  border-inline-start:5px solid var(--info);font-size:.93rem}
+.note.info{border-inline-start-color:var(--info);background:var(--info-soft)}
+.note.ok{border-inline-start-color:var(--accent);background:var(--accent-soft)}
+.note.warn{border-inline-start-color:var(--caution);background:var(--caution-soft)}
+.note.danger{border-inline-start-color:var(--fault);background:var(--fault-soft)}
+.note b{display:block;margin-bottom:.2rem}
+.note p{margin:.3rem 0 0;color:var(--ink-2)}
+
+ol.steps{list-style:none;padding-inline-start:0;counter-reset:s}
+ol.steps>li{counter-increment:s;position:relative;
+  padding-inline-start:2.6rem;margin:.85rem 0;min-height:1.9rem}
+ol.steps>li::before{content:counter(s);position:absolute;inset-inline-start:0;
+  top:0;width:1.85rem;height:1.85rem;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);
+  font:700 .85rem/1.85rem var(--mono);text-align:center}
+
+.lamp{display:inline-block;width:.85rem;height:.85rem;border-radius:50%;
+  margin-inline-end:.4rem;vertical-align:-.1em;border:1px solid rgba(0,0,0,.25)}
+.lamp.g{background:#2ecc71}.lamp.r{background:#e74c3c}
+.lamp.o{background:#e8a33d}.lamp.off{background:var(--surface-2)}
+.pb{display:inline-block;font:700 .74rem var(--mono);border-radius:5px;
+  padding:.16em .45em;border:1px solid rgba(0,0,0,.2);direction:ltr;
+  unicode-bidi:isolate;white-space:nowrap}
+.pb.r{background:#e74c3c;color:#fff}
+.pb.o{background:#e8a33d;color:#3a2600}
+.pb.g{background:#2ecc71;color:#04361b}
+
+.links{display:grid;gap:.6rem;margin:1rem 0}
+a.lk{display:block;text-decoration:none;background:var(--surface);
+  border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;
+  border-inline-start:4px solid var(--rule)}
+a.lk:hover{border-color:var(--accent);border-inline-start-color:var(--accent)}
+.lk-t{display:block;color:var(--ink);font-weight:600;font-size:.97rem}
+.lk-d{display:block;color:var(--ink-3);font-size:.85rem;margin-top:.15rem}
+.badge{display:inline-block;margin-inline-start:.5rem;font:700 .62rem/1 var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;padding:.25em .45em;
+  border-radius:4px;vertical-align:.1em}
+:root[data-lang="he"] .badge{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.68rem}
+.badge.live{background:var(--accent-soft);color:var(--accent)}
+.badge.ref{background:var(--info-soft);color:var(--info)}
+.badge.archive{background:var(--surface-2);color:var(--ink-3)}
+.badge.data{background:var(--caution-soft);color:var(--caution)}
+
+footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:.8rem}
+@media print{
+  .bar{display:none} body{background:#fff}
+  .note,.tw{break-inside:avoid}
+}
 </style>
 </head>
 <body>
-
-<header>
-  <h1>Flower — Documentation Index</h1>
-  <div class="sub">
-    Bulb-flower assembly stand: a <b>CP6606 panel PC</b> running the TwinCAT PLC (8 SOL-Spring pistons, coordinated by <code>FB_MasterAutoCycle</code>) <i>and</i> the operator's classic PLC visualization, talking <b>TCP/IP directly</b> to a Dobot robot.<br>
-    Repo: <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
-    &middot; Docs updated <b>2026-07-27</b>
-  </div>
-  <div class="stats">
-    <div class="stat"><div class="n">8</div><div class="l">Pistons</div></div>
-    <div class="stat"><div class="n">7</div><div class="l">Panel VISU pages</div></div>
-    <div class="stat"><div class="n">15</div><div class="l">Cycle states</div></div>
-    <div class="stat"><div class="n">11</div><div class="l">Robot params</div></div>
-  </div>
+<div class="bar"><div class="in">
+<span class="docnav"><a href="index.html" class="here"><span data-l="en">All docs</span><span data-l="he">כל המסמכים</span></a><a href="operator-manual.html"><span data-l="en">Operator</span><span data-l="he">מדריך מפעיל</span></a><a href="technician-manual.html"><span data-l="en">Technician</span><span data-l="he">מדריך טכנאי</span></a><a href="auto-state-machine-current.html"><span data-l="en">State machine</span><span data-l="he">מכונת מצבים</span></a></span>
+<span class="sp"></span>
+<button class="sw" id="lg" type="button" aria-pressed="false">עברית / HE</button>
+<button class="sw" id="tg" type="button" aria-pressed="false">theme: auto</button>
+</div></div>
+<div class="wrap">
+<header class="mast">
+<p class="eyebrow" dir="ltr">167_01 Saad — Flower</p>
+<h1 lang="en" dir="ltr" data-l="en">Documentation</h1>
+<h1 lang="he" dir="rtl" data-l="he">תיעוד</h1>
+<p lang="en" dir="ltr" data-l="en">Everything for the 167_01 pin-push assembly stand. Current documents first; superseded ones are in the archive with a note saying what replaced them.</p>
+<p lang="he" dir="rtl" data-l="he">כל התיעוד עבור מתקן ההרכבה <span class="ltr">167_01</span>. מסמכים עדכניים תחילה; מסמכים שהוחלפו נמצאים בארכיון עם הערה המציינת מה החליף אותם.</p>
 </header>
-
-<main>
-
-<div class="tldr">
-  <b>What this project is.</b> An assembly stand for pin-based bulb-flower components. One <b>CP6606 Panel PC</b> is the entire control system: it runs the TwinCAT PLC, the operator interface (classic PLC visualization, seven <code>.TcVIS</code> pages), and the robot comms. Eight pistons — 3&nbsp;Sep, 3&nbsp;Push, 2&nbsp;Grip — are each a <b>SOL-Spring two-position actuator</b> (single Extend coil, mechanical spring returns it) driven by one instance of <code>FB_SolSpringPiston_2Pos</code>. <code>FB_MasterAutoCycle</code> runs a 15-state sequence over all eight, gated by two plate sensors. A single machine-wide <code>bAutoMode</code> is the sole source of truth for every piston's mode — there is no per-piston mode selection.
-  <br><br>
-  <b>Robot comms are TCP-only, from the PLC itself.</b> <code>FB_RobotTcpClient</code> (native ST on <code>Tc2_TcpIp</code>) dials the robot's server at <code>192.168.201.1:6001</code> and exchanges <code>STATE:&lt;n&gt;</code> / <code>CMD:&lt;m&gt;</code> frames plus the 11 tuning parameters. <b>TF6310 is installed on the CP6606</b> — the documented exception to the avoid-paid-libraries rule. The former Python bridge (<code>RobotBridge/</code>) and the discrete-I/O handshake are both <b>retired</b>; so is the TwinCAT web HMI (<code>Flower_PLC_HMI/</code>, deleted 2026-07-26). The engineering-side UI is now <b>FlowerPyHmi</b>, a separate repo that talks ADS to the panel from a laptop.
+<div class="hd" id="live"><h2 lang="en" dir="ltr" data-l="en">Current documents</h2><h2 lang="he" dir="rtl" data-l="he">מסמכים עדכניים</h2></div>
+<p lang="en" dir="ltr" data-l="en">These describe the machine as it runs today.</p><p lang="he" dir="rtl" data-l="he">אלה מתארים את המכונה כפי שהיא פועלת היום.</p>
+<div class="links" lang="en" dir="ltr" data-l="en"><a class="lk" href="operator-manual.html"><span class="lk-t">Operator's manual<span class="badge live">start here</span></span><span class="lk-d">Running the machine from the panel: the three buttons, the lamps, starting, stopping, and what to do when the red lamp comes on.</span></a><a class="lk" href="technician-manual.html"><span class="lk-t">Technician's manual<span class="badge live">detailed</span></span><span class="lk-d">Sequence, error codes, every setting on the AutoMain screen, the IO map, the robot protocol, diagnostics, and the field deviations you must know about.</span></a><a class="lk" href="auto-state-machine-current.html"><span class="lk-t">Auto state machine — as built<span class="badge live">reference</span></span><span class="lk-d">All 19 states with their wire values. Click any state for the exact commands it drives and what each push button does there.</span></a><a class="lk" href="pb-test-report.html"><span class="lk-t">Push-button test report<span class="badge live">test result</span></span><span class="lk-d">Latest automated run against a live PLC — 57 checks over ADS covering every button in every machine state.</span></a><a class="lk" href="bench-checklist-arming.html"><span class="lk-t">Bench &amp; field checklist<span class="badge live">open items</span></span><span class="lk-d">What has been verified and what has not. The outstanding field checks and the pre-machine steps live here.</span></a><a class="lk" href="167_01_SAAD_PinPush_IO_List.xlsx"><span class="lk-t">IO list (spreadsheet)<span class="badge data">source of truth</span></span><span class="lk-d">The authority for the channel map — sheet IO, column NEW. The GVL_IO..[] column is the OLD pre-rewire numbering; do not read it by mistake.</span></a></div><div class="links" lang="he" dir="rtl" data-l="he"><a class="lk" href="operator-manual.html"><span class="lk-t">מדריך למפעיל<span class="badge live">התחל כאן</span></span><span class="lk-d">הפעלת המכונה מלוח ההפעלה: שלושת הלחצנים, הנוריות, התחלה, עצירה, ומה לעשות כשהנורית האדומה נדלקת.</span></a><a class="lk" href="technician-manual.html"><span class="lk-t">מדריך לטכנאי<span class="badge live">מפורט</span></span><span class="lk-d">רצף, קודי תקלה, כל הגדרה במסך AutoMain, מפת ה-IO, פרוטוקול הרובוט, אבחון, והחריגות בשטח שחובה להכיר.</span></a><a class="lk" href="auto-state-machine-current.html"><span class="lk-t">מכונת המצבים — כפי שנבנתה<span class="badge live">עיון</span></span><span class="lk-d">כל 19 המצבים עם ערכי התקשורת שלהם. לחץ על מצב כדי לראות את הפקודות המדויקות שהוא מפעיל ומה כל לחצן עושה שם.</span></a><a class="lk" href="pb-test-report.html"><span class="lk-t">דוח בדיקת לחצנים<span class="badge live">תוצאת בדיקה</span></span><span class="lk-d">ההרצה האוטומטית האחרונה מול PLC פעיל — 57 בדיקות דרך ADS המכסות כל לחצן בכל מצב של המכונה.</span></a><a class="lk" href="bench-checklist-arming.html"><span class="lk-t">רשימת בדיקות שולחן ושדה<span class="badge live">פתוח</span></span><span class="lk-d">מה אומת ומה לא. בדיקות השדה הפתוחות והשלבים שלפני העלייה למכונה נמצאים כאן.</span></a><a class="lk" href="167_01_SAAD_PinPush_IO_List.xlsx"><span class="lk-t">רשימת IO (גיליון)<span class="badge data">מקור אמת</span></span><span class="lk-d">מקור הסמכות למפת הערוצים — גיליון IO, עמודה NEW. העמודה GVL_IO..[] היא המספור הישן שלפני החיווט מחדש; אל תקרא אותה בטעות.</span></a></div>
+<div class="hd" id="archive"><h2 lang="en" dir="ltr" data-l="en">Archive</h2><h2 lang="he" dir="rtl" data-l="he">ארכיון</h2></div>
+<p lang="en" dir="ltr" data-l="en">Kept for the reasoning and the decision trail. <strong>Do not treat any of these as a description of the current machine.</strong> Each entry says what replaced it.</p><p lang="he" dir="rtl" data-l="he">נשמרים בשל הנימוקים ושרשרת ההחלטות. <strong>אל תתייחס לאף אחד מהם כתיאור המכונה הנוכחית.</strong> כל רשומה מציינת מה החליף אותה.</p>
+<div class="links" lang="en" dir="ltr" data-l="en"><a class="lk" href="archive/auto-state-machine-pause.html"><span class="lk-t">Pause / Continue proposal<span class="badge archive">rejected</span></span><span class="lk-d">REJECTED 2026-08-05 — never implemented. Kept for one finding that still governs any future attempt: spring-return pistons cannot be stopped mid-stroke.</span></a><a class="lk" href="archive/auto-state-machine-retract-all.html"><span class="lk-t">Retract-all split from ERR<span class="badge archive">partly</span></span><span class="lk-d">PARTLY IMPLEMENTED — the RECOVER_* chain shipped. The retry counter and the reset-ownership split did not: the robot only sends its reset when a human presses a button on its own panel, so the premise was wrong.</span></a><a class="lk" href="archive/auto-state-machine-combined.html"><span class="lk-t">Combined target proposal<span class="badge archive">superseded</span></span><span class="lk-d">SUPERSEDED — three of its four proposals changed before implementation. Read the as-built diagram instead.</span></a><a class="lk" href="archive/operator-manual.md"><span class="lk-t">Operator manual (old, Markdown)<span class="badge archive">superseded</span></span><span class="lk-d">Superseded by the HTML operator manual above. Predates the arming model, so it describes a start sequence the machine no longer has.</span></a><a class="lk" href="archive/configuration.html"><span class="lk-t">Configuration reference (old)<span class="badge archive">stale</span></span><span class="lk-d">Snapshot from 2026-07-27. Predates the arming model, the recovery chain and the new button behaviour. The technician manual replaces it.</span></a><a class="lk" href="archive/operation.html"><span class="lk-t">Operation &amp; install guide (old)<span class="badge archive">stale</span></span><span class="lk-d">Snapshot from 2026-07-27, same vintage and same problem.</span></a><a class="lk" href="archive/open-issues.html"><span class="lk-t">Open issues (old)<span class="badge archive">stale</span></span><span class="lk-d">Snapshot from 2026-07-27. The live list of open items is the TODO section of CLAUDE.md in the repository root.</span></a><a class="lk" href="archive/robot-integration-options.md"><span class="lk-t">Robot integration options<span class="badge archive">historic</span></span><span class="lk-d">The four architectures considered in July 2026. Resolved: TCP-only. Kept for archaeology; it does not describe current behaviour.</span></a></div><div class="links" lang="he" dir="rtl" data-l="he"><a class="lk" href="archive/auto-state-machine-pause.html"><span class="lk-t">הצעת השהיה / המשך<span class="badge archive">נדחה</span></span><span class="lk-d">נדחה ב-2026-08-05 — לא יושם. נשמר בשל מסקנה אחת שעדיין תקפה לכל ניסיון עתידי: לא ניתן לעצור בוכנות עם חזרה בקפיץ באמצע התנועה.</span></a><a class="lk" href="archive/auto-state-machine-retract-all.html"><span class="lk-t">הפרדת ההכנסה ממצב תקלה<span class="badge archive">חלקית</span></span><span class="lk-d">יושם חלקית — שרשרת RECOVER_* נכנסה. מונה הניסיונות והפרדת בעלות האיפוס לא: הרובוט שולח איפוס רק כאשר אדם לוחץ לחצן בלוח שלו, ולכן ההנחה הייתה שגויה.</span></a><a class="lk" href="archive/auto-state-machine-combined.html"><span class="lk-t">הצעה משולבת<span class="badge archive">הוחלף</span></span><span class="lk-d">הוחלף — שלוש מארבע ההצעות שבו שונו לפני היישום. קרא את תרשים כפי שנבנתה במקום.</span></a><a class="lk" href="archive/operator-manual.md"><span class="lk-t">מדריך מפעיל (ישן, Markdown)<span class="badge archive">הוחלף</span></span><span class="lk-d">הוחלף על ידי מדריך המפעיל ב-HTML שלמעלה. קדם למודל האישור, ולכן מתאר רצף התחלה שאינו קיים יותר במכונה.</span></a><a class="lk" href="archive/configuration.html"><span class="lk-t">מדריך תצורה (ישן)<span class="badge archive">מיושן</span></span><span class="lk-d">תצלום מ-2026-07-27. קדם למודל האישור, לשרשרת השחזור ולהתנהגות הלחצנים החדשה. מדריך הטכנאי מחליף אותו.</span></a><a class="lk" href="archive/operation.html"><span class="lk-t">מדריך הפעלה והתקנה (ישן)<span class="badge archive">מיושן</span></span><span class="lk-d">תצלום מ-2026-07-27, מאותה תקופה ועם אותה בעיה.</span></a><a class="lk" href="archive/open-issues.html"><span class="lk-t">נושאים פתוחים (ישן)<span class="badge archive">מיושן</span></span><span class="lk-d">תצלום מ-2026-07-27. הרשימה החיה של נושאים פתוחים היא מקטע ה-TODO בקובץ CLAUDE.md בשורש המאגר.</span></a><a class="lk" href="archive/robot-integration-options.md"><span class="lk-t">אפשרויות שילוב הרובוט<span class="badge archive">היסטורי</span></span><span class="lk-d">ארבע הארכיטקטורות שנשקלו ביולי 2026. הוכרע: TCP בלבד. נשמר לצורכי היסטוריה; אינו מתאר את ההתנהגות הנוכחית.</span></a></div>
+<div class="hd" id="truth"><h2 lang="en" dir="ltr" data-l="en">Where the live source of truth is</h2><h2 lang="he" dir="rtl" data-l="he">היכן מקור האמת החי</h2></div>
+<div class="note info"><div lang="en" dir="ltr" data-l="en"><b>CLAUDE.md in the repository root</b><p>The open-issues list, every architectural decision and its reasoning, and the record of what has and has not been verified all live there. It is maintained with the code, so it does not go stale the way a snapshot page does. The HTML here is generated from it and from the PLC source.</p></div><div lang="he" dir="rtl" data-l="he"><b>CLAUDE.md בשורש המאגר</b><p>רשימת הנושאים הפתוחים, כל החלטה ארכיטקטונית והנימוקים שלה, והתיעוד של מה אומת ומה לא — כולם נמצאים שם. הוא מתוחזק יחד עם הקוד, ולכן אינו מתיישן כמו דף תצלום. ה-HTML שכאן נוצר ממנו ומקוד ה-PLC.</p></div></div>
+<p lang="en" dir="ltr" data-l="en">Regenerate these pages with <code>python scripts/manuals/build_manuals.py</code> and <code>python scripts/statediagram/build_state_diagrams.py</code>. Edit the content modules under <code>scripts/</code>, never the generated HTML.</p><p lang="he" dir="rtl" data-l="he">צור מחדש את הדפים האלה עם <code>python scripts/manuals/build_manuals.py</code> ועם <code>python scripts/statediagram/build_state_diagrams.py</code>. ערוך את מודולי התוכן תחת <code>scripts/</code>, לעולם לא את ה-HTML שנוצר.</p>
+<footer><span data-l="en" dir="ltr">Generated by <code>scripts/manuals/build_manuals.py</code>. Both languages ship in this file — no network needed.</span><span data-l="he" dir="rtl">נוצר על ידי <code>scripts/manuals/build_manuals.py</code>. שתי השפות כלולות בקובץ זה — אין צורך בחיבור לרשת.</span></footer>
 </div>
+<script>
+(function(){
+  var r=document.documentElement;
+  var tb=document.getElementById('tg'), lb=document.getElementById('lg');
 
-<section class="cat">
-  <h2><span class="dot ops"></span>For operators</h2>
-  <p class="desc">Start here if you run the machine rather than build it.</p>
-  <div class="grid">
-    <a class="card" data-c="ops" href="viewer.html?doc=operator-manual.md">
-      <div class="title">Operator's Manual <span class="kind" style="background:var(--accent2)">MD</span></div>
-      <div class="desc">Panel navigation, startup, running a cycle, the 3 push-buttons, the 2 status lamps, all 12 error codes, E-Stop recovery, and what persists across a power cycle.</div>
-      <div class="path">docs/operator-manual.md</div>
-    </a>
-  </div>
-</section>
+  function applyLang(l){
+    r.setAttribute('data-lang', l);
+    r.setAttribute('lang', l);
+    // dir on <html> so the whole layout mirrors, not only the text
+    r.setAttribute('dir', l === 'he' ? 'rtl' : 'ltr');
+    lb.setAttribute('aria-pressed', l === 'he' ? 'true' : 'false');
+    lb.textContent = l === 'he' ? 'אנגלית / EN' : 'עברית / HE';
+  }
+  function applyTheme(t){
+    if(t){ r.setAttribute('data-theme', t); } else { r.removeAttribute('data-theme'); }
+    tb.textContent = 'theme: ' + (t || 'auto');
+    tb.setAttribute('aria-pressed', t ? 'true' : 'false');
+  }
 
-<section class="cat">
-  <h2><span class="dot config"></span>Configuration</h2>
-  <p class="desc">What the system is and how each part is wired: architecture, PLC structure, the panel VISU pages, and the robot TCP protocol.</p>
-  <div class="grid">
-    <a class="card" data-c="config" href="configuration.html">
-      <div class="title">Configuration reference <span class="kind">HTML</span></div>
-      <div class="desc">4 tabs: Architecture, PLC (TwinCAT), Panel VISU, Robot (TCP). Data-flow diagram, DUT/FB/GVL breakdown, IO channel map, and the wire protocol.</div>
-      <div class="path">docs/configuration.html</div>
-    </a>
-    <a class="card" data-c="config" href="viewer.html?doc=../CLAUDE.md">
-      <div class="title">CLAUDE.md — decisions &amp; TODOs <span class="kind" style="background:var(--accent2)">MD</span></div>
-      <div class="desc"><b>The source of truth</b> for open issues, architectural decisions, and outstanding work. Read this before starting any task; these HTML pages are a rendering of it, not a replacement.</div>
-      <div class="path">CLAUDE.md</div>
-    </a>
-    <a class="card" data-c="config" href="viewer.html?doc=../RobotBridge/README.md">
-      <div class="title">RobotBridge — retired <span class="kind" style="background:var(--warn)">MD</span></div>
-      <div class="desc">The Python bridge is <b>no longer part of the machine</b>. This README records why, what two files are still kept as vendor protocol reference, and what each retired file was superseded by.</div>
-      <div class="path">RobotBridge/README.md</div>
-    </a>
-  </div>
-</section>
+  tb.addEventListener('click', function(){
+    var cur = r.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : (cur === 'light' ? null : 'dark');
+    try{ next ? localStorage.setItem('mnTheme', next)
+              : localStorage.removeItem('mnTheme'); }catch(e){}
+    applyTheme(next);
+  });
+  lb.addEventListener('click', function(){
+    var next = r.getAttribute('data-lang') === 'he' ? 'en' : 'he';
+    try{ localStorage.setItem('mnLang', next); }catch(e){}
+    applyLang(next);
+  });
 
-<section class="cat">
-  <h2><span class="dot ops"></span>Operation &amp; Installation</h2>
-  <p class="desc">How to build, activate, start, verify, and recover the panel.</p>
-  <div class="grid">
-    <a class="card" data-c="ops" href="operation.html">
-      <div class="title">Operation &amp; install guide <span class="kind">HTML</span></div>
-      <div class="desc">4 tabs: Install (PLC build/activate, TF6310, panel bring-up), Startup order, Smoke test (robot TCP + piston moves), Recovery (link down, persistent data, symbol table).</div>
-      <div class="path">docs/operation.html</div>
-    </a>
-  </div>
-</section>
-
-<section class="cat">
-  <h2><span class="dot issues"></span>Open issues &amp; history</h2>
-  <p class="desc">What is still open, and what the record shows about decisions already made.</p>
-  <div class="grid">
-    <a class="card" data-c="issues" href="open-issues.html">
-      <div class="title">Open issues <span class="kind" style="background:var(--danger)">HTML</span></div>
-      <div class="desc">Current open items and a list of what closed recently. Mirrors <code>CLAUDE.md</code>, which is authoritative if the two ever disagree.</div>
-      <div class="path">docs/open-issues.html</div>
-    </a>
-    <a class="card" data-c="issues" href="viewer.html?doc=robot-integration-options.md">
-      <div class="title">Robot integration options <span class="kind" style="background:var(--warn)">MD</span></div>
-      <div class="desc"><b>Historic.</b> The four options weighed in July 2026 before the TCP-only decision landed. Kept for archaeology — it does <b>not</b> describe current behaviour, so don't plan from it.</div>
-      <div class="path">docs/robot-integration-options.md</div>
-    </a>
-  </div>
-</section>
-
-</main>
-
-<footer>
-  <b>How to open these docs:</b><br>
-  <b>Fastest (daily):</b> double-click <code>scripts\serve-docs.bat</code> (or run <code>scripts\serve-docs.ps1</code>). It launches <code>python -m http.server 8765</code> from the repo root and opens your default browser at <code>http://127.0.0.1:8765/docs/index.html</code>. Leave the terminal window open while browsing; Ctrl+C to stop.<br>
-  <b>Manual:</b> <code>cd C:\Users\Natan.Moshkin\source\repos\Flower &amp;&amp; python -m http.server 8765</code>, then browse to <code>http://127.0.0.1:8765/docs/index.html</code>.<br>
-  <b>Direct file:// open:</b> works for the tabbed HTML pages, but the <b>.md viewer</b> needs HTTP (browsers block <code>fetch()</code> under <code>file://</code>) — the viewer will show a helpful error with the fix.<br>
-  <br>
-  <b>Style:</b> mirrors <a href="https://github.com/NatanMoshkin/BS_HMI_PLC_DB">BS_HMI_PLC_DB/docs</a> — self-contained dark-theme HTML with Mermaid diagrams and a client-side markdown renderer (<code>viewer.html</code>).
-  &middot; <a href="https://github.com/NatanMoshkin/Flower">github.com/NatanMoshkin/Flower</a>
-</footer>
-
+  var t=null, l='en';
+  try{ t = localStorage.getItem('mnTheme'); l = localStorage.getItem('mnLang') || 'en'; }catch(e){}
+  applyTheme(t); applyLang(l);
+})();
+</script>
 </body>
 </html>

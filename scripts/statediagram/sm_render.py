@@ -444,12 +444,24 @@ lbl();})();
 })();
 """
 
+# (filename, label, subdir).  The as-built page lives in docs/; the three
+# decision records live in docs/archive/, so nav links have to be computed
+# relative to whichever page is being rendered -- see nav_href().
 VIEWS = [
-    ("auto-state-machine-current.html", "Current"),
-    ("auto-state-machine-pause.html", "+ Pause / Continue"),
-    ("auto-state-machine-retract-all.html", "+ Separate Retract-all"),
-    ("auto-state-machine-combined.html", "★ Combined target"),
+    ("auto-state-machine-current.html", "As built", ""),
+    ("auto-state-machine-pause.html", "Rejected: Pause", "archive"),
+    ("auto-state-machine-retract-all.html", "Partly: Retract-all", "archive"),
+    ("auto-state-machine-combined.html", "Superseded: combined", "archive"),
 ]
+
+
+def nav_href(target_dir, here_dir):
+    """Relative prefix to reach target_dir from a page sitting in here_dir."""
+    if target_dir == here_dir:
+        return ""
+    if here_dir and not target_dir:
+        return "../"
+    return target_dir + "/"
 
 LEGEND = [
     ("sw", "c-arm-f", "c-arm-s", "not a sequence step"),
@@ -499,10 +511,14 @@ def popup_data(states_list):
 
 def page(title, eyebrow, lede, here, body_html, states_for_popups=None,
          status=None):
+    here_dir = next((d for fn, _, d in VIEWS if fn == here), "")
     nav = ['<nav class="views">']
-    for fn, label in VIEWS:
+    for fn, label, d in VIEWS:
         cls = ' class="here"' if fn == here else ""
-        nav.append(f'<a href="{fn}"{cls}>{_esc(label)}</a>')
+        nav.append(f'<a href="{nav_href(d, here_dir)}{fn}"{cls}>'
+                   f"{_esc(label)}</a>")
+    nav.append('<a href="' + ("../" if here_dir else "") + 'index.html">'
+               "All docs</a>")
     nav.append("</nav>")
     data = popup_data(states_for_popups) if states_for_popups else ""
     banner = ""

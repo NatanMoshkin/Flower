@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Auto state machine — Retract-all split from ERR</title>
+<title>Auto state machine — combined target</title>
 <style>
 :root{
   --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
@@ -179,24 +179,22 @@ footer{margin-top:3rem;padding-top:1.1rem;border-top:1px solid var(--rule);
 <button class="theme" id="t">theme: auto</button>
 <div class="wrap">
 <header class="mast">
-<p class="eyebrow">167_01 Saad — Flower · proposed variant</p>
-<h1>Auto state machine — Retract-all split from ERR</h1>
-<p class="sub">Give fault recovery its own retract chain, so a failed recovery stops looking identical to a failed arming — and rename the shared chain to say what it actually is, keeping its wire values so the robot cannot notice.</p>
+<p class="eyebrow">167_01 Saad — Flower · the plan</p>
+<h1>Auto state machine — combined target</h1>
+<p class="sub">Per-step Pause/Continue, Retract-all split from <code>ERR</code>, and manual commands allowed in STOP and <code>ERR</code> — on one machine, with the implementation order and the one decision that still needs your call.</p>
 <nav class="views">
-<a href="auto-state-machine-current.html">Current</a>
-<a href="auto-state-machine-pause.html">+ Pause / Continue</a>
-<a href="auto-state-machine-retract-all.html" class="here">+ Separate Retract-all</a>
-<a href="auto-state-machine-combined.html">★ Combined target</a>
+<a href="../auto-state-machine-current.html">As built</a>
+<a href="auto-state-machine-pause.html">Rejected: Pause</a>
+<a href="auto-state-machine-retract-all.html">Partly: Retract-all</a>
+<a href="auto-state-machine-combined.html" class="here">Superseded: combined</a>
+<a href="../index.html">All docs</a>
 </nav>
-<div class="status partial"><b>Partly implemented — 2026-08-05</b><p>The <code>RECOVER_*</code> chain (50/51/52) and error codes 12/13/14 <strong>shipped</strong>; see <a href="auto-state-machine-current.html">as built</a>. The retry counter and the operator-vs-robot <code>bReset</code> split did <strong>not</strong> — the operator ruled them out, because the robot only sends <code>CMD:2</code> when a human presses a button on its own panel, so it can never arrive unattended. The argument for them below assumed otherwise. The rename to <code>RETRACT_ALL_*</code> was also not done; the chain is still <code>INIT_*</code>.</p></div>
+<div class="status partial"><b>Superseded — 2026-08-05</b><p>This was the proposal. What actually shipped is on <a href="auto-state-machine-current.html">as built</a>, and it differs in three ways: <strong>no Pause</strong> (rejected), <strong>no manual commands in any Automatic state</strong> (also rejected — so the PB3-in-<code>NOT_HOMED</code> conflict argued below never arose), and <strong>no retry counter or <code>bReset</code> split</strong>. The <code>RECOVER_*</code> chain and the enum plan did ship. Two hold gestures on PB1 and PB2+PB3 were added, which this page does not describe.</p></div>
 </header>
 
-<h2>What changes</h2>
-<p>The amber chain is <strong>renamed, not renumbered</strong> — same wire values
-10 / 11 / 12, so the robot cannot tell the difference. The purple chain is new and
-is used by fault recovery only. Compare against
-<a href="auto-state-machine-current.html">today</a>, where <code>ERR</code>
-recovers by borrowing the amber chain.</p>
+<h2>Everything at once</h2>
+<p>Four changes on one machine. Purple is new or renamed; everything else is
+unchanged from <a href="auto-state-machine-current.html">today</a>.</p>
 
 <div class="diagram"><svg class="smsvg" viewBox="0 0 1110 1854" width="1110" height="1854" role="img" xmlns="http://www.w3.org/2000/svg">
 <polyline class="e e-op" points="215,59.0 185,59.0 185,247.0 215,247.0"/>
@@ -274,12 +272,12 @@ recovers by borrowing the amber chain.</p>
 <polyline class="e e-op" points="555,59.0 431,59.0"/>
 <polygon class="ah ah-op" points="431,59.0 438,54.66 438,63.34"/>
 <text class="el el-op" x="493.0" y="54.0" text-anchor="middle">disarm</text>
-<polyline class="e e-op" points="555,153.0 461,153.0 461,59.0 431,59.0"/>
+<polyline class="e e-op" points="555,341.0 461,341.0 461,59.0 431,59.0"/>
 <polygon class="ah ah-op" points="431,59.0 438,54.66 438,63.34"/>
-<text class="el el-op" x="507.0" y="148.0" text-anchor="middle">re-park</text>
+<text class="el el-op" x="507.0" y="336.0" text-anchor="middle">re-park</text>
 <polyline class="e e-new" points="663.0,1494 663.0,1538"/>
 <polygon class="ah ah-new" points="663.0,1538 658.66,1531 667.34,1531"/>
-<text class="el el-new" x="671.0" y="1520.0" text-anchor="start">RESET (HMI or CMD:2)</text>
+<text class="el el-new" x="671.0" y="1520.0" text-anchor="start">RESET — operator, or robot CMD:2 (attempts &lt; 3)</text>
 <polyline class="e e-new" points="663.0,1588 663.0,1632"/>
 <polygon class="ah ah-new" points="663.0,1632 658.66,1625 667.34,1625"/>
 <text class="el el-new" x="671.0" y="1614.0" text-anchor="start">push retracted</text>
@@ -291,8 +289,11 @@ recovers by borrowing the amber chain.</p>
 <text class="el el-new" x="833" y="1735.0" text-anchor="start">grip retracted → armed</text>
 <polyline class="e e-fault" points="555,1751.0 521,1751.0 521,1439.0 537,1439.0 537,1469.0 555,1469.0"/>
 <polygon class="ah ah-fault" points="555,1469.0 548,1464.66 548,1473.34"/>
-<text class="el el-fault" x="505" y="1781.0" text-anchor="end">retry ≥ 3 → back to ERR</text>
-<text class="el el-fault" x="505" y="1794.0" text-anchor="end">and refuse the robot&#x27;s CMD:2</text>
+<text class="el el-fault" x="505" y="1781.0" text-anchor="end">retry ≥ 3 → latch ERR,</text>
+<text class="el el-fault" x="505" y="1794.0" text-anchor="end">refuse the robot&#x27;s CMD:2</text>
+<polyline class="e e-new" points="431,153.0 555,153.0"/>
+<polygon class="ah ah-new" points="555,153.0 548,148.66 548,157.34"/>
+<text class="el el-new" x="521" y="148.0" text-anchor="end">PB2</text>
 <g class="n n-arm has-info" data-key="NOT_HOMED" tabindex="0" role="button" aria-label="NOT_HOMED — show commands">
 <rect x="215" y="34" width="216" height="50" rx="9" ry="9" fill="var(--c-arm-f)" stroke="var(--c-arm-s)"/>
 <text class="nl" x="228" y="55.0" fill="var(--c-arm-t)">NOT_HOMED</text>
@@ -410,17 +411,25 @@ recovers by borrowing the amber chain.</p>
 <text class="ns" x="568" y="72.0">from any state except ERR</text>
 </g>
 <g class="n n-ghost">
-<rect x="555" y="128" width="216" height="50" rx="9" ry="9" fill="var(--c-gho-f)" stroke="var(--c-gho-s)"/>
-<text class="nl" x="568" y="149.0" fill="var(--c-gho-t)">Manual  — global override</text>
-<text class="ns" x="568" y="166.0">except NOT_HOMED and ERR</text>
+<rect x="555" y="316" width="216" height="50" rx="9" ry="9" fill="var(--c-gho-f)" stroke="var(--c-gho-s)"/>
+<text class="nl" x="568" y="337.0" fill="var(--c-gho-t)">Manual  — global override</text>
+<text class="ns" x="568" y="354.0">except NOT_HOMED and ERR</text>
 </g>
 <g class="n n-fault has-info" data-key="ERR" tabindex="0" role="button" aria-label="ERR — show commands">
 <rect x="555" y="1444" width="216" height="50" rx="9" ry="9" fill="var(--c-flt-f)" stroke="var(--c-flt-s)"/>
 <text class="nl" x="568" y="1465.0" fill="var(--c-flt-t)">ERR</text>
-<text class="ns" x="568" y="1482.0">latched — RESET only</text>
+<text class="ns" x="568" y="1482.0">latched — manual live</text>
 <text class="nv" x="760" y="1473.0" text-anchor="end">99</text>
 <circle class="ni" cx="735" cy="1469.0" r="7.5"/>
 <text class="nim" x="735" y="1472.5" text-anchor="middle">i</text>
+</g>
+<g class="n n-new has-info" data-key="PAUSED" tabindex="0" role="button" aria-label="PAUSED — wire value only — show commands">
+<rect x="555" y="128" width="216" height="50" rx="9" ry="9" fill="var(--c-new-f)" stroke="var(--c-new-s)"/>
+<text class="nl" x="568" y="149.0" fill="var(--c-new-t)">PAUSED — wire value only</text>
+<text class="ns" x="568" y="166.0">nStateOut only</text>
+<text class="nv" x="760" y="157.0" text-anchor="end">41</text>
+<circle class="ni" cx="735" cy="153.0" r="7.5"/>
+<text class="nim" x="735" y="156.5" text-anchor="middle">i</text>
 </g>
 <g class="n n-new has-info" data-key="REC_PUSH" tabindex="0" role="button" aria-label="RECOVER_PUSH_RETR — show commands">
 <rect x="555" y="1538" width="216" height="50" rx="9" ry="9" fill="var(--c-new-f)" stroke="var(--c-new-s)"/>
@@ -459,81 +468,137 @@ recovers by borrowing the amber chain.</p>
 <span><i class="ln" style="border-top:2px solid var(--fault)"></i>fault path</span>
 <span><i class="ln" style="border-top:2px solid var(--caution)"></i>recovery</span>
 </div>
-<p class="pophint">Click any state box for the commands it drives.</p>
+<p class="pophint">Click any state box for its commands, and for which operator
+inputs that state accepts.</p>
 
-<h2>The problem being solved, stated honestly</h2>
-<p>Today one retract chain serves four callers, and a single boolean
-<code>bHomeThenIdle</code> picks its exit. It is worth separating the
-<em>diagnosis</em>, but it is worth being clear about which complaints are real:</p>
+<h2>The four changes</h2>
 <div class="tblwrap"><table>
-<thead><tr><th>Complaint</th><th>Verdict</th></tr></thead>
+<thead><tr><th>#</th><th>Change</th><th>Cost</th></tr></thead>
 <tbody>
-<tr><td>Sharing the retract <em>motion</em> between callers</td>
-    <td><strong>Not a defect.</strong> Push-before-sep-before-grip is a collision-ordering constraint, not a caller concern. Three copies would be worse. Keep sharing it.</td></tr>
-<tr><td><code>RESET</code> homing instead of jumping to <code>IDLE</code></td>
-    <td><strong>Correct as-is.</strong> A fault leaves pistons anywhere, so <code>IDLE</code> would advertise &ldquo;ready&rdquo; falsely. Do not touch.</td></tr>
-<tr><td>One boolean, four writers</td>
-    <td><strong>Inelegance with a bad default.</strong> No live defect — all four entry points do write it. But it has no initialiser, so its cold-boot value <code>FALSE</code> is the &ldquo;run a bulb&rdquo; direction. Wrong fail-safe direction.</td></tr>
-<tr><td>A failed recovery is indistinguishable from a failed arming</td>
-    <td><strong>Real defect, and the one this page fixes.</strong> Both report codes 6/7/8 and the same <code>sStepText</code>. Worse, <code>iErrorCode</code> is cleared at RESET <em>before</em> the retract runs — so the original diagnosis is destroyed, and the robot presses RESET about a second after the fault, usually before a human has read the panel.</td></tr>
-<tr><td>The recovery retry loop</td>
-    <td><strong>Real defect — and renaming states does not fix it.</strong> See below.</td></tr>
+<tr><td class="m">1</td>
+    <td><strong>Per-step Pause / Continue</strong> on PB2, holding at the step
+    boundary once the exit guard is satisfied. <code>eStep</code> unchanged;
+    <code>PAUSED (41)</code> emitted from <code>nStateOut</code>.</td>
+    <td>One term per pausable state, one timer guard, one enum value, one MAIN
+    override, PB2 + LED2.</td></tr>
+<tr><td class="m">2</td>
+    <td><strong>Retract-all split from ERR.</strong> The shared chain is
+    <em>renamed</em> <code>RETRACT_ALL_*</code> keeping 10/11/12; recovery gets
+    its own <code>RECOVER_*</code> 50/51/52 with error codes 12/13/14.</td>
+    <td>3 enum values, 3 CASE branches, 3 error codes. Wire semantics
+    unchanged — every new value lands in the robot's &ldquo;wait&rdquo;.</td></tr>
+<tr><td class="m">3</td>
+    <td><strong>Manual commands in STOP and ERR.</strong> The existing
+    <code>bJogEnable</code> window widens from <code>ERR</code> only to
+    <code>ERR</code> <em>and</em> <code>NOT_HOMED</code> — which is where STOP
+    puts the machine.</td>
+    <td>One condition in MAIN. Already-proven mechanism.</td></tr>
+<tr><td class="m">4</td>
+    <td><strong>Retry counter + reset ownership</strong>, and the unsafe
+    <code>CASE ELSE</code> fixed to land on <code>NOT_HOMED</code>.</td>
+    <td>A counter, splitting <code>bReset</code>, two lines for the ELSE.</td></tr>
+</tbody></table></div>
+
+<div class="callout good">
+<h3>The three features reinforce each other — this is not just a bundle</h3>
+<p><strong>Separating <code>RECOVER_*</code> is what makes the manual window
+correct.</strong> Today the window is <code>eStep = ERR</code>, and ERR is
+transient in production — the robot resets it in about a second, so the operator's
+jog window slams shut. With recovery in its own states, <code>ERR</code> stays
+latched as a genuine &ldquo;stopped, waiting for a decision&rdquo; state while the
+<em>motion</em> happens in <code>RECOVER_*</code> — where jogs are correctly
+<em>off</em>, because the machine is moving.</p>
+<p><strong>The retry counter is what stops the window closing anyway.</strong>
+After 3 failed recovery attempts the machine latches <code>ERR</code> and refuses
+the robot's <code>CMD:2</code>, so the operator gets an indefinite window instead
+of a 10-second one. That needs <code>bReset</code> split into operator-vs-robot,
+which is the same change.</p>
+<p><strong>And Pause makes the whole thing usable without a fault.</strong> Today
+the only way to get hands-on is to cause or wait for an <code>ERR</code>, or to
+switch to Manual and lose the arming. Pause &rarr; STOP &rarr; manual work &rarr;
+START is a clean operator path that never involves a fault at all.</p>
+</div>
+
+<h2>Operator inputs, per machine condition</h2>
+<p>This is the whole panel contract in one table. Note it stays a
+<strong>partition</strong> — no state accepts both a jog and a Pause, so no
+priority scheme is needed.</p>
+<div class="tblwrap"><table>
+<thead><tr><th>Condition</th><th>PB1 (red)</th><th>PB2 (orange)</th>
+<th>PB3 (green)</th><th>HMI</th></tr></thead>
+<tbody>
+<tr><td>Manual</td><td>grip jog</td><td>sep jog</td><td>push jog</td>
+    <td>per-piston Extend/Retract</td></tr>
+<tr><td><code>NOT_HOMED</code> — incl. after STOP <span class="mono">(new)</span></td>
+    <td><strong>grip jog</strong></td><td><strong>sep jog</strong></td>
+    <td>START</td><td><strong>jog buttons</strong></td></tr>
+<tr><td><code>ERR</code> latched</td><td>grip jog</td><td>sep jog</td>
+    <td>push jog</td><td>jog buttons</td></tr>
+<tr><td><code>RECOVER_*</code> — moving <span class="mono">(new)</span></td>
+    <td>—</td><td>—</td><td>—</td><td>—</td></tr>
+<tr><td><code>IDLE</code> and all cycle steps</td><td>—</td>
+    <td><strong>Pause / Continue</strong></td>
+    <td>START (re-home, from IDLE)</td><td>START / STOP / RESET</td></tr>
+<tr><td>Paused</td><td>—</td><td><strong>Continue</strong></td><td>START</td>
+    <td>START / STOP</td></tr>
 </tbody></table></div>
 
 <div class="callout bad">
-<h3>Do not ship the rename without the retry counter</h3>
-<p><code>ERR</code> &rarr; <code>STATE:99</code> &rarr; robot <code>CMD:2</code>
-&rarr; clear error &rarr; retract &rarr; timeout &rarr; <code>ERR</code> &rarr; …
-with <strong>no attempt counter and no escalation</strong>. Each lap takes about
-<code>tStepTimeoutMs</code> plus a keep-alive, so roughly 11 s, and writes about
-five log entries. The panel Log page shows 20 entries — so
-<strong>the original fault scrolls off the panel in about four laps, under a
-minute.</strong></p>
-<p>The loop also closes the operator's only repair window: the PB jogs are live
-only while <code>eStep = ERR</code>, so during each 10 s retract attempt they are
-dead.</p>
-<p>A prettier state name on an unbounded retry loop is a cosmetic change sold as a
-safety one. The counter and the escalation edge are drawn in purple above; they
-are the point.</p>
+<h3>The one unavoidable conflict: PB3 in NOT_HOMED</h3>
+<p><code>NOT_HOMED</code> is where STOP puts the machine, so it is exactly where
+an operator wants to jog. But PB3 is <strong>START</strong> there, and its LED is
+blinking the &ldquo;press me to arm&rdquo; prompt. One button cannot be both.</p>
+<p>Three ways out, in preference order:</p>
+<ul>
+<li><strong>Recommended: PB1 and PB2 jog in <code>NOT_HOMED</code>; PB3 stays
+START.</strong> Grip and sep are reachable, and the push jog is still available
+from <code>ERR</code> or from Manual. Costs nothing, breaks nothing, and keeps
+the only physical arm button.</li>
+<li>PB3 jogs push in <code>NOT_HOMED</code> and arming moves to the HMI START
+button only. Symmetric, but it removes the physical arm button and silences a
+prompt operators have been trained on.</li>
+<li>Long-press PB3 = START, short-press = jog. Discoverable by nobody, and a
+timing-dependent safety-adjacent control. Not recommended.</li>
+</ul>
+<p><strong>This one needs your call</strong> — it is the only place in the combined
+design where two operator intents genuinely compete for one input.</p>
 </div>
 
-<div class="callout bad">
-<h3>And the escalation needs one more change to be possible at all</h3>
-<p><code>MAIN</code> deliberately fans the robot's <code>CMD:2</code> into the same
-<code>stHmi.bReset</code> field the HMI button writes. That was the right call for
-the deadlock fix, but it means <strong>the FB cannot tell an operator RESET from a
-robot RESET</strong> — so &ldquo;after 3 failed attempts, only a human may clear
-this&rdquo; is not expressible until that field is split in two.</p>
-<p>This, rather than the chain sharing, is the actual reason ERR recovery
-misbehaves on the machine.</p>
-</div>
+<h2>Should the HMI per-piston buttons work too?</h2>
+<p>&ldquo;Manual commands&rdquo; can mean just the PB jogs, or also the
+Extend/Retract controls on the Piston page. The PB jogs already ride
+<code>bJogEnable</code>. The HMI ones do not, because <code>MAIN</code> forces
+<code>eMode := Automatic</code> and Section 0 of the piston FB then force-clears
+<code>bSelectedExtend</code>/<code>bSelectedRetract</code> every scan.</p>
+<p>Enabling them means relaxing that force-clear to
+<code>IF eMode = Automatic AND NOT bJogEnable THEN clear</code>. Doable, but note
+the asymmetry: <strong>the HMI jog latches</strong> (that is deliberate —
+<code>bManJogRetract</code> sits next to it) whereas a PB jog releases when you
+let go. So a latched HMI Extend would survive into the resumed sequence unless
+<code>bSelected*</code> is cleared on leaving the window.</p>
+<p><strong>Recommendation:</strong> enable the HMI <em>jog</em> buttons
+(<code>bManJogExtend</code>, which already shares the gate) and leave the latching
+Extend/Retract radio selections dead. Same capability, none of the latch hazard.</p>
 
-<h2>Also replace the boolean with a target state</h2>
-<p>Independent of the new chain, and worth doing first because it is free:
-<code>bHomeThenIdle : BOOL</code> becomes <code>eReturnTo :
-E_MasterAutoStep</code>. Four writes and one read change; no new wire values, no
-robot risk, no mock churn.</p>
-<p>The gain is the fail-safe direction. An uninitialised <code>BOOL</code> is
-<code>FALSE</code> = &ldquo;go run a bulb&rdquo;. An uninitialised
-<code>E_MasterAutoStep</code> is <code>0</code> = <code>IDLE</code> — armed and
-waiting, which is the conservative direction.</p>
-<p>Do <strong>not</strong> let a future Pause feature reuse
-<code>eReturnTo</code>. &ldquo;Where the retract chain exits to&rdquo; and
-&ldquo;which step Pause interrupted&rdquo; are different facts that happen to share
-a type; merging them repeats the <code>bHomeThenIdle</code> mistake one level
-up.</p>
-
-<h2>Enum numbering</h2>
-<p>Occupied: 0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 20, 21, 22, 30, 40, 99.
-<strong>Nothing may be renumbered</strong> — these are wire values. 50 / 51 / 52
-are proposed because a fresh decade matches the existing convention that
-non-bulb-cycle states own decades (30 Manual, 40 Not-homed, 99 Err), and
-<code>STATE:5x</code> is instantly greppable in a robot log. Avoid 13&ndash;15:
-adjacency to 10/11/12 invites exactly the confusion being removed.</p>
-<p><code>2</code> (<code>WAIT_POS2</code>) is retired but must not be reused — old
-logs and CSV exports still carry it, same rule as retired error code 99. New error
-codes 12/13/14 are free; <code>iErrorCode</code> is a separate namespace from the
-step enum.</p>
+<h2>Enum plan — reserve it all in one commit</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>Value</th><th>Name</th><th>Status</th></tr></thead>
+<tbody>
+<tr><td class="m">0, 1, 3–8, 10–12, 20–22</td><td class="m">existing steps</td>
+    <td><strong>renamed only</strong> for 10/11/12 — never renumbered</td></tr>
+<tr><td class="m">2</td><td class="m">WAIT_POS2</td>
+    <td>retired; do not reuse (old logs and CSV exports carry it)</td></tr>
+<tr><td class="m">30</td><td class="m">MANUAL</td>
+    <td>sentinel, MAIN emits it directly; never assigned to <code>eStep</code></td></tr>
+<tr><td class="m">40</td><td class="m">NOT_HOMED</td><td>existing</td></tr>
+<tr><td class="m">41</td><td class="m">PAUSED</td>
+    <td><strong>new</strong> — wire value only, emitted from <code>nStateOut</code></td></tr>
+<tr><td class="m">50 / 51 / 52</td><td class="m">RECOVER_PUSH / SEP / GRIP</td>
+    <td><strong>new</strong> — real assigned states</td></tr>
+<tr><td class="m">99</td><td class="m">ERR</td><td>existing; part of the protocol</td></tr>
+</tbody></table></div>
+<p><code>iErrorCode</code> is a separate namespace: 0, 1, 3–11 used, 2 and 99
+retired, <strong>12/13/14 free</strong> for the recovery timeouts.</p>
 
 <div class="tblwrap"><table>
 <thead><tr><th>STATE:&lt;n&gt;</th><th>Robot replies</th><th>Meaning</th></tr></thead>
@@ -547,56 +612,64 @@ the robot does not recognise falls into &ldquo;wait&rdquo;, the safe default —
 why <strong>renumbering</strong> one is not. It is also why <code>NOT_HOMED = 40</code>
 needed no robot-side change when it was introduced.</p>
 
-<div class="callout">
-<h3>Unverifiable from this repo</h3>
-<p>The robot's &ldquo;anything else &rarr; wait&rdquo; branch is a
-<em>documented</em> contract, confirmed only against the two Python mocks. The
-machine runs an <strong>uncommitted</strong> <code>src2.lua</code>, so before
-shipping any new wire value, commit it or at least read the running copy off the
-controller. Both mocks print <code>?</code> for an unknown number, so a missed
-table update is cosmetic rather than a crash.</p>
+
+<div class="callout bad">
+<h3>Verify against the real robot before shipping any new value</h3>
+<p>The &ldquo;anything else &rarr; wait&rdquo; branch is a <em>documented</em>
+contract, confirmed only against the two Python mocks in this repo. The machine
+runs an <strong>uncommitted</strong> <code>src2.lua</code>. Commit it, or at
+minimum read the running copy off the controller, before relying on
+<code>41</code> or <code>5x</code>. Both mocks print <code>?</code> for an unknown
+value, so a missed table update is cosmetic rather than a crash — but the real
+Lua has not been read.</p>
 </div>
 
-<h2>What each party sees during recovery</h2>
-<div class="tblwrap"><table>
-<thead><tr><th></th><th>Today</th><th>With this change</th></tr></thead>
-<tbody>
-<tr><td>Robot wire</td><td class="m">99 → 10 → 11 → 12 → 0</td><td class="m">99 → 50 → 51 → 52 → 0</td></tr>
-<tr><td>Robot behaviour</td><td>wait, wait, wait, then CMD:1</td><td><strong>identical</strong></td></tr>
-<tr><td>Panel step text</td><td class="m">INIT_PUSH_RETRACTING — same as arming</td><td class="m">RECOVER_PUSH_RETR — unambiguous</td></tr>
-<tr><td>Error on a failed retract</td><td class="m">6 / 7 / 8 — same as arming</td><td class="m">12 / 13 / 14</td></tr>
-<tr><td>Status lamps</td><td>green <em>blinking</em> = &ldquo;running&rdquo; the moment RESET lands</td><td>can now be made distinct, because the states are distinct</td></tr>
-<tr><td>Runaway recovery</td><td>invisible; original fault gone from the panel in ~45 s</td><td>escalates to a latched ERR after 3 attempts</td></tr>
-</tbody></table></div>
-<p>Note the shape: <strong>the wire semantics do not change and the robot needs no
-new branch</strong> — only the diagnosis improves. That is the right trade.</p>
-
-<h2>Suggested order</h2>
+<h2>Implementation order</h2>
 <ol>
-<li><strong>Fix the unsafe <code>CASE ELSE</code> first, on its own.</strong> It
-currently snaps any unhandled <code>eStep</code> to <code>IDLE</code> — wire value
-0, &ldquo;send me a bulb&rdquo; — with pistons in unknown positions.
-<code>NOT_HOMED</code> is the correct landing. Two lines, unrelated to everything
-else. While in the file, delete the dead <code>bAnyRunning</code> or fix its
-comment.</li>
-<li><code>bHomeThenIdle</code> &rarr; <code>eReturnTo</code>. Zero wire risk.</li>
-<li><strong>One enum commit reserving every new wire value at once</strong> —
-<code>RECOVER_*</code> 50/51/52 <em>and</em> <code>PAUSED</code> 41. Then the robot
-contract changes exactly once and you make one verification trip instead of two.
-This is the most valuable sequencing decision on these three pages.</li>
-<li>The <code>RECOVER_*</code> branches, error codes 12/13/14, the rename — plus
-the attempt counter and the <code>bReset</code> split.</li>
-<li>Pause / Continue last, copying the <code>eReturnTo</code> pattern into its own
-separate variable.</li>
+<li><strong>The unsafe <code>CASE ELSE</code></strong> &rarr; <code>NOT_HOMED</code>.
+Alone, first, two lines. Also delete the dead <code>bAnyRunning</code> or fix its
+comment while in the file.</li>
+<li><strong><code>bHomeThenIdle</code> &rarr; <code>eReturnTo :
+E_MasterAutoStep</code>.</strong> Zero wire risk, and it flips the fail-safe
+default: an uninitialised BOOL means &ldquo;run a bulb&rdquo;, an uninitialised
+enum means <code>IDLE</code>.</li>
+<li><strong>One enum commit</strong> reserving <code>PAUSED (41)</code> and
+<code>RECOVER_* (50/51/52)</code> together, so the robot contract changes once and
+needs one verification trip.</li>
+<li><strong>Widen the manual window</strong> to <code>NOT_HOMED</code> — one
+condition in MAIN, and the smallest useful change on this page. Ships
+independently of everything else.</li>
+<li><strong><code>RECOVER_*</code> branches</strong> + error codes 12/13/14 +
+the rename + the retry counter + the <code>bReset</code> split. Do not ship the
+rename without the counter.</li>
+<li><strong>Per-step Pause / Continue</strong> last, with its own resume state
+held in <code>eStep</code> and its flag in <code>GVL_HMI</code>. Do not let it
+reuse <code>eReturnTo</code> — that repeats the <code>bHomeThenIdle</code>
+mistake one level up.</li>
 </ol>
-<p>Keep the two features in separate commits but reserve their enum values
-together: they collide on the same four places — the enum, the Section 2 override
-block, the Section 3 timer selector and the Section 4 <code>CASE</code> — so
-parallel branches would conflict in every one of them.</p>
+<p>Steps 1, 2 and 4 are each independently shippable and carry no wire risk;
+they are worth doing first regardless of what happens to 5 and 6.</p>
+
+<h2>What the test harnesses will need</h2>
+<ul>
+<li><code>scripts/test_master_cycle_arming.py</code> — the arming transitions.
+Add: pause rejected from <code>NOT_HOMED</code> and <code>ERR</code>, STOP clears
+the pause, a paused <code>IDLE</code> refuses <code>CMD:1</code>, and the recovery
+chain's exit and escalation.</li>
+<li><code>scripts/test_piston_jog_gate.py</code> — the solenoid ladder. Add the
+widened window: jog allowed in <code>NOT_HOMED</code>, still refused in
+<code>IDLE</code> and in <code>RECOVER_*</code>.</li>
+<li><code>scripts/pb_test/</code> — the live-PLC harness. Two existing rules
+apply: drive <code>GVL_IO.dIn[14]</code>, never <code>GVL_App.bPb2</code>; and
+read transition paths from <code>GVL_Log</code>, never by polling
+<code>eStep</code>.</li>
+<li><code>scripts/mock_robot/mock_robot.py</code> — teach <code>STATE_NAMES</code>
+the values 41 and 50/51/52 so bench traces stay readable.</li>
+</ul>
 
 <footer>Generated by <code>scripts/statediagram/build_state_diagrams.py</code>. Diagrams are hand-laid-out inline SVG — no external scripts, so these pages open straight from the filesystem. Click any state box marked <strong>i</strong> for the commands it drives.</footer>
 </div>
-<script>window.SM_STATE_INFO = {"NOT_HOMED": {"title": "NOT_HOMED", "value": 40, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["also clears", "iErrorCode := 0, sErrorText := ''"], ["timer", "none — falls to the Section 3 ELSE"], ["physically", "everything at its spring-return home, nothing energised"]]}, "IDLE": {"title": "IDLE", "value": 0, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["also clears", "iErrorCode := 0, sErrorText := ''"], ["timer", "none"], ["physically", "at rest and armed; the robot may command a bulb"]]}, "INIT_PUSH": {"title": "RETRACT_ALL_PUSH", "value": 10, "rows": [["resets first + drives", "<span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 6"], ["physically", "push pins driving home on their springs"]]}, "INIT_SEP": {"title": "RETRACT_ALL_SEP", "value": 11, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 7"], ["physically", "push already home; separators retracting"]]}, "INIT_GRIP": {"title": "RETRACT_ALL_GRIP", "value": 12, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND"], ["timer", "tStepTimeoutMs → error 8"], ["physically", "releasing the grippers; sep and push confirmed home"]]}, "CHECK_PLATE": {"title": "CHECK_PLATE", "value": 20, "rows": [["drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["exit", "bPlateOk = bPlateSenL <strong>OR</strong> bPlateSenR"], ["timer", "tPlateWaitTimeoutMs → error 9, suppressed by bBypassPlateSensors (which then advances instead)"], ["physically", "nothing driven — but the robot arm is inside the fixture placing the plate"]]}, "GRIP_EXT": {"title": "GRIP_EXTENDING", "value": 21, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "bAllGripExtended — <strong>OR</strong>, not AND"], ["timer", "tStepTimeoutMs → error 10"], ["physically", "grippers closing on the plate"]]}, "SEP_EXT": {"title": "SEP_EXTENDING", "value": 1, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE  (hold clamp)</span>"], ["exit", "bAllSepExtended (AND of all 3)"], ["timer", "tStepTimeoutMs → error 1"], ["physically", "separator pins driving into the clamped plate"]]}, "PUSH_EXT": {"title": "PUSH_EXTENDING", "value": 3, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE  (hold out)</span><span class=\"cmd on\">bPushCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "bAllPushExtended (AND of all 3)"], ["timer", "tStepTimeoutMs → error 3"], ["physically", "<strong>the force stroke</strong> — pins being driven into the bulb base"]]}, "DWELL_PUSH": {"title": "DWELL_PUSH", "value": 4, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend, bPushCmdExtend, bGripCmdExtend all TRUE</span>"], ["exit", "tDwellPushMs elapsed"], ["timer", "tDwellPushMs — a dwell, not a timeout. No error path."], ["physically", "everything held out against hard stops, full pin load"]]}, "PUSH_RET": {"title": "PUSH_RETRACTING", "value": 5, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE  (sep stays out)</span><span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span><span class=\"cmd off\">Push ext := FALSE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 4"], ["physically", "push retracting on its springs, separators still out"]]}, "PUSH_RET_DW": {"title": "PUSH_RETRACTED_DWELL", "value": 6, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "tPushRetractedDwellMs elapsed"], ["timer", "dwell, no error path"], ["physically", "push home, separators held out, plate clamped"]]}, "SEP_RET": {"title": "SEP_RETRACTING", "value": 7, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span><span class=\"cmd off\">Sep ext := FALSE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 5"], ["physically", "separators retracting, plate still clamped"]]}, "SEP_RET_DW": {"title": "SEP_RETRACTED_DWELL", "value": 8, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "tSepRetractedDwellMs elapsed"], ["timer", "dwell, no error path"], ["physically", "sep and push home; only the clamp still holding"]]}, "GRIP_RET": {"title": "GRIP_RETRACTING", "value": 22, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND. Then nCyclesCompleted + 1"], ["timer", "tStepTimeoutMs → error 11"], ["physically", "releasing the plate — last motion of the bulb"]]}, "ERR": {"title": "ERR", "value": 99, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["exit", "only Section 2 RESET — HMI button, orange PB2, or robot CMD:2 → enters RECOVER_PUSH_RETR"], ["timer", "none"], ["physically", "coils dropped, so every piston has spring-returned home. The plate is released."]]}, "REC_PUSH": {"title": "RECOVER_PUSH_RETR", "value": 50, "rows": [["resets first + drives", "<span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → <strong>error 12</strong> — distinct from arming's error 6, which is the whole point of this chain"], ["physically", "push pins driving home on their springs, recovering from a fault"]]}, "REC_SEP": {"title": "RECOVER_SEP_RETR", "value": 51, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → <strong>error 13</strong>"], ["physically", "push already home; separators retracting"]]}, "REC_GRIP": {"title": "RECOVER_GRIP_RETR", "value": 52, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND → IDLE"], ["timer", "tStepTimeoutMs → <strong>error 14</strong>"], ["physically", "releasing the grippers; sep and push confirmed home"], ["why IDLE", "the machine really IS homed at this point, so advertising STATE:0 to the robot is honest"]]}};</script>
+<script>window.SM_STATE_INFO = {"NOT_HOMED": {"title": "NOT_HOMED", "value": 40, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["also clears", "iErrorCode := 0, sErrorText := ''"], ["timer", "none — falls to the Section 3 ELSE"], ["physically", "everything at its spring-return home, nothing energised"], ["operator", "<strong>Manual commands LIVE</strong> — PB1 grip and PB2 sep jog; PB3 stays START. Pause rejected."]]}, "IDLE": {"title": "IDLE", "value": 0, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["also clears", "iErrorCode := 0, sErrorText := ''"], ["timer", "none"], ["physically", "at rest and armed; the robot may command a bulb"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "INIT_PUSH": {"title": "RETRACT_ALL_PUSH", "value": 10, "rows": [["resets first + drives", "<span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 6"], ["physically", "push pins driving home on their springs"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "INIT_SEP": {"title": "RETRACT_ALL_SEP", "value": 11, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 7"], ["physically", "push already home; separators retracting"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "INIT_GRIP": {"title": "RETRACT_ALL_GRIP", "value": 12, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND"], ["timer", "tStepTimeoutMs → error 8"], ["physically", "releasing the grippers; sep and push confirmed home"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "CHECK_PLATE": {"title": "CHECK_PLATE", "value": 20, "rows": [["drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["exit", "bPlateOk = bPlateSenL <strong>OR</strong> bPlateSenR"], ["timer", "tPlateWaitTimeoutMs → error 9, suppressed by bBypassPlateSensors (which then advances instead)"], ["physically", "nothing driven — but the robot arm is inside the fixture placing the plate"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "GRIP_EXT": {"title": "GRIP_EXTENDING", "value": 21, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "bAllGripExtended — <strong>OR</strong>, not AND"], ["timer", "tStepTimeoutMs → error 10"], ["physically", "grippers closing on the plate"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "SEP_EXT": {"title": "SEP_EXTENDING", "value": 1, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE  (hold clamp)</span>"], ["exit", "bAllSepExtended (AND of all 3)"], ["timer", "tStepTimeoutMs → error 1"], ["physically", "separator pins driving into the clamped plate"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "PUSH_EXT": {"title": "PUSH_EXTENDING", "value": 3, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE  (hold out)</span><span class=\"cmd on\">bPushCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "bAllPushExtended (AND of all 3)"], ["timer", "tStepTimeoutMs → error 3"], ["physically", "<strong>the force stroke</strong> — pins being driven into the bulb base"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "DWELL_PUSH": {"title": "DWELL_PUSH", "value": 4, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend, bPushCmdExtend, bGripCmdExtend all TRUE</span>"], ["exit", "tDwellPushMs elapsed"], ["timer", "tDwellPushMs — a dwell, not a timeout. No error path."], ["physically", "everything held out against hard stops, full pin load"], ["operator", "<strong>Pause excluded</strong> — the guard is 'dwell elapsed', so holding here keeps full pin load applied indefinitely. Pause takes effect one step later."]]}, "PUSH_RET": {"title": "PUSH_RETRACTING", "value": 5, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE  (sep stays out)</span><span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span><span class=\"cmd off\">Push ext := FALSE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 4"], ["physically", "push retracting on its springs, separators still out"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "PUSH_RET_DW": {"title": "PUSH_RETRACTED_DWELL", "value": 6, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdExtend[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "tPushRetractedDwellMs elapsed"], ["timer", "dwell, no error path"], ["physically", "push home, separators held out, plate clamped"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "SEP_RET": {"title": "SEP_RETRACTING", "value": 7, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span><span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span><span class=\"cmd off\">Sep ext := FALSE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → error 5"], ["physically", "separators retracting, plate still clamped"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "SEP_RET_DW": {"title": "SEP_RETRACTED_DWELL", "value": 8, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdExtend[1..2] := TRUE</span>"], ["exit", "tSepRetractedDwellMs elapsed"], ["timer", "dwell, no error path"], ["physically", "sep and push home; only the clamp still holding"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "GRIP_RET": {"title": "GRIP_RETRACTING", "value": 22, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND. Then nCyclesCompleted + 1"], ["timer", "tStepTimeoutMs → error 11"], ["physically", "releasing the plate — last motion of the bulb"], ["operator", "<strong>Pause</strong> (PB2) — holds at this step's boundary. Manual commands blocked."]]}, "ERR": {"title": "ERR", "value": 99, "rows": [["resets first + drives", "<span class=\"cmd off\">ResetAllCommands() only — all 10 FALSE</span>"], ["exit", "only Section 2 RESET — HMI button, orange PB2, or robot CMD:2 → enters RECOVER_PUSH_RETR"], ["timer", "none"], ["physically", "coils dropped, so every piston has spring-returned home. The plate is released."], ["operator", "<strong>Manual commands LIVE</strong> — PB1 grip and PB2 sep jog, PB3 push jog. Pause rejected."]]}, "PAUSED": {"title": "PAUSED — wire value only", "value": 41, "rows": [["proposed", "<strong>Wire value only — never assigned to eStep.</strong>"], ["drives", "nothing of its own. The interrupted step keeps asserting its own coil pattern every scan."], ["emitted by", "MAIN's nStateOut computation, exactly like the existing MANUAL = 30 sentinel"], ["robot sees", "STATE:41 → falls into &ldquo;anything else&rdquo; → CMD:0 (wait). No robot-side branch needed."], ["leaves on", "PB2 again (Continue), START, STOP, Manual, or entering ERR"]]}, "REC_PUSH": {"title": "RECOVER_PUSH_RETR", "value": 50, "rows": [["resets first + drives", "<span class=\"cmd on\">bPushCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllPushRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → <strong>error 12</strong> — distinct from arming's error 6, which is the whole point of this chain"], ["physically", "push pins driving home on their springs, recovering from a fault"]]}, "REC_SEP": {"title": "RECOVER_SEP_RETR", "value": 51, "rows": [["resets first + drives", "<span class=\"cmd on\">bSepCmdRetract[1..3] := TRUE</span>"], ["exit", "bAllSepRetracted (AND of all 3)"], ["timer", "tStepTimeoutMs → <strong>error 13</strong>"], ["physically", "push already home; separators retracting"]]}, "REC_GRIP": {"title": "RECOVER_GRIP_RETR", "value": 52, "rows": [["resets first + drives", "<span class=\"cmd on\">bGripCmdRetract[1..2] := TRUE</span>"], ["exit", "bAllGripRetracted — <strong>OR</strong>, not AND → IDLE"], ["timer", "tStepTimeoutMs → <strong>error 14</strong>"], ["physically", "releasing the grippers; sep and push confirmed home"], ["why IDLE", "the machine really IS homed at this point, so advertising STATE:0 to the robot is honest"]]}};</script>
 <script>
 (function(){var r=document.documentElement,b=document.getElementById('t');
 function lbl(){var m=r.getAttribute('data-theme');b.textContent='theme: '+(m||'auto');}

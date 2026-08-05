@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Technician's manual — מדריך לטכנאי</title>
+<style>
+:root{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#44515700; --ink-2:#445157; --ink-3:#6f7c82;
+  --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --heb:"Segoe UI","Arial Hebrew","Noto Sans Hebrew",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}}
+:root[data-theme="dark"]{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}
+:root[data-theme="light"]{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#445157; --ink-3:#6f7c82; --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font:16px/1.65 var(--sans);font-variant-numeric:tabular-nums}
+:root[data-lang="he"] body{font-family:var(--heb)}
+
+/* ---- language switching: both languages ship in the DOM ---- */
+[data-l="he"]{display:none}
+:root[data-lang="he"] [data-l="en"]{display:none}
+:root[data-lang="he"] [data-l="he"]{display:revert}
+
+.wrap{max-width:56rem;margin:0 auto;padding:0 1.25rem 5rem}
+.bar{position:sticky;top:0;z-index:10;background:var(--ground);
+  border-bottom:1px solid var(--rule);padding:.55rem 0;margin-bottom:1.5rem}
+.bar .in{max-width:56rem;margin:0 auto;padding:0 1.25rem;display:flex;
+  gap:.5rem;align-items:center;flex-wrap:wrap}
+.bar .sp{flex:1}
+button.sw{background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);
+  border-radius:7px;padding:.35rem .7rem;font:.78rem var(--mono);cursor:pointer}
+button.sw[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:700}
+.docnav a{font:.78rem var(--sans);text-decoration:none;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+  padding:.3rem .75rem;margin-inline-end:.35rem}
+.docnav a.here{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:600}
+
+header.mast{padding:.5rem 0 .5rem}
+.eyebrow{font:600 .7rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .6rem;direction:ltr;unicode-bidi:isolate;
+  text-align:start}
+h1{font-size:clamp(1.5rem,4vw,2.15rem);line-height:1.15;margin:0 0 .4rem;
+   text-wrap:balance}
+.hd h2{font-size:1.2rem;margin:2.2rem 0 .4rem;padding-bottom:.3rem;
+  border-bottom:2px solid var(--accent-soft)}
+.hd h3{font-size:1rem;margin:1.6rem 0 .3rem}
+p{margin:.65rem 0}
+ul,ol{margin:.6rem 0;padding-inline-start:1.4rem}
+li{margin:.35rem 0}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+code{font:.86em var(--mono);background:var(--surface-2);padding:.1em .34em;
+  border-radius:3px;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+kbd{font:.8em var(--mono);border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:4px;padding:.12em .4em;background:var(--surface);
+  direction:ltr;unicode-bidi:isolate}
+strong{color:var(--ink)}
+
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;
+  background:var(--surface);margin:1rem 0}
+table{width:100%;border-collapse:collapse;min-width:30rem}
+th,td{text-align:start;padding:.55rem .7rem;border-bottom:1px solid var(--rule);
+  vertical-align:top;font-size:.9rem}
+th{background:var(--surface-2);font:600 .72rem/1.35 var(--mono);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+:root[data-lang="he"] th{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.8rem}
+tr:last-child td{border-bottom:0}
+
+.note{margin:1.2rem 0;padding:.85rem 1.1rem;border-radius:9px;
+  background:var(--surface);border:1px solid var(--rule);
+  border-inline-start:5px solid var(--info);font-size:.93rem}
+.note.info{border-inline-start-color:var(--info);background:var(--info-soft)}
+.note.ok{border-inline-start-color:var(--accent);background:var(--accent-soft)}
+.note.warn{border-inline-start-color:var(--caution);background:var(--caution-soft)}
+.note.danger{border-inline-start-color:var(--fault);background:var(--fault-soft)}
+.note b{display:block;margin-bottom:.2rem}
+.note p{margin:.3rem 0 0;color:var(--ink-2)}
+
+ol.steps{list-style:none;padding-inline-start:0;counter-reset:s}
+ol.steps>li{counter-increment:s;position:relative;
+  padding-inline-start:2.6rem;margin:.85rem 0;min-height:1.9rem}
+ol.steps>li::before{content:counter(s);position:absolute;inset-inline-start:0;
+  top:0;width:1.85rem;height:1.85rem;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);
+  font:700 .85rem/1.85rem var(--mono);text-align:center}
+
+.lamp{display:inline-block;width:.85rem;height:.85rem;border-radius:50%;
+  margin-inline-end:.4rem;vertical-align:-.1em;border:1px solid rgba(0,0,0,.25)}
+.lamp.g{background:#2ecc71}.lamp.r{background:#e74c3c}
+.lamp.o{background:#e8a33d}.lamp.off{background:var(--surface-2)}
+.pb{display:inline-block;font:700 .74rem var(--mono);border-radius:5px;
+  padding:.16em .45em;border:1px solid rgba(0,0,0,.2);direction:ltr;
+  unicode-bidi:isolate;white-space:nowrap}
+.pb.r{background:#e74c3c;color:#fff}
+.pb.o{background:#e8a33d;color:#3a2600}
+.pb.g{background:#2ecc71;color:#04361b}
+
+.links{display:grid;gap:.6rem;margin:1rem 0}
+a.lk{display:block;text-decoration:none;background:var(--surface);
+  border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;
+  border-inline-start:4px solid var(--rule)}
+a.lk:hover{border-color:var(--accent);border-inline-start-color:var(--accent)}
+.lk-t{display:block;color:var(--ink);font-weight:600;font-size:.97rem}
+.lk-d{display:block;color:var(--ink-3);font-size:.85rem;margin-top:.15rem}
+.badge{display:inline-block;margin-inline-start:.5rem;font:700 .62rem/1 var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;padding:.25em .45em;
+  border-radius:4px;vertical-align:.1em}
+:root[data-lang="he"] .badge{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.68rem}
+.badge.live{background:var(--accent-soft);color:var(--accent)}
+.badge.ref{background:var(--info-soft);color:var(--info)}
+.badge.archive{background:var(--surface-2);color:var(--ink-3)}
+.badge.data{background:var(--caution-soft);color:var(--caution)}
+
+footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:.8rem}
+@media print{
+  .bar{display:none} body{background:#fff}
+  .note,.tw{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="bar"><div class="in">
+<span class="docnav"><a href="index.html"><span data-l="en">All docs</span><span data-l="he">כל המסמכים</span></a><a href="operator-manual.html"><span data-l="en">Operator</span><span data-l="he">מדריך מפעיל</span></a><a href="technician-manual.html" class="here"><span data-l="en">Technician</span><span data-l="he">מדריך טכנאי</span></a><a href="auto-state-machine-current.html"><span data-l="en">State machine</span><span data-l="he">מכונת מצבים</span></a></span>
+<span class="sp"></span>
+<button class="sw" id="lg" type="button" aria-pressed="false">עברית / HE</button>
+<button class="sw" id="tg" type="button" aria-pressed="false">theme: auto</button>
+</div></div>
+<div class="wrap">
+<header class="mast">
+<p class="eyebrow" dir="ltr">167_01 Saad — Flower</p>
+<h1 lang="en" dir="ltr" data-l="en">Technician's manual</h1>
+<h1 lang="he" dir="rtl" data-l="he">מדריך לטכנאי</h1>
+<p lang="en" dir="ltr" data-l="en">The detailed reference: sequence, error codes, settings, IO, robot protocol, diagnostics and the deviations you need to know about. For day-to-day running see the <a href="operator-manual.html">operator manual</a>.</p>
+<p lang="he" dir="rtl" data-l="he">המדריך המפורט: רצף, קודי תקלה, הגדרות, IO, פרוטוקול רובוט, אבחון והחריגות שחשוב להכיר. להפעלה יומיומית ראה את <a href="operator-manual.html">מדריך המפעיל</a>.</p>
+</header>
+<div class="hd" id="overview"><h2 lang="en" dir="ltr" data-l="en">1 &middot; System overview</h2><h2 lang="he" dir="rtl" data-l="he">1 &middot; סקירת המערכת</h2></div>
+<p lang="en" dir="ltr" data-l="en">One device does everything: a Beckhoff <strong>CP6606</strong> panel PC running TwinCAT 3. It holds the PLC program and the operator screens (classic PLC visualization). There is no separate HMI box and no PC in the loop.</p><p lang="he" dir="rtl" data-l="he">מכשיר אחד עושה הכל: פאנל <strong>CP6606</strong> של Beckhoff המריץ TwinCAT 3. הוא מכיל את תוכנית ה-PLC ואת מסכי המפעיל (ויזואליזציה קלאסית). אין קופסת HMI נפרדת ואין מחשב בלופ.</p>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Part</th><th>What it is</th></tr></thead><tbody><tr><td><code>MAIN</code></td><td>Runs every scan. Forces the machine mode onto all eight pistons, reads the push buttons, drives the lamps, and translates the robot's commands.</td></tr><tr><td><code>FB_MasterAutoCycle</code></td><td>The sequence. One state machine, 19 assigned states.</td></tr><tr><td><code>FB_SolSpringPiston_2Pos</code></td><td>One instance per actuator, eight in total. Single coil, spring return.</td></tr><tr><td><code>PRG_IoMap</code></td><td>Copies raw IO to named aliases. Runs on its own 5&nbsp;ms task, which pre-empts the 10&nbsp;ms PLC task.</td></tr><tr><td><code>FB_RobotTcpClient</code></td><td>The PLC is the TCP <em>client</em>; the robot is the server on port 6001.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>חלק</th><th>מה זה</th></tr></thead><tbody><tr><td dir="ltr"><code>MAIN</code></td><td>רץ בכל סריקה. כופה את מצב המכונה על שמונה הבוכנות, קורא את הלחצנים, מפעיל את הנוריות, ומתרגם את פקודות הרובוט.</td></tr><tr><td dir="ltr"><code>FB_MasterAutoCycle</code></td><td>הרצף. מכונת מצבים אחת, 19 מצבים.</td></tr><tr><td dir="ltr"><code>FB_SolSpringPiston_2Pos</code></td><td>מופע אחד לכל מפעיל, שמונה בסך הכל. סליל אחד, חזרה בקפיץ.</td></tr><tr><td dir="ltr"><code>PRG_IoMap</code></td><td>מעתיק IO גולמי לשמות. רץ במשימה נפרדת של 5&nbsp;מ"ש, הקודמת למשימת ה-PLC של 10&nbsp;מ"ש.</td></tr><tr><td dir="ltr"><code>FB_RobotTcpClient</code></td><td>ה-PLC הוא <em>לקוח</em> TCP; הרובוט הוא השרת בפורט 6001.</td></tr></tbody></table></div>
+<div class="note info"><div lang="en" dir="ltr" data-l="en"><b>All eight actuators are single-coil spring-return</b><p>Energising the coil drives the piston out; de-energising lets a spring pull it home. There is no mid-position and no brake. Power loss, a broken wire or a dead coil all retract — fail-safe by construction. It also means a piston cannot be stopped part-way, which rules out several otherwise-obvious features.</p></div><div lang="he" dir="rtl" data-l="he"><b>כל שמונה המפעילים הם חד-סליליים עם חזרה בקפיץ</b><p>הפעלת הסליל מוציאה את הבוכנה; ניתוקו מאפשר לקפיץ להחזירה. אין מצב אמצע ואין בלם. נפילת מתח, חוט קרוע או סליל מקולקל — כולם מכניסים את הבוכנה. זהו כשל-לבטוח מעצם הבנייה. משמעות נוספת: לא ניתן לעצור בוכנה באמצע התנועה, מה ששולל כמה תכונות מובנות מאליהן.</p></div></div>
+<div class="hd" id="sequence"><h2 lang="en" dir="ltr" data-l="en">2 &middot; The Auto sequence</h2><h2 lang="he" dir="rtl" data-l="he">2 &middot; רצף האוטומט</h2></div>
+<p lang="en" dir="ltr" data-l="en">The full picture, clickable state by state, is in <a href="auto-state-machine-current.html">the as-built state machine diagram</a>. Summary:</p><p lang="he" dir="rtl" data-l="he">התמונה המלאה, מצב אחר מצב עם לחיצה, נמצאת ב<a href="auto-state-machine-current.html">תרשים מכונת המצבים כפי שנבנתה</a>. תמצית:</p>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>State</th><th>Value</th><th>What happens</th></tr></thead><tbody><tr><td><code>NOT_HOMED</code></td><td>40</td><td>In Automatic but <strong>not armed</strong>. Nothing driven, no timer. The power-up state, and where STOP and Manual leave the machine. Only an operator START leaves it.</td></tr><tr><td><code>IDLE</code></td><td>0</td><td>Armed. Waits for the robot's <code>CMD:1</code>, or the operator's two-button hold.</td></tr><tr><td><code>INIT_PUSH/SEP/GRIP_RETRACTING</code></td><td>10 / 11 / 12</td><td>The retract chain: push home, then sep, then grip. Ordering matters — it is a collision constraint. Exits to <code>IDLE</code> when arming, or to <code>CHECK_PLATE</code> when it is the front of a cycle.</td></tr><tr><td><code>CHECK_PLATE</code></td><td>20</td><td>Waits for the plate. Was called <code>WAIT_PLATE</code>; renamed 2026-08-05, <strong>wire value unchanged</strong>.</td></tr><tr><td><code>GRIP_EXTENDING</code> &rarr; <code>GRIP_RETRACTING</code></td><td>21, 1, 3, 4, 5, 6, 7, 8, 22</td><td>The cycle: clamp, sep out, push out, dwell, push back, dwell, sep back, dwell, release. Then <code>IDLE</code>, still armed.</td></tr><tr><td><code>ERR</code></td><td>99</td><td>Latched. Only RESET leaves it — HMI button, orange PB2, or the robot's <code>CMD:2</code>.</td></tr><tr><td><code>RECOVER_PUSH/SEP/GRIP_RETR</code></td><td>50 / 51 / 52</td><td><strong>Fault recovery only.</strong> Same motion as the INIT chain but its own identity, so a failed recovery reports 12/13/14 instead of looking like a failed arming. Always exits to <code>IDLE</code>.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>מצב</th><th>ערך</th><th>מה קורה</th></tr></thead><tbody><tr><td dir="ltr"><code>NOT_HOMED</code></td><td dir="ltr">40</td><td>במצב אוטומטי אך <strong>ללא אישור</strong>. שום דבר לא מופעל, אין טיימר. זהו מצב ההדלקה, ולשם מגיעים לאחר עצירה או מצב ידני. רק לחיצת התחלה של מפעיל מוציאה ממנו.</td></tr><tr><td dir="ltr"><code>IDLE</code></td><td dir="ltr">0</td><td>מאושר. ממתין ל<code>CMD:1</code> מהרובוט, או להחזקת שני הלחצנים על ידי המפעיל.</td></tr><tr><td dir="ltr"><code>INIT_PUSH/SEP/GRIP_RETRACTING</code></td><td dir="ltr">10 / 11 / 12</td><td>שרשרת ההכנסה: קודם דחיפה, אחר כך הפרדה, אחר כך תפיסה. הסדר חשוב — זו מניעת התנגשות. יוצא ל<code>IDLE</code> בעת אישור, או ל<code>CHECK_PLATE</code> כשזו תחילת מחזור.</td></tr><tr><td dir="ltr"><code>CHECK_PLATE</code></td><td dir="ltr">20</td><td>ממתין למגש. נקרא בעבר <code>WAIT_PLATE</code>; שונה השם ב-2026-08-05, <strong>ערך התקשורת לא שונה</strong>.</td></tr><tr><td dir="ltr"><code>GRIP_EXTENDING</code> &rarr; <code>GRIP_RETRACTING</code></td><td dir="ltr">21, 1, 3, 4, 5, 6, 7, 8, 22</td><td>המחזור: תפיסה, הוצאת הפרדה, הוצאת דחיפה, השהיה, החזרת דחיפה, השהיה, החזרת הפרדה, השהיה, שחרור. אחר כך <code>IDLE</code>, עדיין מאושר.</td></tr><tr><td dir="ltr"><code>ERR</code></td><td dir="ltr">99</td><td>נעול. רק איפוס מוציא ממנו — לחצן במסך, לחצן כתום, או <code>CMD:2</code> מהרובוט.</td></tr><tr><td dir="ltr"><code>RECOVER_PUSH/SEP/GRIP_RETR</code></td><td dir="ltr">50 / 51 / 52</td><td><strong>שחזור מתקלה בלבד.</strong> אותה תנועה כמו שרשרת ההכנסה אך בזהות נפרדת, כך ששחזור שנכשל מדווח <span class="ltr">12/13/14</span> ולא נראה כמו אישור שנכשל. יוצא תמיד ל<code>IDLE</code>.</td></tr></tbody></table></div>
+<div class="note ok"><div lang="en" dir="ltr" data-l="en"><b>Two kinds of start, different owners</b><p><strong>Operator START</strong> (HMI button or green PB3) means <em>home the pistons and arm</em> — it never runs a cycle. <strong>Robot <code>CMD:1</code></strong> means <em>run one cycle</em>, and is only accepted from <code>IDLE</code>. The operator's two-button hold is fed into the same input as <code>CMD:1</code>, because it means the same thing.</p></div><div lang="he" dir="rtl" data-l="he"><b>שני סוגי התחלה, בעלים שונים</b><p><strong>התחלה של מפעיל</strong> (לחצן במסך או לחצן ירוק) פירושה <em>אפס מקום ואשר</em> — היא לעולם אינה מריצה מחזור. <strong><code>CMD:1</code> מהרובוט</strong> פירושו <em>הרץ מחזור אחד</em>, ומתקבל רק מ<code>IDLE</code>. החזקת שני הלחצנים של המפעיל מוזנת לאותה כניסה כמו <code>CMD:1</code>, כי משמעותה זהה.</p></div></div>
+<div class="hd" id="errors"><h2 lang="en" dir="ltr" data-l="en">3 &middot; Error codes</h2><h2 lang="he" dir="rtl" data-l="he">3 &middot; קודי תקלה</h2></div>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Code</th><th>Step that timed out</th></tr></thead><tbody><tr><td>1 / 3 / 4 / 5</td><td>SEP_EXTENDING / PUSH_EXTENDING / PUSH_RETRACTING / SEP_RETRACTING</td></tr><tr><td>6 / 7 / 8</td><td>The three <code>INIT_*</code> steps — <strong>arming</strong></td></tr><tr><td>9</td><td><code>CHECK_PLATE</code> — plate never arrived. Suppressed by <code>bBypassPlateSensors</code>.</td></tr><tr><td>10 / 11</td><td>GRIP_EXTENDING / GRIP_RETRACTING</td></tr><tr><td>12 / 13 / 14</td><td>The three <code>RECOVER_*</code> steps — <strong>recovery</strong>. Deliberately distinct from 6/7/8 so you can tell which one failed.</td></tr><tr><td>2 and 99</td><td><strong>Retired, never set.</strong> Do not reuse the numbers — old logs and CSV exports still carry them.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>קוד</th><th>השלב שפג זמנו</th></tr></thead><tbody><tr><td dir="ltr">1 / 3 / 4 / 5</td><td dir="ltr">SEP_EXTENDING / PUSH_EXTENDING / PUSH_RETRACTING / SEP_RETRACTING</td></tr><tr><td dir="ltr">6 / 7 / 8</td><td>שלושת שלבי <code>INIT_*</code> — <strong>אישור</strong></td></tr><tr><td dir="ltr">9</td><td><code>CHECK_PLATE</code> — המגש לא הגיע. מבוטל על ידי <code>bBypassPlateSensors</code>.</td></tr><tr><td dir="ltr">10 / 11</td><td dir="ltr">GRIP_EXTENDING / GRIP_RETRACTING</td></tr><tr><td dir="ltr">12 / 13 / 14</td><td>שלושת שלבי <code>RECOVER_*</code> — <strong>שחזור</strong>. נפרדים במתכוון מ-<span class="ltr">6/7/8</span> כדי שתוכל לדעת מי נכשל.</td></tr><tr><td>2 ו-99</td><td><strong>הוצאו משימוש, לא נקבעים.</strong> אל תעשה בהם שימוש חוזר — יומנים וקבצי CSV ישנים עדיין מכילים אותם.</td></tr></tbody></table></div>
+<div class="note danger"><div lang="en" dir="ltr" data-l="en"><b>With bNoSensors set, almost no error can occur</b><p><code>bNoSensors</code> makes the twelve movement steps advance on their timer instead of on sensors, so codes 1/3/4/5/6/7/8/10/11/12/13/14 all become <strong>unreachable</strong> — only code 9 can still fire. Every bench test so far has run with this flag set, which means <strong>no movement-timeout path has ever been exercised on any panel.</strong> Turn it off before production.</p></div><div lang="he" dir="rtl" data-l="he"><b>כאשר bNoSensors מסומן, כמעט שום תקלה לא יכולה לקרות</b><p><code>bNoSensors</code> גורם לשנים-עשר שלבי התנועה להתקדם לפי הטיימר במקום לפי חיישנים, כך שהקודים 1/3/4/5/6/7/8/10/11/12/13/14 הופכים <strong>בלתי ניתנים להשגה</strong> — רק קוד 9 עוד יכול לקרות. כל הבדיקות עד כה רצו עם דגל זה מסומן, כלומר <strong>אף מסלול פסק-זמן של תנועה לא נבדק מעולם באף פאנל.</strong> כבה אותו לפני ייצור.</p></div></div>
+<div class="hd" id="settings"><h2 lang="en" dir="ltr" data-l="en">4 &middot; Settings on the AutoMain screen</h2><h2 lang="he" dir="rtl" data-l="he">4 &middot; הגדרות במסך AutoMain</h2></div>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Field</th><th>Default</th><th>Meaning</th></tr></thead><tbody><tr><td><code>tStepTimeoutMs</code></td><td>10000</td><td>Movement budget for all twelve motion steps. Expiry = fault.</td></tr><tr><td><code>tPlateWaitTimeoutMs</code></td><td>10000</td><td>How long <code>CHECK_PLATE</code> waits for the robot to place the plate.</td></tr><tr><td><code>tDwellPushMs</code></td><td>2000</td><td>How long the push pins are held loaded.</td></tr><tr><td><code>tPushRetractedDwellMs</code> / <code>tSepRetractedDwellMs</code></td><td>500 / 500</td><td>Settle pauses after each retract.</td></tr><tr><td><code>tPbStopHoldMs</code></td><td>1000</td><td>How long red PB1 must be held to STOP.</td></tr><tr><td><code>tPbStartHoldMs</code></td><td>1000</td><td>How long orange + green must be held to run one cycle.</td></tr><tr><td><code>bNoSensors</code></td><td>FALSE</td><td><strong>Bench only.</strong> Steps advance on time, not sensors. See the warning above.</td></tr><tr><td><code>bBypassPlateSensors</code></td><td>FALSE</td><td>Removes the <code>CHECK_PLATE</code> <em>error</em> only, not the wait. The timeout becomes a fixed placement dwell.</td></tr><tr><td><code>bAutoMode</code></td><td>FALSE</td><td>Automatic / Manual. The single source of truth for every piston's mode — no per-piston override exists.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>שדה</th><th>ברירת מחדל</th><th>משמעות</th></tr></thead><tbody><tr><td dir="ltr"><code>tStepTimeoutMs</code></td><td dir="ltr">10000</td><td>תקציב זמן לשנים-עשר שלבי התנועה. פקיעה = תקלה.</td></tr><tr><td dir="ltr"><code>tPlateWaitTimeoutMs</code></td><td dir="ltr">10000</td><td>כמה זמן <code>CHECK_PLATE</code> ממתין שהרובוט יניח את המגש.</td></tr><tr><td dir="ltr"><code>tDwellPushMs</code></td><td dir="ltr">2000</td><td>כמה זמן פיני הדחיפה מוחזקים בעומס.</td></tr><tr><td dir="ltr"><code>tPushRetractedDwellMs</code> / <code>tSepRetractedDwellMs</code></td><td dir="ltr">500 / 500</td><td>השהיות התייצבות אחרי כל הכנסה.</td></tr><tr><td dir="ltr"><code>tPbStopHoldMs</code></td><td dir="ltr">1000</td><td>כמה זמן להחזיק את הלחצן האדום כדי לעצור.</td></tr><tr><td dir="ltr"><code>tPbStartHoldMs</code></td><td dir="ltr">1000</td><td>כמה זמן להחזיק כתום + ירוק כדי להריץ מחזור אחד.</td></tr><tr><td dir="ltr"><code>bNoSensors</code></td><td dir="ltr">FALSE</td><td><strong>לשולחן עבודה בלבד.</strong> שלבים מתקדמים לפי זמן, לא לפי חיישנים. ראה אזהרה לעיל.</td></tr><tr><td dir="ltr"><code>bBypassPlateSensors</code></td><td dir="ltr">FALSE</td><td>מבטל רק את <em>התקלה</em> של <code>CHECK_PLATE</code>, לא את ההמתנה. פסק-הזמן הופך להשהיית הנחה קבועה.</td></tr><tr><td dir="ltr"><code>bAutoMode</code></td><td dir="ltr">FALSE</td><td>אוטומטי / ידני. מקור האמת היחיד למצב כל בוכנה — אין דריסה פרטנית לבוכנה.</td></tr></tbody></table></div>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>These survive a power cycle — including the bench flags</b><p>The settings are persistent and are flushed to disk about two seconds after you stop editing. That includes <code>bNoSensors</code> and <code>bBypassPlateSensors</code>: a flag left on for a bench session <strong>comes back on after a reboot</strong>. Check both before running production.</p></div><div lang="he" dir="rtl" data-l="he"><b>אלה נשמרים לאחר כיבוי — כולל דגלי השולחן</b><p>ההגדרות נשמרות ונכתבות לדיסק כשתי שניות לאחר סיום העריכה. זה כולל את <code>bNoSensors</code> ואת <code>bBypassPlateSensors</code>: דגל שהושאר דלוק לבדיקה <strong>יחזור דלוק לאחר אתחול</strong>. בדוק את שניהם לפני ייצור.</p></div></div>
+<div class="hd" id="robot"><h2 lang="en" dir="ltr" data-l="en">5 &middot; Robot interface</h2><h2 lang="he" dir="rtl" data-l="he">5 &middot; ממשק הרובוט</h2></div>
+<p lang="en" dir="ltr" data-l="en">Raw ASCII over TCP, no newline framing, one send &rarr; one reply. The PLC dials the robot; the endpoint is editable on the Robot screen.</p><p lang="he" dir="rtl" data-l="he">ASCII גולמי מעל TCP, בלי מפריד שורה, שליחה אחת &rarr; תשובה אחת. ה-PLC מתקשר לרובוט; ניתן לערוך את הכתובת במסך הרובוט.</p>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>PLC sends</th><th>Robot replies</th><th>Meaning</th></tr></thead><tbody><tr><td><code>STATE:0</code></td><td><code>CMD:1</code></td><td>Armed — run one cycle.</td></tr><tr><td><code>STATE:99</code></td><td><code>CMD:2</code></td><td>Faulted — reset it.</td></tr><tr><td>anything else</td><td><code>CMD:0</code></td><td>Wait. This is why new states cost nothing robot-side: 30, 40, 50, 51, 52 all land here.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>ה-PLC שולח</th><th>הרובוט משיב</th><th>משמעות</th></tr></thead><tbody><tr><td dir="ltr"><code>STATE:0</code></td><td dir="ltr"><code>CMD:1</code></td><td>מאושר — הרץ מחזור אחד.</td></tr><tr><td dir="ltr"><code>STATE:99</code></td><td dir="ltr"><code>CMD:2</code></td><td>תקלה — אפס אותה.</td></tr><tr><td>כל דבר אחר</td><td dir="ltr"><code>CMD:0</code></td><td>המתן. זו הסיבה שמצבים חדשים אינם עולים דבר בצד הרובוט: <span class="ltr">30, 40, 50, 51, 52</span> — כולם נופלים לכאן.</td></tr></tbody></table></div>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>The step numbers are a wire contract</b><p><code>eStep</code>'s numeric value goes on the wire, so a state may be <em>renamed</em> freely but <strong>never renumbered</strong>. <code>0</code> and <code>99</code> in particular <em>are</em> the protocol.</p></div><div lang="he" dir="rtl" data-l="he"><b>מספרי המצבים הם חוזה תקשורת</b><p>הערך המספרי של <code>eStep</code> נשלח בתקשורת, ולכן ניתן <em>לשנות שם</em> של מצב בחופשיות אך <strong>לעולם לא את המספר</strong>. במיוחד <code>0</code> ו<code>99</code> — הם עצמם הפרוטוקול.</p></div></div>
+<div class="hd" id="io"><h2 lang="en" dir="ltr" data-l="en">6 &middot; IO map</h2><h2 lang="he" dir="rtl" data-l="he">6 &middot; מפת כניסות ויציאות</h2></div>
+<p lang="en" dir="ltr" data-l="en">Authority is <code>docs/167_01_SAAD_PinPush_IO_List.xlsx</code>, sheet <code>IO</code>, column <strong>NEW</strong> — the as-rewired assignment. The <code>GVL_IO..[]</code> column in that sheet is the <em>old</em> numbering; do not read it by mistake.</p><p lang="he" dir="rtl" data-l="he">מקור הסמכות הוא <code>docs/167_01_SAAD_PinPush_IO_List.xlsx</code>, גיליון <code>IO</code>, עמודה <strong>NEW</strong> — החיווט לאחר השינוי. העמודה <code>GVL_IO..[]</code> באותו גיליון היא המספור <em>הישן</em>; אל תקרא אותה בטעות.</p>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Device</th><th>DI retract</th><th>DI extend</th><th>DO</th><th>Status</th></tr></thead><tbody><tr><td>SepSol1 / 2 / 3</td><td>3 / 7 / 11</td><td>4 / 8 / 12</td><td>4 / 5 / 6</td><td>ok</td></tr><tr><td>PushSol1 / 2 / 3</td><td>1 / 5 / 9</td><td>2 / 6 / 10</td><td>1 / 2 / 3</td><td>ok</td></tr><tr><td>PB1 red / PB2 orange / PB3 green</td><td>13 / 14 / 15</td><td>&mdash;</td><td>7 / 8 / 9 (LEDs)</td><td>ok</td></tr><tr><td>GripSolL</td><td>17</td><td>18</td><td>10</td><td>ok</td></tr><tr><td>GripSolR</td><td>19</td><td>20</td><td>11</td><td><strong>NO AIR</strong>; both sensors unconfirmed</td></tr><tr><td>Plate sensors</td><td>21, 22</td><td>&mdash;</td><td>&mdash;</td><td>21 ok; 22 unconfirmed. <strong>L/R swapped</strong> — see below.</td></tr><tr><td>Status lamps green / red</td><td>&mdash;</td><td>&mdash;</td><td>12 / 13</td><td>ok</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>התקן</th><th>כניסה מוכנס</th><th>כניסה מוצא</th><th>יציאה</th><th>מצב</th></tr></thead><tbody><tr><td dir="ltr">SepSol1 / 2 / 3</td><td dir="ltr">3 / 7 / 11</td><td dir="ltr">4 / 8 / 12</td><td dir="ltr">4 / 5 / 6</td><td>תקין</td></tr><tr><td dir="ltr">PushSol1 / 2 / 3</td><td dir="ltr">1 / 5 / 9</td><td dir="ltr">2 / 6 / 10</td><td dir="ltr">1 / 2 / 3</td><td>תקין</td></tr><tr><td>לחצן אדום / כתום / ירוק</td><td dir="ltr">13 / 14 / 15</td><td dir="ltr">&mdash;</td><td><span class="ltr">7 / 8 / 9</span> (נוריות)</td><td>תקין</td></tr><tr><td dir="ltr">GripSolL</td><td dir="ltr">17</td><td dir="ltr">18</td><td dir="ltr">10</td><td>תקין</td></tr><tr><td dir="ltr">GripSolR</td><td dir="ltr">19</td><td dir="ltr">20</td><td dir="ltr">11</td><td><strong>אין אוויר</strong>; שני החיישנים לא אומתו</td></tr><tr><td>חיישני מגש</td><td dir="ltr">21, 22</td><td dir="ltr">&mdash;</td><td dir="ltr">&mdash;</td><td>21 תקין; 22 לא אומת. <strong>ימין/שמאל הפוכים</strong> — ראה להלן.</td></tr><tr><td>נוריות מצב ירוקה / אדומה</td><td dir="ltr">&mdash;</td><td dir="ltr">&mdash;</td><td dir="ltr">12 / 13</td><td>תקין</td></tr></tbody></table></div>
+<p lang="en" dir="ltr" data-l="en">Sep and Push are <strong>interleaved on the input side</strong> and <strong>swapped on the output side</strong>. That is the physical wiring, not a mistake to tidy up.</p><p lang="he" dir="rtl" data-l="he">הפרדה ודחיפה <strong>משולבים בצד הכניסות</strong> ו<strong>מוחלפים בצד היציאות</strong>. זהו החיווט הפיזי, לא טעות שצריך לסדר.</p>
+<div class="hd" id="deviations"><h2 lang="en" dir="ltr" data-l="en">7 &middot; Known deviations</h2><h2 lang="he" dir="rtl" data-l="he">7 &middot; חריגות ידועות</h2></div>
+<div class="note danger"><div lang="en" dir="ltr" data-l="en"><b>Grip and plate use OR, not AND</b><p>Because <code>GripSolR</code> has no air, the sequence advances when <strong>either</strong> gripper reports position, and the plate gate passes on <strong>either</strong> sensor. This is a deliberate decision to keep producing on one gripper. The cost: a genuine failure of one gripper is <strong>invisible</strong>, and errors 10/11 can only fire when <em>both</em> fail. Treat grip position as unverified in any fault analysis.</p></div><div lang="he" dir="rtl" data-l="he"><b>תפיסה ומגש משתמשים ב-OR, לא ב-AND</b><p>מכיוון שאין אוויר ל<code>GripSolR</code>, הרצף מתקדם כאשר <strong>אחת</strong> מהתפסניות מדווחת על מקום, ושער המגש עובר עם <strong>אחד</strong> מהחיישנים. זו החלטה מכוונת כדי להמשיך לייצר עם תפסנית אחת. המחיר: כשל אמיתי של תפסנית אחת הוא <strong>בלתי נראה</strong>, וקודי 10/11 יכולים לקרות רק כאשר <em>שתיהן</em> נכשלות. התייחס למצב התפיסה כלא מאומת בכל ניתוח תקלה.</p></div></div>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>Plate sensors L and R are swapped</b><p>The IO list puts <code>PlateSensR</code> on DI&nbsp;21 and <code>PlateSensL</code> on DI&nbsp;22; <code>PRG_IoMap</code> does the opposite. Harmless for the cycle while the gate is an OR, but the <code>L</code>/<code>R</code> lamps on the main screen are therefore mislabelled. Settle which physical side is which before changing either end.</p></div><div lang="he" dir="rtl" data-l="he"><b>חיישני המגש שמאל וימין הפוכים</b><p>רשימת ה-IO ממקמת את <code>PlateSensR</code> ב-DI&nbsp;21 ואת <code>PlateSensL</code> ב-DI&nbsp;22; <code>PRG_IoMap</code> עושה את ההפוך. לא מזיק למחזור כל עוד השער הוא OR, אך משמעות הדבר שנוריות <code>L</code>/<code>R</code> במסך הראשי מסומנות שגוי. קבע איזה צד פיזי הוא מה לפני שינוי אחד הצדדים.</p></div></div>
+<div class="hd" id="diagnostics"><h2 lang="en" dir="ltr" data-l="en">8 &middot; Diagnostics</h2><h2 lang="he" dir="rtl" data-l="he">8 &middot; אבחון</h2></div>
+<ol class="steps" lang="en" dir="ltr" data-l="en"><li><div><strong>Log page first.</strong> It shows the 20 newest events with a timestamp, and the sequence records <em>every</em> state transition. A fault entry carries the failing step's text.</div></li><li><div>Tick <strong>Debug</strong> on the Log page to add every robot frame sent and received. Untick it afterwards — the ring is only 20 entries and debug traffic fills it in seconds.</div></li><li><div><strong>Robot page</strong> for the link: connection state, packets in and out, the last frame each way, and the two numbers actually being exchanged.</div></li><li><div>If the link says <em>Connected</em>, packets are climbing, and yet no cycle ever starts — check what <em>Last Rx</em> says. A reply that is not a <code>CMD:</code> frame means the robot software does not implement the state channel.</div></li><li><div>The timestamps are only as good as the panel clock. If it shows <code>--:--:--</code> the clock is unset, which is honest rather than wrong.</div></li></ol><ol class="steps" lang="he" dir="rtl" data-l="he"><li><div><strong>קודם כל מסך היומן.</strong> הוא מציג את 20 האירועים החדשים עם חותמת זמן, והרצף מתעד <em>כל</em> מעבר מצב. רשומת תקלה מכילה את הטקסט של השלב שנכשל.</div></li><li><div>סמן <strong>Debug</strong> במסך היומן כדי להוסיף כל מסגרת רובוט שנשלחה והתקבלה. בטל את הסימון לאחר מכן — הטבעת מכילה 20 רשומות בלבד ותעבורת ניפוי ממלאת אותה בשניות.</div></li><li><div><strong>מסך הרובוט</strong> לבדיקת הקישור: מצב חיבור, מנות נכנסות ויוצאות, המסגרת האחרונה בכל כיוון, ושני המספרים שמוחלפים בפועל.</div></li><li><div>אם הקישור מציג <em>Connected</em>, המנות עולות, ובכל זאת אף מחזור לא מתחיל — בדוק מה מציג <em>Last Rx</em>. תשובה שאינה מסגרת <code>CMD:</code> פירושה שתוכנת הרובוט אינה מיישמת את ערוץ המצב.</div></li><li><div>חותמות הזמן טובות כמו שעון הפאנל. אם מוצג <code>--:--:--</code> השעון לא כוון — זה כנה ולא שגוי.</div></li></ol>
+<div class="note info"><div lang="en" dir="ltr" data-l="en"><b>Bench test scripts</b><p><code>scripts/pb_test/pb_test_procedure.py</code> exercises all three buttons in every machine state over ADS and writes an HTML report (57 checks). <code>scripts/pb_test/cycle_trace.py</code> runs one complete cycle with the pistons emulated and checks the coil pattern of every state. <strong>Neither may be pointed at a machine with air connected.</strong></p></div><div lang="he" dir="rtl" data-l="he"><b>סקריפטים לבדיקה בשולחן</b><p><code>scripts/pb_test/pb_test_procedure.py</code> בודק את שלושת הלחצנים בכל מצבי המכונה דרך ADS וכותב דוח HTML (57 בדיקות). <code>scripts/pb_test/cycle_trace.py</code> מריץ מחזור שלם עם בוכנות מדומות ובודק את תבנית הסלילים בכל מצב. <strong>אין להפנות אף אחד מהם למכונה עם אוויר מחובר.</strong></p></div></div>
+<div class="hd" id="commissioning"><h2 lang="en" dir="ltr" data-l="en">9 &middot; Commissioning notes</h2><h2 lang="he" dir="rtl" data-l="he">9 &middot; הערות הרצה ראשונית</h2></div>
+<ul lang="en" dir="ltr" data-l="en"><li><strong>The robot IP is persistent.</strong> Changing the default in the source does <em>not</em> retarget a panel that has already run — the stored value wins. Use the Robot screen.</li><li><strong>Turn off both bench flags</strong> (<code>bNoSensors</code>, <code>bBypassPlateSensors</code>) before production. They persist.</li><li><strong>Never merge the bench target configuration.</strong> The local development setup disables the fieldbus; shipping it would give the machine a build with no IO.</li><li><strong>A full cycle on real sensors has never been run.</strong> Every test so far used emulated or bypassed sensors. Expect the first real cycle to reveal timing that needs tuning.</li></ul><ul lang="he" dir="rtl" data-l="he"><li><strong>כתובת ה-IP של הרובוט נשמרת.</strong> שינוי ברירת המחדל בקוד <em>אינו</em> מפנה מחדש פאנל שכבר רץ — הערך השמור קובע. השתמש במסך הרובוט.</li><li><strong>כבה את שני דגלי השולחן</strong> (<code>bNoSensors</code>, <code>bBypassPlateSensors</code>) לפני ייצור. הם נשמרים.</li><li><strong>לעולם אל תמזג את תצורת יעד השולחן.</strong> סביבת הפיתוח המקומית מנטרלת את אפיק השדה; שליחתה תיתן למכונה גרסה בלי IO.</li><li><strong>מחזור שלם על חיישנים אמיתיים מעולם לא הורץ.</strong> כל הבדיקות עד כה השתמשו בחיישנים מדומים או מבוטלים. צפה שהמחזור האמיתי הראשון יחשוף תזמונים שדורשים כיול.</li></ul>
+<footer><span data-l="en" dir="ltr">Generated by <code>scripts/manuals/build_manuals.py</code>. Both languages ship in this file — no network needed.</span><span data-l="he" dir="rtl">נוצר על ידי <code>scripts/manuals/build_manuals.py</code>. שתי השפות כלולות בקובץ זה — אין צורך בחיבור לרשת.</span></footer>
+</div>
+<script>
+(function(){
+  var r=document.documentElement;
+  var tb=document.getElementById('tg'), lb=document.getElementById('lg');
+
+  function applyLang(l){
+    r.setAttribute('data-lang', l);
+    r.setAttribute('lang', l);
+    // dir on <html> so the whole layout mirrors, not only the text
+    r.setAttribute('dir', l === 'he' ? 'rtl' : 'ltr');
+    lb.setAttribute('aria-pressed', l === 'he' ? 'true' : 'false');
+    lb.textContent = l === 'he' ? 'אנגלית / EN' : 'עברית / HE';
+  }
+  function applyTheme(t){
+    if(t){ r.setAttribute('data-theme', t); } else { r.removeAttribute('data-theme'); }
+    tb.textContent = 'theme: ' + (t || 'auto');
+    tb.setAttribute('aria-pressed', t ? 'true' : 'false');
+  }
+
+  tb.addEventListener('click', function(){
+    var cur = r.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : (cur === 'light' ? null : 'dark');
+    try{ next ? localStorage.setItem('mnTheme', next)
+              : localStorage.removeItem('mnTheme'); }catch(e){}
+    applyTheme(next);
+  });
+  lb.addEventListener('click', function(){
+    var next = r.getAttribute('data-lang') === 'he' ? 'en' : 'he';
+    try{ localStorage.setItem('mnLang', next); }catch(e){}
+    applyLang(next);
+  });
+
+  var t=null, l='en';
+  try{ t = localStorage.getItem('mnTheme'); l = localStorage.getItem('mnLang') || 'en'; }catch(e){}
+  applyTheme(t); applyLang(l);
+})();
+</script>
+</body>
+</html>

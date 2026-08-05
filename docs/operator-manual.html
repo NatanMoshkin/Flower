@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operator's manual — מדריך למפעיל</title>
+<style>
+:root{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#44515700; --ink-2:#445157; --ink-3:#6f7c82;
+  --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --heb:"Segoe UI","Arial Hebrew","Noto Sans Hebrew",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}}
+:root[data-theme="dark"]{
+  --ground:#141a1f; --surface:#1b2329; --surface-2:#232d34;
+  --ink:#e7edef; --ink-2:#a9b7bd; --ink-3:#7d8b92; --rule:#2f3b43;
+  --accent:#3fbb75; --accent-soft:#143724;
+  --fault:#f2726a; --fault-soft:#3d1d1b;
+  --caution:#d9a640; --caution-soft:#3a2c12;
+  --info:#6ba7dd; --info-soft:#16283a;
+}
+:root[data-theme="light"]{
+  --ground:#eef1f2; --surface:#ffffff; --surface-2:#e4e9ea;
+  --ink:#131a1e; --ink-2:#445157; --ink-3:#6f7c82; --rule:#cdd6d8;
+  --accent:#0e8a45; --accent-soft:#d8ece0;
+  --fault:#c4342c; --fault-soft:#f7dedc;
+  --caution:#a8761a; --caution-soft:#f7ecd6;
+  --info:#2c6ca8; --info-soft:#dde8f4;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);
+     font:16px/1.65 var(--sans);font-variant-numeric:tabular-nums}
+:root[data-lang="he"] body{font-family:var(--heb)}
+
+/* ---- language switching: both languages ship in the DOM ---- */
+[data-l="he"]{display:none}
+:root[data-lang="he"] [data-l="en"]{display:none}
+:root[data-lang="he"] [data-l="he"]{display:revert}
+
+.wrap{max-width:56rem;margin:0 auto;padding:0 1.25rem 5rem}
+.bar{position:sticky;top:0;z-index:10;background:var(--ground);
+  border-bottom:1px solid var(--rule);padding:.55rem 0;margin-bottom:1.5rem}
+.bar .in{max-width:56rem;margin:0 auto;padding:0 1.25rem;display:flex;
+  gap:.5rem;align-items:center;flex-wrap:wrap}
+.bar .sp{flex:1}
+button.sw{background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);
+  border-radius:7px;padding:.35rem .7rem;font:.78rem var(--mono);cursor:pointer}
+button.sw[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:700}
+.docnav a{font:.78rem var(--sans);text-decoration:none;color:var(--ink-2);
+  background:var(--surface);border:1px solid var(--rule);border-radius:999px;
+  padding:.3rem .75rem;margin-inline-end:.35rem}
+.docnav a.here{background:var(--accent-soft);color:var(--accent);
+  border-color:var(--accent);font-weight:600}
+
+header.mast{padding:.5rem 0 .5rem}
+.eyebrow{font:600 .7rem/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 .6rem;direction:ltr;unicode-bidi:isolate;
+  text-align:start}
+h1{font-size:clamp(1.5rem,4vw,2.15rem);line-height:1.15;margin:0 0 .4rem;
+   text-wrap:balance}
+.hd h2{font-size:1.2rem;margin:2.2rem 0 .4rem;padding-bottom:.3rem;
+  border-bottom:2px solid var(--accent-soft)}
+.hd h3{font-size:1rem;margin:1.6rem 0 .3rem}
+p{margin:.65rem 0}
+ul,ol{margin:.6rem 0;padding-inline-start:1.4rem}
+li{margin:.35rem 0}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+code{font:.86em var(--mono);background:var(--surface-2);padding:.1em .34em;
+  border-radius:3px;direction:ltr;unicode-bidi:isolate;white-space:nowrap}
+kbd{font:.8em var(--mono);border:1px solid var(--rule);border-bottom-width:2px;
+  border-radius:4px;padding:.12em .4em;background:var(--surface);
+  direction:ltr;unicode-bidi:isolate}
+strong{color:var(--ink)}
+
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:9px;
+  background:var(--surface);margin:1rem 0}
+table{width:100%;border-collapse:collapse;min-width:30rem}
+th,td{text-align:start;padding:.55rem .7rem;border-bottom:1px solid var(--rule);
+  vertical-align:top;font-size:.9rem}
+th{background:var(--surface-2);font:600 .72rem/1.35 var(--mono);
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+:root[data-lang="he"] th{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.8rem}
+tr:last-child td{border-bottom:0}
+
+.note{margin:1.2rem 0;padding:.85rem 1.1rem;border-radius:9px;
+  background:var(--surface);border:1px solid var(--rule);
+  border-inline-start:5px solid var(--info);font-size:.93rem}
+.note.info{border-inline-start-color:var(--info);background:var(--info-soft)}
+.note.ok{border-inline-start-color:var(--accent);background:var(--accent-soft)}
+.note.warn{border-inline-start-color:var(--caution);background:var(--caution-soft)}
+.note.danger{border-inline-start-color:var(--fault);background:var(--fault-soft)}
+.note b{display:block;margin-bottom:.2rem}
+.note p{margin:.3rem 0 0;color:var(--ink-2)}
+
+ol.steps{list-style:none;padding-inline-start:0;counter-reset:s}
+ol.steps>li{counter-increment:s;position:relative;
+  padding-inline-start:2.6rem;margin:.85rem 0;min-height:1.9rem}
+ol.steps>li::before{content:counter(s);position:absolute;inset-inline-start:0;
+  top:0;width:1.85rem;height:1.85rem;border-radius:50%;
+  background:var(--accent-soft);color:var(--accent);
+  font:700 .85rem/1.85rem var(--mono);text-align:center}
+
+.lamp{display:inline-block;width:.85rem;height:.85rem;border-radius:50%;
+  margin-inline-end:.4rem;vertical-align:-.1em;border:1px solid rgba(0,0,0,.25)}
+.lamp.g{background:#2ecc71}.lamp.r{background:#e74c3c}
+.lamp.o{background:#e8a33d}.lamp.off{background:var(--surface-2)}
+.pb{display:inline-block;font:700 .74rem var(--mono);border-radius:5px;
+  padding:.16em .45em;border:1px solid rgba(0,0,0,.2);direction:ltr;
+  unicode-bidi:isolate;white-space:nowrap}
+.pb.r{background:#e74c3c;color:#fff}
+.pb.o{background:#e8a33d;color:#3a2600}
+.pb.g{background:#2ecc71;color:#04361b}
+
+.links{display:grid;gap:.6rem;margin:1rem 0}
+a.lk{display:block;text-decoration:none;background:var(--surface);
+  border:1px solid var(--rule);border-radius:10px;padding:.7rem .9rem;
+  border-inline-start:4px solid var(--rule)}
+a.lk:hover{border-color:var(--accent);border-inline-start-color:var(--accent)}
+.lk-t{display:block;color:var(--ink);font-weight:600;font-size:.97rem}
+.lk-d{display:block;color:var(--ink-3);font-size:.85rem;margin-top:.15rem}
+.badge{display:inline-block;margin-inline-start:.5rem;font:700 .62rem/1 var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;padding:.25em .45em;
+  border-radius:4px;vertical-align:.1em}
+:root[data-lang="he"] .badge{font-family:var(--heb);text-transform:none;
+  letter-spacing:0;font-size:.68rem}
+.badge.live{background:var(--accent-soft);color:var(--accent)}
+.badge.ref{background:var(--info-soft);color:var(--info)}
+.badge.archive{background:var(--surface-2);color:var(--ink-3)}
+.badge.data{background:var(--caution-soft);color:var(--caution)}
+
+footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--rule);
+  color:var(--ink-3);font-size:.8rem}
+@media print{
+  .bar{display:none} body{background:#fff}
+  .note,.tw{break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="bar"><div class="in">
+<span class="docnav"><a href="index.html"><span data-l="en">All docs</span><span data-l="he">כל המסמכים</span></a><a href="operator-manual.html" class="here"><span data-l="en">Operator</span><span data-l="he">מדריך מפעיל</span></a><a href="technician-manual.html"><span data-l="en">Technician</span><span data-l="he">מדריך טכנאי</span></a><a href="auto-state-machine-current.html"><span data-l="en">State machine</span><span data-l="he">מכונת מצבים</span></a></span>
+<span class="sp"></span>
+<button class="sw" id="lg" type="button" aria-pressed="false">עברית / HE</button>
+<button class="sw" id="tg" type="button" aria-pressed="false">theme: auto</button>
+</div></div>
+<div class="wrap">
+<header class="mast">
+<p class="eyebrow" dir="ltr">167_01 Saad — Flower</p>
+<h1 lang="en" dir="ltr" data-l="en">Operator's manual</h1>
+<h1 lang="he" dir="rtl" data-l="he">מדריך למפעיל</h1>
+<p lang="en" dir="ltr" data-l="en">Everything you need to run the machine from the panel. If you are diagnosing a fault or changing settings, use the <a href="technician-manual.html">technician manual</a> instead.</p>
+<p lang="he" dir="rtl" data-l="he">כל מה שצריך כדי להפעיל את המכונה מלוח ההפעלה. אם אתה מאתר תקלה או משנה הגדרות, השתמש ב<a href="technician-manual.html">מדריך הטכנאי</a> במקום.</p>
+</header>
+<div class="hd" id="what"><h2 lang="en" dir="ltr" data-l="en">1 &middot; What this machine does</h2><h2 lang="he" dir="rtl" data-l="he">1 &middot; מה המכונה עושה</h2></div>
+<p lang="en" dir="ltr" data-l="en">The robot places a plate in the fixture. The machine then clamps it, drives the separator pins out, presses the push pins home, and releases. That whole sequence is <strong>one cycle</strong>. The robot asks for each cycle; the machine runs it.</p><p lang="he" dir="rtl" data-l="he">הרובוט מניח מגש במתקן. המכונה תופסת אותו, מוציאה את פיני ההפרדה, לוחצת את פיני הדחיפה, ומשחררת. כל הרצף הזה הוא <strong>מחזור אחד</strong>. הרובוט מבקש כל מחזור; המכונה מבצעת אותו.</p>
+<p lang="en" dir="ltr" data-l="en">Your job is to put the machine into a state where the robot is allowed to ask, and to deal with faults. You do not have to start each cycle by hand — though you can.</p><p lang="he" dir="rtl" data-l="he">התפקיד שלך הוא להביא את המכונה למצב שבו הרובוט מורשה לבקש, ולטפל בתקלות. אינך צריך להתחיל כל מחזור ידנית — אך אתה יכול.</p>
+<div class="hd" id="panel"><h2 lang="en" dir="ltr" data-l="en">2 &middot; The panel</h2><h2 lang="he" dir="rtl" data-l="he">2 &middot; לוח ההפעלה</h2></div>
+<p lang="en" dir="ltr" data-l="en">Three buttons, each with a light in it, and two status lamps. <strong>The colour of the button tells you what it does.</strong></p><p lang="he" dir="rtl" data-l="he">שלושה לחצנים, בכל אחד נורית, ושתי נוריות מצב. <strong>צבע הלחצן מלמד מה הוא עושה.</strong></p>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Button</th><th>In Automatic</th><th>In Manual</th></tr></thead><tbody><tr><td><span class="pb r">RED</span></td><td><strong>Hold 1 second</strong> to STOP the machine.</td><td>Hold to move the <strong>grippers</strong> out. Let go and they come back.</td></tr><tr><td><span class="pb o">ORANGE</span></td><td>If the red lamp is on: press once to <strong>clear the fault</strong>.</td><td>Hold to move the <strong>separator pins</strong> out.</td></tr><tr><td><span class="pb g">GREEN</span></td><td>Press once to <strong>START</strong> — the machine homes itself and is then ready.</td><td>Hold to move the <strong>push pins</strong> out.</td></tr><tr><td><span class="pb o">ORANGE</span> + <span class="pb g">GREEN</span></td><td><strong>Hold both for 1 second</strong> to run one cycle yourself, instead of waiting for the robot.</td><td>&mdash;</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>לחצן</th><th>במצב אוטומטי</th><th>במצב ידני</th></tr></thead><tbody><tr><td><span class="pb r">אדום</span></td><td><strong>החזק שנייה אחת</strong> כדי לעצור את המכונה.</td><td>החזק כדי להוציא את <strong>התפסניות</strong>. שחרר והן חוזרות.</td></tr><tr><td><span class="pb o">כתום</span></td><td>אם הנורית האדומה דולקת: לחץ פעם אחת כדי <strong>לאפס את התקלה</strong>.</td><td>החזק כדי להוציא את <strong>פיני ההפרדה</strong>.</td></tr><tr><td><span class="pb g">ירוק</span></td><td>לחץ פעם אחת כדי <strong>להתחיל</strong> — המכונה מאפסת את מקומה ואז מוכנה.</td><td>החזק כדי להוציא את <strong>פיני הדחיפה</strong>.</td></tr><tr><td><span class="pb o">כתום</span> + <span class="pb g">ירוק</span></td><td><strong>החזק את שניהם שנייה אחת</strong> כדי להריץ מחזור אחד בעצמך, במקום לחכות לרובוט.</td><td dir="ltr">&mdash;</td></tr></tbody></table></div>
+<div class="note info"><div lang="en" dir="ltr" data-l="en"><b>Why two buttons must be held</b><p>Stopping the machine and starting a cycle are both important, so they need a deliberate hold. A knock or a brushed sleeve cannot trigger them. The 1&nbsp;second can be changed on the screen.</p></div><div lang="he" dir="rtl" data-l="he"><b>מדוע יש להחזיק שני לחצנים</b><p>עצירת המכונה והתחלת מחזור הן שתי פעולות חשובות, ולכן הן דורשות החזקה מכוונת. מכה מקרית או שרוול שנתקל אינם יכולים להפעיל אותן. אפשר לשנות את השנייה במסך.</p></div></div>
+<div class="hd" id="start"><h2 lang="en" dir="ltr" data-l="en">3 &middot; Starting production</h2><h2 lang="he" dir="rtl" data-l="he">3 &middot; התחלת ייצור</h2></div>
+<ol class="steps" lang="en" dir="ltr" data-l="en"><li><div>Switch the machine on. The screen shows <code>NOT_HOMED</code> — this means <em>not ready</em>. Nothing will move.</div></li><li><div>Make sure the screen is in <strong>Automatic</strong> mode.</div></li><li><div>The <span class="pb g">GREEN</span> button light is <strong>blinking</strong>. That is the machine asking you to press it.</div></li><li><div>Press <span class="pb g">GREEN</span>. The pistons all pull back to their home position and the screen changes to <code>IDLE</code>.</div></li><li><div>The green lamp <span class="lamp g"></span> is now <strong>on steadily</strong>. The machine is ready and the robot may start sending work.</div></li></ol><ol class="steps" lang="he" dir="rtl" data-l="he"><li><div>הדלק את המכונה. המסך מציג <code>NOT_HOMED</code> — כלומר <em>לא מוכן</em>. שום דבר לא יזוז.</div></li><li><div>ודא שהמסך נמצא במצב <strong>אוטומטי</strong>.</div></li><li><div>נורית הלחצן <span class="pb g">ירוק</span> <strong>מהבהבת</strong>. זו המכונה מבקשת שתלחץ עליו.</div></li><li><div>לחץ <span class="pb g">ירוק</span>. כל הבוכנות חוזרות למקומן והמסך משתנה ל<code>IDLE</code>.</div></li><li><div>הנורית הירוקה <span class="lamp g"></span> דולקת כעת <strong>באור קבוע</strong>. המכונה מוכנה והרובוט יכול להתחיל לשלוח עבודה.</div></li></ol>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>The machine will not move until you press GREEN</b><p>This is deliberate. After power-on, after any time in Manual, and after a STOP, the machine refuses to run — even if the robot asks — until a person has pressed START. That is what stops it moving unexpectedly when nobody is watching.</p></div><div lang="he" dir="rtl" data-l="he"><b>המכונה לא תזוז עד שתלחץ על הירוק</b><p>זה מכוון. לאחר הדלקה, לאחר כל שהות במצב ידני, ולאחר עצירה, המכונה מסרבת לפעול — גם אם הרובוט מבקש — עד שאדם לחץ על התחלה. זה מה שמונע ממנה לזוז באופן לא צפוי כשאף אחד לא מסתכל.</p></div></div>
+<div class="hd" id="stop"><h2 lang="en" dir="ltr" data-l="en">4 &middot; Stopping</h2><h2 lang="he" dir="rtl" data-l="he">4 &middot; עצירה</h2></div>
+<p lang="en" dir="ltr" data-l="en"><strong>Hold the <span class="pb r">RED</span> button for 1 second.</strong> Its light blinks while you hold it, so you can see the machine is counting. When it takes effect the screen goes back to <code>NOT_HOMED</code> and the green lamp goes out.</p><p lang="he" dir="rtl" data-l="he"><strong>החזק את הלחצן <span class="pb r">אדום</span> שנייה אחת.</strong> הנורית שלו מהבהבת בזמן ההחזקה, כך שאתה רואה שהמכונה מונה. כשהפעולה מתבצעת המסך חוזר ל<code>NOT_HOMED</code> והנורית הירוקה נכבית.</p>
+<p lang="en" dir="ltr" data-l="en">This is <strong>not</strong> a fault — nothing is broken, the machine is simply not allowed to run any more. To start again, press <span class="pb g">GREEN</span>.</p><p lang="he" dir="rtl" data-l="he">זו <strong>אינה</strong> תקלה — שום דבר לא נשבר, פשוט אין יותר אישור למכונה לפעול. כדי להתחיל מחדש, לחץ <span class="pb g">ירוק</span>.</p>
+<div class="note danger"><div lang="en" dir="ltr" data-l="en"><b>STOP is not an emergency stop</b><p>A cycle already under way finishes its current movement. The pistons are air-driven and springs pull them back, so cutting power makes everything retract — but do not rely on the STOP button to protect hands. Use the machine's emergency stop for that.</p></div><div lang="he" dir="rtl" data-l="he"><b>עצירה אינה עצירת חירום</b><p>מחזור שכבר בעיצומו ישלים את התנועה הנוכחית. הבוכנות מונעות באוויר וקפיצים מחזירים אותן, כך שהפסקת חשמל גורמת להכל להתכנס — אך אין להסתמך על לחצן העצירה כדי להגן על הידיים. לשם כך יש להשתמש בעצירת החירום של המכונה.</p></div></div>
+<div class="hd" id="lamps"><h2 lang="en" dir="ltr" data-l="en">5 &middot; Reading the lamps</h2><h2 lang="he" dir="rtl" data-l="he">5 &middot; קריאת הנוריות</h2></div>
+<div class="tw" lang="en" dir="ltr" data-l="en"><table><thead><tr><th>Lamp</th><th>Meaning</th></tr></thead><tbody><tr><td><span class="lamp g"></span> green, steady</td><td>Ready and waiting for the robot.</td></tr><tr><td><span class="lamp g"></span> green, blinking</td><td>A cycle is running.</td></tr><tr><td><span class="lamp g"></span> green, off</td><td>Not ready: either in Manual, or STOPped, or faulted.</td></tr><tr><td><span class="lamp r"></span> red, on</td><td><strong>Fault.</strong> See the next section.</td></tr><tr><td><span class="pb g">GREEN</span> button light blinking</td><td>Press me to get ready.</td></tr><tr><td><span class="pb r">RED</span> button light blinking</td><td>You are holding it and the STOP is being counted.</td></tr></tbody></table></div><div class="tw" lang="he" dir="rtl" data-l="he"><table><thead><tr><th>נורית</th><th>משמעות</th></tr></thead><tbody><tr><td><span class="lamp g"></span> ירוקה, קבועה</td><td>מוכנה וממתינה לרובוט.</td></tr><tr><td><span class="lamp g"></span> ירוקה, מהבהבת</td><td>מחזור מתבצע.</td></tr><tr><td><span class="lamp g"></span> ירוקה, כבויה</td><td>לא מוכנה: או במצב ידני, או שנעצרה, או שיש תקלה.</td></tr><tr><td><span class="lamp r"></span> אדומה, דולקת</td><td><strong>תקלה.</strong> ראה בסעיף הבא.</td></tr><tr><td>נורית הלחצן <span class="pb g">ירוק</span> מהבהבת</td><td>לחץ עליי כדי להתכונן.</td></tr><tr><td>נורית הלחצן <span class="pb r">אדום</span> מהבהבת</td><td>אתה מחזיק אותו והעצירה נמנית.</td></tr></tbody></table></div>
+<div class="hd" id="fault"><h2 lang="en" dir="ltr" data-l="en">6 &middot; If the red lamp comes on</h2><h2 lang="he" dir="rtl" data-l="he">6 &middot; אם הנורית האדומה נדלקת</h2></div>
+<p lang="en" dir="ltr" data-l="en">The machine stopped because something did not reach where it was expected — usually a piston that did not travel, or a plate that never arrived. The screen shows a short message saying which step failed.</p><p lang="he" dir="rtl" data-l="he">המכונה עצרה כי משהו לא הגיע ליעדו — בדרך כלל בוכנה שלא זזה, או מגש שלא הגיע. המסך מציג הודעה קצרה המציינת איזה שלב נכשל.</p>
+<ol class="steps" lang="en" dir="ltr" data-l="en"><li><div>Look at the message on the screen and write it down if this keeps happening.</div></li><li><div>Look at the machine. Is something jammed, is a plate crooked, is air connected?</div></li><li><div>If you can see nothing wrong: press <span class="pb o">ORANGE</span> once. The machine pulls everything back to home and becomes ready again.</div></li><li><div>If something <em>is</em> jammed, do not just reset. Switch the screen to <strong>Manual</strong> and free it by hand first — see the next section.</div></li></ol><ol class="steps" lang="he" dir="rtl" data-l="he"><li><div>הסתכל בהודעה שעל המסך ורשום אותה אם התקלה חוזרת.</div></li><li><div>הסתכל על המכונה. האם משהו תקוע, האם מגש עקום, האם האוויר מחובר?</div></li><li><div>אם אינך רואה בעיה: לחץ <span class="pb o">כתום</span> פעם אחת. המכונה מחזירה את הכל למקום ושבה להיות מוכנה.</div></li><li><div>אם משהו <em>כן</em> תקוע, אל תאפס סתם. העבר את המסך למצב <strong>ידני</strong> ושחרר אותו קודם ביד — ראה בסעיף הבא.</div></li></ol>
+<div class="note info"><div lang="en" dir="ltr" data-l="en"><b>The robot may reset the fault before you do</b><p>The robot watches the machine and can clear a fault itself, so the red lamp sometimes goes out on its own after a second or two. That is normal. If the same fault keeps returning, stop the machine and investigate rather than letting it retry.</p></div><div lang="he" dir="rtl" data-l="he"><b>הרובוט עלול לאפס את התקלה לפניך</b><p>הרובוט עוקב אחר המכונה ויכול לאפס תקלה בעצמו, ולכן לעיתים הנורית האדומה נכבית מעצמה לאחר שנייה או שתיים. זה נורמלי. אם אותה תקלה חוזרת שוב ושוב, עצור את המכונה ובדוק במקום לתת לה לנסות שוב.</p></div></div>
+<div class="hd" id="manual"><h2 lang="en" dir="ltr" data-l="en">7 &middot; Moving things by hand</h2><h2 lang="he" dir="rtl" data-l="he">7 &middot; הזזת חלקים ביד</h2></div>
+<p lang="en" dir="ltr" data-l="en">Switch the screen to <strong>Manual</strong>. Now the three buttons move pistons directly: each one moves its group out while you hold it, and the springs pull the group back when you let go.</p><p lang="he" dir="rtl" data-l="he">העבר את המסך למצב <strong>ידני</strong>. כעת שלושת הלחצנים מזיזים בוכנות ישירות: כל אחד מוציא את הקבוצה שלו כל עוד אתה מחזיק, והקפיצים מחזירים אותה כשאתה משחרר.</p>
+<ul lang="en" dir="ltr" data-l="en"><li><span class="pb r">RED</span> &mdash; the two grippers</li><li><span class="pb o">ORANGE</span> &mdash; the three separator pins</li><li><span class="pb g">GREEN</span> &mdash; the three push pins</li></ul><ul lang="he" dir="rtl" data-l="he"><li><span class="pb r">אדום</span> &mdash; שתי התפסניות</li><li><span class="pb o">כתום</span> &mdash; שלושת פיני ההפרדה</li><li><span class="pb g">ירוק</span> &mdash; שלושת פיני הדחיפה</li></ul>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>Manual mode only</b><p>The buttons do <strong>not</strong> move pistons while the machine is in Automatic — not even when it is faulted. That is on purpose: in Automatic the sequence owns the pistons, and two things driving the same piston is how equipment gets damaged. Switch to Manual, do the work, then switch back and press <span class="pb g">GREEN</span> to get ready again.</p></div><div lang="he" dir="rtl" data-l="he"><b>מצב ידני בלבד</b><p>הלחצנים <strong>אינם</strong> מזיזים בוכנות כשהמכונה במצב אוטומטי — גם לא כשיש תקלה. זה מכוון: במצב אוטומטי הרצף הוא הבעלים של הבוכנות, ושני גורמים המפעילים אותה בוכנה הם הדרך שבה ציוד נהרס. עבור למצב ידני, בצע את העבודה, חזור למצב אוטומטי ולחץ <span class="pb g">ירוק</span> כדי להתכונן שוב.</p></div></div>
+<div class="hd" id="manualcycle"><h2 lang="en" dir="ltr" data-l="en">8 &middot; Running a cycle yourself</h2><h2 lang="he" dir="rtl" data-l="he">8 &middot; הרצת מחזור בעצמך</h2></div>
+<p lang="en" dir="ltr" data-l="en">From <code>IDLE</code> (green lamp steady), <strong>hold <span class="pb o">ORANGE</span> and <span class="pb g">GREEN</span> together for 1 second</strong>. The machine runs exactly one cycle and returns to ready.</p><p lang="he" dir="rtl" data-l="he">מ<code>IDLE</code> (נורית ירוקה קבועה), <strong>החזק <span class="pb o">כתום</span> ו<span class="pb g">ירוק</span> יחד שנייה אחת</strong>. המכונה מבצעת מחזור אחד בדיוק וחוזרת למצב מוכן.</p>
+<div class="note warn"><div lang="en" dir="ltr" data-l="en"><b>Press ORANGE first, then GREEN</b><p>If you press <span class="pb g">GREEN</span> first, the machine reads it as START on its own and simply re-homes instead of running a cycle. No harm done — just release and try again, orange first.</p></div><div lang="he" dir="rtl" data-l="he"><b>לחץ קודם על הכתום, אחר כך על הירוק</b><p>אם תלחץ קודם <span class="pb g">ירוק</span>, המכונה תפרש זאת כלחיצת התחלה בלבד ותאפס מקום במקום להריץ מחזור. אין נזק — שחרר ונסה שוב, כתום קודם.</p></div></div>
+<div class="hd" id="safety"><h2 lang="en" dir="ltr" data-l="en">9 &middot; Safety</h2><h2 lang="he" dir="rtl" data-l="he">9 &middot; בטיחות</h2></div>
+<ul lang="en" dir="ltr" data-l="en"><li>The pistons are held out by air and pulled back by springs. If power or air is lost, <strong>everything retracts</strong>. That is the safe direction, but it means a clamped plate is released.</li><li>The grippers and the pins can pinch. Keep hands clear whenever the green lamp is blinking, and whenever the robot is moving.</li><li><code>NOT_HOMED</code> on the screen does not mean <em>safe</em>. It means <em>not allowed to run</em>. The robot can still be moving.</li><li>Only one gripper currently has air. The machine is set up to keep working on one, so do not assume both are holding.</li></ul><ul lang="he" dir="rtl" data-l="he"><li>הבוכנות מוחזקות בחוץ באוויר ומוחזרות בקפיצים. אם נופל מתח או אוויר, <strong>הכל מתכנס</strong>. זה הכיוון הבטוח, אך משמעותו שמגש שהיה תפוס משתחרר.</li><li>התפסניות והפינים יכולים ללחוץ ולפצוע. הרחק ידיים בכל זמן שהנורית הירוקה מהבהבת, ובכל זמן שהרובוט זז.</li><li><code>NOT_HOMED</code> על המסך אינו אומר <em>בטוח</em>. הוא אומר <em>אין אישור לפעול</em>. הרובוט עדיין עשוי לזוז.</li><li>כרגע רק לתפסנית אחת יש אוויר. המכונה מוגדרת להמשיך לעבוד עם אחת, לכן אל תניח ששתיהן אוחזות.</li></ul>
+<div class="note danger"><div lang="en" dir="ltr" data-l="en"><b>Use the emergency stop for anything urgent</b><p>The <span class="pb r">RED</span> button is a controlled stop that takes a second and lets the current movement finish. It is not a safety device.</p></div><div lang="he" dir="rtl" data-l="he"><b>השתמש בעצירת חירום לכל דבר דחוף</b><p>הלחצן <span class="pb r">אדום</span> הוא עצירה מבוקרת שלוקחת שנייה ומאפשרת לתנועה הנוכחית להסתיים. הוא אינו אמצעי בטיחות.</p></div></div>
+<footer><span data-l="en" dir="ltr">Generated by <code>scripts/manuals/build_manuals.py</code>. Both languages ship in this file — no network needed.</span><span data-l="he" dir="rtl">נוצר על ידי <code>scripts/manuals/build_manuals.py</code>. שתי השפות כלולות בקובץ זה — אין צורך בחיבור לרשת.</span></footer>
+</div>
+<script>
+(function(){
+  var r=document.documentElement;
+  var tb=document.getElementById('tg'), lb=document.getElementById('lg');
+
+  function applyLang(l){
+    r.setAttribute('data-lang', l);
+    r.setAttribute('lang', l);
+    // dir on <html> so the whole layout mirrors, not only the text
+    r.setAttribute('dir', l === 'he' ? 'rtl' : 'ltr');
+    lb.setAttribute('aria-pressed', l === 'he' ? 'true' : 'false');
+    lb.textContent = l === 'he' ? 'אנגלית / EN' : 'עברית / HE';
+  }
+  function applyTheme(t){
+    if(t){ r.setAttribute('data-theme', t); } else { r.removeAttribute('data-theme'); }
+    tb.textContent = 'theme: ' + (t || 'auto');
+    tb.setAttribute('aria-pressed', t ? 'true' : 'false');
+  }
+
+  tb.addEventListener('click', function(){
+    var cur = r.getAttribute('data-theme');
+    var next = cur === 'dark' ? 'light' : (cur === 'light' ? null : 'dark');
+    try{ next ? localStorage.setItem('mnTheme', next)
+              : localStorage.removeItem('mnTheme'); }catch(e){}
+    applyTheme(next);
+  });
+  lb.addEventListener('click', function(){
+    var next = r.getAttribute('data-lang') === 'he' ? 'en' : 'he';
+    try{ localStorage.setItem('mnLang', next); }catch(e){}
+    applyLang(next);
+  });
+
+  var t=null, l='en';
+  try{ t = localStorage.getItem('mnTheme'); l = localStorage.getItem('mnLang') || 'en'; }catch(e){}
+  applyTheme(t); applyLang(l);
+})();
+</script>
+</body>
+</html>
