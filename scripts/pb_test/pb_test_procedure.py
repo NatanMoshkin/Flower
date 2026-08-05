@@ -1,8 +1,12 @@
 """Panel push-button test procedure — runs against a LIVE PLC over ADS.
 
-Covers every documented PB behaviour in CLAUDE.md's "PANEL HARDWARE" section,
-including the ERR jog window added 2026-08-04. Presses are simulated by
-writing GVL_IO.dIn[13..15]; see pb_io.py for why that is the only way.
+Covers every documented PB behaviour in CLAUDE.md's "PANEL HARDWARE" section.
+Presses are simulated by writing GVL_IO.dIn[13..15]; see pb_io.py for why that
+is the only way.
+
+Group E is now a NEGATIVE group: manual jogs are refused in every Automatic
+state (operator decision 2026-08-05), so it guards the removal of the ERR jog
+window rather than the window itself. Group G covers the two hold gestures.
 
     python scripts/pb_test/pb_test_procedure.py                 # run + report
     python scripts/pb_test/pb_test_procedure.py --net 5.79.93.36.1.1
@@ -24,10 +28,15 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pb_io import (  # noqa: E402
-    BOOL, UDINT, COIL_DO, PB_JOG_GROUP, Plc, SETTLE, has_sev, transitions,
+    BOOL, UDINT, COIL_DO, PB_DI, PB_JOG_GROUP, Plc, SETTLE, has_sev,
+    transitions,
 )
 
+PB_STOP_MS = "GVL_HmiPersistent.stMasterAutoCfg.tPbStopHoldMs"
+PB_START_MS = "GVL_HmiPersistent.stMasterAutoCfg.tPbStartHoldMs"
+
 HOMING = ["INIT_PUSH_RETRACTING", "INIT_SEP_RETRACTING", "INIT_GRIP_RETRACTING"]
+RECOVER = ["RECOVER_PUSH_RETR", "RECOVER_SEP_RETR", "RECOVER_GRIP_RETR"]
 
 RESULTS = []
 _group = {"id": "", "title": "", "note": ""}
@@ -102,9 +111,9 @@ def run(net_id):
 
         # The robot is not on this network, so FB_RobotTcpClient logs a
         # connect failure every 3 s and would flush the 20-entry ring before
-        # we could read it. Disabling the link also keeps ERR stable: with no
-        # robot there is no CMD:2, which is exactly the condition the ERR jog
-        # window needs. On the real machine the robot closes it in ~1 s.
+        # we could read it. Disabling the link also keeps ERR stable, which is
+        # what makes the fault
+        # ERR observable long enough to test, since nothing sends CMD:2.
         p.w(TCP, False, BOOL)
         p.release_all_pbs()
         p.park_all_home()
@@ -182,7 +191,7 @@ def run(net_id):
         # ================================================================
         group("D", "Automatic + IDLE — armed, still no PB jog",
               "Only the robot's CMD:1 may start a bulb. PB jogs must stay "
-              "shut here; this is the regression guard on bJogEnable.")
+              "shut here, and in every other Automatic state.")
         jog_group_moves(p, 1, "D1", False, "in Auto/IDLE")
         jog_group_moves(p, 2, "D2", False, "in Auto/IDLE")
         jog_group_moves(p, 3, "D3", False, "in Auto/IDLE")
@@ -201,7 +210,7 @@ def run(net_id):
         # ================================================================
         group("E", "Automatic + ERR — the new jog window (2026-08-04)",
               "Fault raised for real: a bulb cycle is started with both plate "
-              "sensors clear, so WAIT_PLATE times out with error 9.")
+              "sensors clear, so CHECK_PLATE times out with error 9.")
         p.w(PLATE_TMO, 700, UDINT)
         p.set_plate(False)
         idx0 = p.log_idx()
@@ -210,9 +219,9 @@ def run(net_id):
         entries = p.log_since(idx0)
         got = transitions(entries)
         # An ERR arrival logs sErrorText, not 'PREV -> NEW', so the chain stops
-        # at WAIT_PLATE and the fault shows as a separate ERR-severity entry.
-        want = ["IDLE"] + HOMING + ["WAIT_PLATE"]
-        record("E0", "a bulb cycle with no plate faults at WAIT_PLATE",
+        # at CHECK_PLATE and the fault shows as a separate ERR-severity entry.
+        want = ["IDLE"] + HOMING + ["CHECK_PLATE"]
+        record("E0", "a bulb cycle with no plate faults at CHECK_PLATE",
                " -> ".join(want) + " + ERR entry",
                " -> ".join(got) + (" + ERR entry" if has_sev(entries, "ERR")
                                    else " + NO ERR entry"),
@@ -222,27 +231,16 @@ def run(net_id):
         check("E2", "status lamps: red ON, green OFF",
               {"green": False, "red": True}, p.lamps())
 
-        # The three jogs that did nothing in group D must work here.
-        jog_group_moves(p, 1, "E3", True, "in Auto/ERR")
-        jog_group_moves(p, 2, "E4", True, "in Auto/ERR")
-        jog_group_moves(p, 3, "E5", True, "in Auto/ERR")
+        # Manual moves are NOT available in any Automatic state (operator
+        # decision 2026-08-05). These are the regression guard on that removal:
+        # the ERR jog window that used to make them pass is gone.
+        jog_group_moves(p, 1, "E3", False, "in Auto/ERR")
+        jog_group_moves(p, 3, "E4", False, "in Auto/ERR")
 
-        check("E6", "PB3 LED reverts to a press mirror in ERR (jog feedback)",
-              (True, False), (led_on_press(p, 3), p.led(3)))
-
-        idx0 = p.log_idx()
-        p.press(3)
-        p.release(3)
-        time.sleep(0.3)
-        entries = p.log_since(idx0)
-        started_logged = any("START" in e["msg"].upper() for e in entries)
-        record("E7", "PB3 in ERR does NOT log a spurious 'START pressed'",
-               "no START entry", "START entry present" if started_logged
-               else "none", not started_logged, evidence=fmt_log(entries))
-        check("E8", "PB3 in ERR does not clear the fault", ("ERR", 9),
+        check("E5", "PB3 LED stays off in ERR", (False, False),
+              (led_on_press(p, 3), p.led(3)))
+        check("E6", "PB3 in ERR does not clear the fault", ("ERR", 9),
               (p.step_name(), p.err_code()))
-        check("E9", "bStart was never written", False,
-              p.r("GVL_HMI.stMasterAuto.bStart", BOOL))
 
         # ================================================================
         group("F", "Recovery — RESET homes, it does not jump to IDLE",
@@ -251,18 +249,73 @@ def run(net_id):
         p.set_plate(True)
         p.park_all_home()
         idx0 = p.log_idx()
-        p.w("GVL_HMI.stMasterAuto.bReset", True, BOOL)
+        # PB2 is the operator RESET in ERR now, so press the button rather than
+        # writing the field -- that way the new mapping is what gets tested.
+        p.press(2)
+        p.release(2)
         reached = p.wait_step(0, timeout=8)
         entries = p.log_since(idx0)
-        want = ["ERR"] + HOMING + ["IDLE"]
+        want = ["ERR"] + RECOVER + ["IDLE"]
         got = transitions(entries)
-        record("F0", "RESET homes; it does NOT jump straight to IDLE",
+        record("F0", "PB2 in ERR = RESET, and recovery runs its own chain",
                " -> ".join(want), " -> ".join(got) or "(no transition logged)",
                reached and got == want, evidence=fmt_log(entries))
         check("F1", "error cleared", 0, p.err_code())
         check("F2", "lamps back to armed-idle", {"green": True, "red": False},
               p.lamps())
         jog_group_moves(p, 1, "F3", False, "back in Auto/IDLE")
+
+        # ================================================================
+        group("G", "The two Automatic hold gestures",
+              "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's "
+              "parallel to the robot's CMD:1. Both durations are read live "
+              "from stMasterAutoCfg.")
+        hold_stop = p.r(PB_STOP_MS, UDINT) / 1000.0
+        hold_start = p.r(PB_START_MS, UDINT) / 1000.0
+
+        short = max(0.05, hold_stop * 0.4)
+        p.press(1, settle=short)
+        early = p.step_name()
+        p.release(1)
+        check("G0", "PB1 held %.2fs (under the %.2fs preset) does nothing"
+              % (short, hold_stop), "IDLE", early)
+
+        idx0 = p.log_idx()
+        p.press(1, settle=hold_stop + 0.4)
+        p.release(1)
+        check("G1", "PB1 held %.2fs disarms to NOT_HOMED" % hold_stop,
+              "NOT_HOMED", p.step_name())
+        record("G2", "and it DISARMS rather than faulting", "iErrorCode 0",
+               "iErrorCode %d" % p.err_code(), p.err_code() == 0,
+               evidence=fmt_log(p.log_since(idx0)))
+
+        p.press(3)
+        p.release(3)
+        assert p.wait_step(0), "could not re-arm with PB3"
+
+        idx0 = p.log_idx()
+        p.press(3)
+        p.release(3)
+        p.wait_step(0, timeout=5)
+        got = transitions(p.log_since(idx0))
+        want = ["IDLE"] + HOMING + ["IDLE"]
+        record("G3", "PB3 alone from IDLE re-homes, it does NOT run a bulb",
+               " -> ".join(want), " -> ".join(got) or "(none)", got == want)
+
+        p.set_plate(True)
+        idx0 = p.log_idx()
+        p.w("GVL_IO.dIn[%d]" % PB_DI[2], True, BOOL)
+        p.w("GVL_IO.dIn[%d]" % PB_DI[3], True, BOOL)
+        time.sleep(hold_start + 0.4)
+        p.release_all_pbs()
+        reached = p.wait_step(0, timeout=15)
+        entries = p.log_since(idx0)
+        got = transitions(entries)
+        record("G4", "PB2+PB3 held runs ONE bulb cycle from IDLE",
+               "through CHECK_PLATE and back to IDLE",
+               " -> ".join(got) or "(none)",
+               reached and "CHECK_PLATE" in got and got and got[-1] == "IDLE",
+               evidence=fmt_log(entries))
 
         log_tail = p.log_head(20)
 

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.16">
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.19">
   <GlobalTextList Name="GlobalTextList" Id="{54e16248-e104-4de0-b385-2e141f287df0}">
     <XmlArchive>
       <Data>
@@ -88,6 +88,16 @@
             <o>
               <v n="TextID">"551"</v>
               <v n="TextDefault">"Gripper Manual"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"650"</v>
+              <v n="TextDefault">"PB1 hold STOP (ms)"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"651"</v>
+              <v n="TextDefault">"PB2+PB3 hold (ms)"</v>
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
@@ -667,9 +677,9 @@
             </o>
           </l>
           <l n="Languages" t="ArrayList" />
-          <v n="GuidInit">{d84661e4-c103-45e1-9539-7c2687aaa584}</v>
-          <v n="GuidReInit">{342db66f-9101-49b9-b75f-8f814b0ff003}</v>
-          <v n="GuidExitX">{7d93b414-5b8f-433a-889c-c19b17edfa8a}</v>
+          <v n="GuidInit">{a42fae01-6bca-49b4-b1d5-488e4b25d278}</v>
+          <v n="GuidReInit">{5129e53a-a014-407c-afbc-dc2ed88930fe}</v>
+          <v n="GuidExitX">{8539b68f-34c2-460e-ae70-a848aabadd58}</v>
         </o>
       </Data>
       <TypeList>

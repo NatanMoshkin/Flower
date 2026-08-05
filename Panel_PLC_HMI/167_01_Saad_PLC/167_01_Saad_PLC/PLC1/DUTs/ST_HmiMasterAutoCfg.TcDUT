@@ -12,10 +12,25 @@ STRUCT
     // set to the step's numeric code and the cycle enters ERR.
     tStepTimeoutMs          : UDINT := 10000;
 
-    // Dedicated timeout for WAIT_PLATE (bounded by robot placement time, not
+    // Dedicated timeout for CHECK_PLATE (bounded by robot placement time, not
     // by a motion budget). On expiry, iErrorCode := 9 and the cycle enters ERR
     // — unless bBypassPlateSensors is set, see below.
     tPlateWaitTimeoutMs     : UDINT := 10000;
+
+    // Panel push-button HOLD durations, milliseconds. Both are deliberate
+    // two-hand / sustained gestures rather than edges, so a knock or a brushed
+    // sleeve cannot trigger them.
+    //
+    // tPbStopHoldMs  — how long the RED PB1 must be held in Automatic to STOP
+    //                  the machine (disarm to NOT_HOMED).
+    // tPbStartHoldMs — how long the GREEN PB3 and ORANGE PB2 must be held
+    //                  TOGETHER to start one bulb cycle from IDLE, which is the
+    //                  operator's parallel to the robot's CMD:1.
+    //
+    // Editable on AutoMain so the duration can be tuned to the operators
+    // without a rebuild.
+    tPbStopHoldMs           : UDINT := 1000;
+    tPbStartHoldMs          : UDINT := 1000;
 
     // If TRUE, the 4 movement states ignore sensor feedback and advance when
     // tStepTimeoutMs expires — the timeout doubles as the fixed step duration.

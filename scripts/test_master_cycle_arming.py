@@ -34,25 +34,33 @@ class Step:
     INIT_PUSH_RETRACTING = 10
     INIT_SEP_RETRACTING  = 11
     INIT_GRIP_RETRACTING = 12
-    WAIT_PLATE           = 20
+    CHECK_PLATE           = 20
     GRIP_EXTENDING       = 21
     GRIP_RETRACTING      = 22
     MANUAL               = 30
     NOT_HOMED            = 40
+    RECOVER_PUSH_RETR    = 50
+    RECOVER_SEP_RETR     = 51
+    RECOVER_GRIP_RETR    = 52
     ERR                  = 99
 
 
 NAME = {v: k for k, v in vars(Step).items() if not k.startswith("_")}
 
-# The bulb cycle, in order, once the INIT chain hands over at WAIT_PLATE.
+# The bulb cycle, in order, once the INIT chain hands over at CHECK_PLATE.
 CYCLE = [
-    Step.WAIT_PLATE, Step.GRIP_EXTENDING, Step.SEP_EXTENDING, Step.PUSH_EXTENDING,
+    Step.CHECK_PLATE, Step.GRIP_EXTENDING, Step.SEP_EXTENDING, Step.PUSH_EXTENDING,
     Step.DWELL_PUSH, Step.PUSH_RETRACTING, Step.PUSH_RETRACTED_DWELL,
     Step.SEP_RETRACTING, Step.SEP_RETRACTED_DWELL, Step.GRIP_RETRACTING,
 ]
 CHAIN = [Step.INIT_PUSH_RETRACTING, Step.INIT_SEP_RETRACTING, Step.INIT_GRIP_RETRACTING]
 
-MOTION = set(CHAIN) | set(CYCLE)
+# Fault recovery has its OWN chain since 2026-08-05: same motion and the same
+# collision ordering, different identity, so a failed recovery reports codes
+# 12/13/14 rather than looking exactly like a failed arming.
+RECOVER = [Step.RECOVER_PUSH_RETR, Step.RECOVER_SEP_RETR, Step.RECOVER_GRIP_RETR]
+
+MOTION = set(CHAIN) | set(CYCLE) | set(RECOVER)
 
 
 class Fb:
@@ -83,10 +91,10 @@ class Fb:
             return
 
         if bReset and self.eStep == Step.ERR:
-            # RESET homes; it does not drop straight to IDLE.
+            # RESET homes; it does not drop straight to IDLE. Since 2026-08-05 it
+            # runs the dedicated RECOVER chain, not the shared INIT one.
             self.iErrorCode = 0
-            self.bHomeThenIdle = True
-            self.eStep = Step.INIT_PUSH_RETRACTING
+            self.eStep = Step.RECOVER_PUSH_RETR
             return
 
         if not bMachineAuto and self.eStep not in (Step.NOT_HOMED, Step.ERR):
@@ -120,11 +128,19 @@ class Fb:
 
         elif self.eStep == Step.INIT_GRIP_RETRACTING:
             # The one place the two callers diverge.
-            self.eStep = Step.IDLE if self.bHomeThenIdle else Step.WAIT_PLATE
+            self.eStep = Step.IDLE if self.bHomeThenIdle else Step.CHECK_PLATE
 
         elif self.eStep == Step.GRIP_RETRACTING:
             self.nCyclesCompleted += 1
             self.eStep = Step.IDLE
+
+        elif self.eStep == Step.RECOVER_GRIP_RETR:
+            # Always IDLE -- the machine really is homed here, so STATE:0
+            # is honest and the robot's next CMD:1 runs the following bulb.
+            self.eStep = Step.IDLE
+
+        elif self.eStep in RECOVER:
+            self.eStep = RECOVER[RECOVER.index(self.eStep) + 1]
 
         elif self.eStep in CHAIN:
             self.eStep = CHAIN[CHAIN.index(self.eStep) + 1]
@@ -185,11 +201,11 @@ def t_operator_start_homes_to_idle():
 
 
 def t_start_never_runs_a_cycle():
-    """The whole point: START homes and stops. It must not touch WAIT_PLATE."""
+    """The whole point: START homes and stops. It must not touch CHECK_PLATE."""
     fb = Fb()
     fb.scan(bStart=True)
     seen = run(fb, 30)
-    assert Step.WAIT_PLATE not in seen, "operator START ran a bulb cycle"
+    assert Step.CHECK_PLATE not in seen, "operator START ran a bulb cycle"
     assert fb.eStep == Step.IDLE
 
 
@@ -199,7 +215,7 @@ def t_robot_runs_cycle_once_armed():
     until(fb, Step.IDLE)
     fb.scan(bExtStartPulse=True)
     seen = run(fb, 30)
-    assert Step.WAIT_PLATE in seen, "robot start never reached the bulb cycle"
+    assert Step.CHECK_PLATE in seen, "robot start never reached the bulb cycle"
     assert fb.eStep == Step.IDLE, f"cycle ended in {NAME[fb.eStep]}"
     assert fb.nCyclesCompleted == 1
 
@@ -268,7 +284,7 @@ def t_err_recovery_is_robot_driven():
     assert robot_reply(fb.state_out(True)) == 2, "robot should send CMD:2 on 99"
 
     fb.scan(bReset=True)                 # CMD:2 fanned in by MAIN
-    assert fb.eStep == Step.INIT_PUSH_RETRACTING, \
+    assert fb.eStep == Step.RECOVER_PUSH_RETR, \
         f"RESET went to {NAME[fb.eStep]} instead of homing"
     assert until(fb, Step.IDLE), "recovery did not reach IDLE"
     assert fb.iErrorCode == 0
@@ -285,7 +301,7 @@ def t_reset_does_not_jump_to_idle():
     fb.iErrorCode = 5
     fb.scan(bReset=True)
     assert fb.eStep != Step.IDLE, "RESET advertised IDLE with pistons unknown"
-    assert fb.eStep in CHAIN
+    assert fb.eStep in RECOVER
 
 
 def t_manual_disarms_and_auto_needs_start():
@@ -310,7 +326,7 @@ def t_err_survives_manual():
 
 
 def t_chain_exit_follows_flag():
-    for flag, target in ((True, Step.IDLE), (False, Step.WAIT_PLATE)):
+    for flag, target in ((True, Step.IDLE), (False, Step.CHECK_PLATE)):
         fb = Fb()
         fb.eStep = Step.INIT_GRIP_RETRACTING
         fb.bHomeThenIdle = flag

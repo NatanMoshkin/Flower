@@ -29,7 +29,7 @@ VAR_INPUT
     (* External jog request (e.g. panel push-button). OR-merged with the
        HMI's stHmi.bManJogExtend inside so a physical PB and the HMI
        button can drive the same jog without stepping on each other.
-       Takes effect while eMode = Manual, OR while bJogEnable is TRUE.
+       Only takes effect while eMode = Manual (same gate as the HMI jog).
 
        MOMENTARY, unlike the HMI jog: holding energises the coil, RELEASING
        de-energises it and the spring returns the piston. The panel has no
@@ -38,28 +38,6 @@ VAR_INPUT
        behaviour because bManJogRetract sits right next to it. *)
     bJogExtend        : BOOL;
 
-    (* Opens the jog branches while eMode is Automatic. Default FALSE, so an
-       Automatic piston ignores every jog request exactly as before.
-
-       Exists for one caller: MAIN sets it TRUE while the master cycle is
-       latched in ERR, so the operator can free a jammed piston on the panel
-       push-buttons without first switching the machine to Manual (a mode
-       switch parks the cycle in NOT_HOMED and costs the arming).
-
-       It is a separate input rather than MAIN forcing eMode := Manual during
-       ERR on purpose. eMode is the machine-wide "no double control"
-       interlock driven from stMasterAutoCfg.bAutoMode, and making it depend
-       on eStep as well would give that interlock two owners. This opens the
-       jog path only: bTargetExtend / bTargetRetract still come from the
-       Automatic branch of Section 1, and Section 0 still force-clears
-       bSelectedExtend / bSelectedRetract while eMode is Automatic, so the
-       HMI radio-button selections stay dead.
-
-       NOTE it does enable stHmi.bManJogExtend too, since both share the
-       branch below. That is intended -- the HMI jog is the same operator
-       recovering the same jam -- but remember the HMI jog LATCHES, so it is
-       undone with bManJogRetract, not by letting go. *)
-    bJogEnable        : BOOL;
 
     (* Physical Feedback (Proximity Switches) *)
     bSwitchExtended   : BOOL;
@@ -191,12 +169,10 @@ IF stHmi.bSelectedRetract AND bSwitchRetracted_eff THEN stHmi.bSelectedRetract :
 (* ==========================================
    1c. PANEL JOG RELEASE EDGE
    Called unconditionally so the edge is never missed. MAIN gates bJogExtend
-   with bManualMode OR the ERR jog window, so this also pulses when either
-   one goes away -- on a Manual -> Auto switch, and on leaving ERR. In both
-   cases Section 2's release branch is gated off at that same scan (eMode is
-   Automatic and bJogEnable has just gone FALSE), so the pulse is correctly
-   ignored and the master cycle's INIT retract states take the piston home
-   instead.
+   with bManualMode, so this also pulses on a Manual -> Auto switch; Section 2
+   gates the release branch on Manual, and MAIN forces eMode to Automatic
+   BEFORE calling this FB, so that pulse is correctly ignored and the master
+   cycle's retract states take the piston home instead.
    ========================================== *)
 fbTrigJogRelease(CLK := bJogExtend);
 
@@ -207,8 +183,7 @@ fbTrigJogRelease(CLK := bJogExtend);
    moment Extend is commanded until Retract is commanded — not pulsed until
    the sensor fires (which is the double-solenoid pattern).
    Structure:
-     - Jog branches first, gated by Manual mode OR bJogEnable (the ERR
-       recovery window -- see the bJogEnable declaration).
+     - Jog branches first, gated by Manual mode.
      - Then the panel-jog RELEASE edge, which is the one exception to the
        retain rule: the PB is momentary, so letting go must drive the coil
        FALSE instead of letting it latch. The HMI jog is NOT momentary --
@@ -228,15 +203,13 @@ fbTrigJogRelease(CLK := bJogExtend);
    Fail-safe still holds: cold boot, PLC reset, or e-stop leave bOutSolenoid
    at its default FALSE and the spring retracts.
    ========================================== *)
-// JOG EXTEND: while held, energise coil. HMI-owned bManJogExtend OR external
-// bJogExtend (panel push-button) -- both share the same gate.
-IF (stHmi.bManJogExtend OR bJogExtend)
-   AND (stHmi.eMode = E_ControlMode.Manual OR bJogEnable) THEN
+// JOG EXTEND: while held in Manual, energise coil. HMI-owned bManJogExtend
+// OR external bJogExtend (panel push-button) -- both share the Manual gate.
+IF (stHmi.bManJogExtend OR bJogExtend) AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := TRUE;
 
-// JOG RETRACT: while held, de-energise coil (spring retracts)
-ELSIF stHmi.bManJogRetract
-      AND (stHmi.eMode = E_ControlMode.Manual OR bJogEnable) THEN
+// JOG RETRACT: while held in Manual, de-energise coil (spring retracts)
+ELSIF stHmi.bManJogRetract AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := FALSE;
 
 // PANEL JOG RELEASE: the PB is momentary, so letting go must send the piston
@@ -248,10 +221,7 @@ ELSIF stHmi.bManJogRetract
 //     re-energise the coil the instant the operator lets go. Section 1a
 //     already cleared bSelected* while the jog was held, so this only
 //     reinforces the same intent.
-// Gated on the same Manual-OR-bJogEnable condition as the jog branches: if a
-// momentary PB could energise the coil, letting go must be able to drop it.
-ELSIF fbTrigJogRelease.Q
-      AND (stHmi.eMode = E_ControlMode.Manual OR bJogEnable) THEN
+ELSIF fbTrigJogRelease.Q AND stHmi.eMode = E_ControlMode.Manual THEN
     bOutSolenoid := FALSE;
 
 // EXTEND commanded — energise coil (latched via retain when bTargetExtend clears)

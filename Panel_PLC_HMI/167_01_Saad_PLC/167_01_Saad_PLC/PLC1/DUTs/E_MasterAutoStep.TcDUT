@@ -18,7 +18,10 @@ TYPE E_MasterAutoStep :
     INIT_PUSH_RETRACTING := 10,
     INIT_SEP_RETRACTING  := 11,
     INIT_GRIP_RETRACTING := 12,
-    WAIT_PLATE           := 20,
+    // Renamed from WAIT_PLATE 2026-08-05. Wire value 20 is UNCHANGED, so the
+    // robot cannot tell the difference; only the panel text and the source read
+    // differently. It does more than wait -- it is the plate-presence gate.
+    CHECK_PLATE          := 20,
     GRIP_EXTENDING       := 21,
     GRIP_RETRACTING      := 22,
     MANUAL               := 30,
@@ -34,6 +37,27 @@ TYPE E_MasterAutoStep :
     // Keep the name short: sStepText is STRING(20) and INIT_PUSH_RETRACTING
     // already fills it exactly, so a longer enumerator would truncate.
     NOT_HOMED            := 40,
+
+    // Fault-recovery retract chain, added 2026-08-05. Same MOTION as the
+    // RETRACT/INIT chain (push, then sep, then grip -- the collision ordering)
+    // but its own identity, so a failed recovery is distinguishable from a
+    // failed arming: distinct sStepText, distinct error codes 12/13/14, and a
+    // distinct value on the wire.
+    //
+    // Entered only from ERR on RESET; exits to IDLE (armed). 50/51/52 rather
+    // than 13/14/15 because a fresh decade matches the convention that
+    // non-bulb-cycle states own decades (30 Manual, 40 Not-homed, 99 Err), and
+    // STATE:5x is instantly greppable in a robot log. Adjacency to 10/11/12
+    // would invite exactly the confusion these states exist to remove.
+    //
+    // The robot needs NO new branch: it acts on 0 (armed), 99 (faulted) and
+    // treats everything else as "wait", which is correct for all three.
+    //
+    // Names are <= 20 chars because sStepText is STRING(20).
+    RECOVER_PUSH_RETR    := 50,
+    RECOVER_SEP_RETR     := 51,
+    RECOVER_GRIP_RETR    := 52,
+
     ERR                  := 99
 ) ;
 END_TYPE

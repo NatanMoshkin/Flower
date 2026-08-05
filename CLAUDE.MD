@@ -5,6 +5,56 @@
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
+- ~~update FB_MasterAutoCycle (items -1- to -4-)~~ **IMPLEMENTED 2026-08-05, NOT
+  YET COMPILED.** Everything below is written and statically verified; a
+  TwinCAT build + download is the next step.
+
+  | Decision | What was done |
+  |---|---|
+  | no PAUSED | not implemented. `docs/auto-state-machine-pause.html` is now a **rejected** option, kept for the reasoning only |
+  | no manual jog in any Auto state | the 2026-08-04 `bJogEnable` window is **removed** — input deleted from `FB_SolSpringPiston_2Pos`, `bErrJogEnable` deleted from `MAIN`, all 8 call sites back to `bManualMode AND bPbN` |
+  | red PB1 held → STOP → NOT_HOMED | `tonPb1Stop` + `R_TRIG`, writes `stMasterAuto.bStop`; preset `tPbStopHoldMs` (1000 ms) |
+  | PB3 stays START in NOT_HOMED | unchanged |
+  | green+orange held → start from IDLE | `tonPbCombo` + `R_TRIG` → `bComboStartPulse`, OR-merged into `bExtStartPulse`; preset `tPbStartHoldMs` (1000 ms) |
+  | never refuse robot CMD:2; orange can also Reset | no retry counter, no `bReset` split. `fbTrigPb2` writes `bReset` while `eStep = ERR` |
+  | `RECOVER_*` states | `RECOVER_PUSH_RETR := 50` / `SEP := 51` / `GRIP := 52`, error codes **12/13/14**, own timer group entry, `RESET` from `ERR` now enters this chain and it always exits to `IDLE` |
+  | Method that resets all commands | `FB_MasterAutoCycle.ResetAllCommands` — **20 call sites**, one at the top of every state |
+  | rename WAIT_PLATE → CHECK_PLATE | done, 13 sites. **Wire value 20 unchanged** |
+
+  Two things came along with it:
+
+  - **The unsafe `CASE ELSE` is fixed** — it snapped any unhandled `eStep` to
+    `IDLE` (wire 0, "send me a bulb") with pistons in unknown positions. Now
+    `NOT_HOMED`.
+  - **Every state now calls `ResetAllCommands()` then re-asserts only what it
+    owns.** Behaviour-identical (each old body's net effect was already
+    "everything FALSE except what it listed"), but the previous mix of explicit
+    clears and commands-held-by-omission meant reading one branch in isolation
+    could not tell you what the coils were doing.
+
+  **Two operator-facing consequences worth knowing:**
+
+  1. **Press ORANGE before GREEN for the combo.** The standalone PB3 START edge
+     is suppressed while PB2 is held, so pressing green first gives a plain
+     START — which from `IDLE` is a harmless re-home, not a bulb.
+  2. **PB1's LED blinks while the STOP hold counts**, so a hold-to-act button
+     is not silent guesswork.
+
+  Both presets are editable on `AutoMain` (added by
+  `scripts/add_automain_pb_timers.py`, rows y=375/415 in the right column).
+
+  **Still to do:** build in TcXaeShell, download, then re-run
+  `python scripts/pb_test/pb_test_procedure.py` — its group E is now inverted
+  (jogs must be refused in `ERR`) and a new **group G** covers both hold
+  gestures. The three diagram docs under `docs/` still describe the *pre-decision*
+  design and need regenerating.
+
+- **`scripts/validate_automain.py` is stale** — it fails on
+  `missing element 'Continuous'`, but that checkbox was deliberately deleted on
+  2026-07-27 by `remove_continuous_checkbox.py`. Verified pre-existing (fails
+  identically on HEAD). Drop that expectation from the validator.
+
+
 - **Update the Auto state machine.** Three decision documents are built and are
   the input for this — read them before touching `FB_MasterAutoCycle`:
 
