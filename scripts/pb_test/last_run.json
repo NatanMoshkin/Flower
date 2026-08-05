@@ -1,16 +1,16 @@
 {
   "env": {
-    "started": "2026-08-04 17:00:52",
+    "started": "2026-08-05 10:02:54",
     "net_id": "127.0.0.1.1.1",
     "ams_port": 851,
     "host": "LP-NatanM",
     "python": "3.12.10",
     "step_at_entry": "NOT_HOMED",
-    "auto_at_entry": false,
+    "auto_at_entry": true,
     "tcp_disabled_for_run": true,
     "step_at_exit": "NOT_HOMED",
-    "auto_at_exit": false,
-    "finished": "2026-08-04 17:01:09"
+    "auto_at_exit": true,
+    "finished": "2026-08-05 10:03:16"
   },
   "results": [
     {
@@ -174,9 +174,9 @@
       "id": "C1",
       "what": "PB3 LED blinks 'press me to arm' (unpressed)",
       "expected": "both ON and OFF observed",
-      "actual": "ON x14, OFF x17 over 31 samples @50ms",
+      "actual": "ON x15, OFF x17 over 32 samples @50ms",
       "status": "PASS",
-      "evidence": "###.........########........###"
+      "evidence": "###........########.........####"
     },
     {
       "group": "C",
@@ -264,7 +264,7 @@
       "expected": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "actual": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 17:00:58 START pressed | INFO 17:00:58 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 17:00:58 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 17:00:58 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 17:00:58 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 10:03:00 START pressed | INFO 10:03:00 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 10:03:00 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:00 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:01 INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "group": "C",
@@ -291,7 +291,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D1a",
       "what": "PB1 held in Auto/IDLE: GripL/GripR stay off",
       "expected": "{'GripL': False, 'GripR': False}",
@@ -302,7 +302,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D1b",
       "what": "PB1 held in Auto/IDLE: the other six coils untouched",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False, 'Push1': False, 'Push2': False, 'Push3': False}",
@@ -313,7 +313,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D1c",
       "what": "PB1 released in Auto/IDLE: coils drop (momentary)",
       "expected": "{'GripL': False, 'GripR': False}",
@@ -324,7 +324,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D2a",
       "what": "PB2 held in Auto/IDLE: Sep1/Sep2/Sep3 stay off",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False}",
@@ -335,7 +335,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D2b",
       "what": "PB2 held in Auto/IDLE: the other six coils untouched",
       "expected": "{'Push1': False, 'Push2': False, 'Push3': False, 'GripL': False, 'GripR': False}",
@@ -346,7 +346,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D2c",
       "what": "PB2 released in Auto/IDLE: coils drop (momentary)",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False}",
@@ -357,7 +357,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D3a",
       "what": "PB3 held in Auto/IDLE: Push1/Push2/Push3 stay off",
       "expected": "{'Push1': False, 'Push2': False, 'Push3': False}",
@@ -368,7 +368,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D3b",
       "what": "PB3 held in Auto/IDLE: the other six coils untouched",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False, 'GripL': False, 'GripR': False}",
@@ -379,7 +379,7 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D3c",
       "what": "PB3 released in Auto/IDLE: coils drop (momentary)",
       "expected": "{'Push1': False, 'Push2': False, 'Push3': False}",
@@ -390,29 +390,29 @@
     {
       "group": "D",
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
-      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here; this is the regression guard on bJogEnable.",
+      "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D4",
       "what": "PB3 in IDLE re-homes, it does NOT run a bulb cycle",
       "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 17:00:59 START pressed | INFO 17:00:59 IDLE -> INIT_PUSH_RETRACTING | INFO 17:00:59 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 17:00:59 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 17:00:59 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 10:03:02 START pressed | INFO 10:03:02 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:02 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:02 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:02 INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E0",
-      "what": "a bulb cycle with no plate faults at WAIT_PLATE",
-      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> WAIT_PLATE + ERR entry",
-      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> WAIT_PLATE + ERR entry",
+      "what": "a bulb cycle with no plate faults at CHECK_PLATE",
+      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
+      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
       "status": "PASS",
-      "evidence": "INFO 17:01:00 Sim start pressed | INFO 17:01:00 IDLE -> INIT_PUSH_RETRACTING | INFO 17:01:00 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 17:01:00 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 17:01:00 INIT_GRIP_RETRACTING -> WAIT_PLATE | ERR 17:01:01 WAIT_PLATE timed out (plate never arrived)"
+      "evidence": "INFO 10:03:03 Sim start pressed | INFO 10:03:03 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:03 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:03 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:03 INIT_GRIP_RETRACTING -> CHECK_PLATE | ERR 10:03:04 CHECK_PLATE timed out (plate never arrived)"
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E1",
       "what": "error code 9 = plate never arrived",
       "expected": "9",
@@ -422,8 +422,8 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E2",
       "what": "status lamps: red ON, green OFF",
       "expected": "{'green': False, 'red': True}",
@@ -433,19 +433,19 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E3a",
-      "what": "PB1 held in Auto/ERR: GripL/GripR energise",
-      "expected": "{'GripL': True, 'GripR': True}",
-      "actual": "{'GripL': True, 'GripR': True}",
+      "what": "PB1 held in Auto/ERR: GripL/GripR stay off",
+      "expected": "{'GripL': False, 'GripR': False}",
+      "actual": "{'GripL': False, 'GripR': False}",
       "status": "PASS",
       "evidence": "dOut {10, 11}"
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E3b",
       "what": "PB1 held in Auto/ERR: the other six coils untouched",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False, 'Push1': False, 'Push2': False, 'Push3': False}",
@@ -455,8 +455,8 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E3c",
       "what": "PB1 released in Auto/ERR: coils drop (momentary)",
       "expected": "{'GripL': False, 'GripR': False}",
@@ -466,53 +466,20 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E4a",
-      "what": "PB2 held in Auto/ERR: Sep1/Sep2/Sep3 energise",
-      "expected": "{'Sep1': True, 'Sep2': True, 'Sep3': True}",
-      "actual": "{'Sep1': True, 'Sep2': True, 'Sep3': True}",
-      "status": "PASS",
-      "evidence": "dOut {4, 5, 6}"
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E4b",
-      "what": "PB2 held in Auto/ERR: the other six coils untouched",
-      "expected": "{'Push1': False, 'Push2': False, 'Push3': False, 'GripL': False, 'GripR': False}",
-      "actual": "{'Push1': False, 'Push2': False, 'Push3': False, 'GripL': False, 'GripR': False}",
-      "status": "PASS",
-      "evidence": ""
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E4c",
-      "what": "PB2 released in Auto/ERR: coils drop (momentary)",
-      "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False}",
-      "actual": "{'Sep1': False, 'Sep2': False, 'Sep3': False}",
-      "status": "PASS",
-      "evidence": ""
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E5a",
-      "what": "PB3 held in Auto/ERR: Push1/Push2/Push3 energise",
-      "expected": "{'Push1': True, 'Push2': True, 'Push3': True}",
-      "actual": "{'Push1': True, 'Push2': True, 'Push3': True}",
+      "what": "PB3 held in Auto/ERR: Push1/Push2/Push3 stay off",
+      "expected": "{'Push1': False, 'Push2': False, 'Push3': False}",
+      "actual": "{'Push1': False, 'Push2': False, 'Push3': False}",
       "status": "PASS",
       "evidence": "dOut {1, 2, 3}"
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E5b",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
+      "id": "E4b",
       "what": "PB3 held in Auto/ERR: the other six coils untouched",
       "expected": "{'Sep1': False, 'Sep2': False, 'Sep3': False, 'GripL': False, 'GripR': False}",
       "actual": "{'Sep1': False, 'Sep2': False, 'Sep3': False, 'GripL': False, 'GripR': False}",
@@ -521,9 +488,9 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E5c",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
+      "id": "E4c",
       "what": "PB3 released in Auto/ERR: coils drop (momentary)",
       "expected": "{'Push1': False, 'Push2': False, 'Push3': False}",
       "actual": "{'Push1': False, 'Push2': False, 'Push3': False}",
@@ -532,45 +499,23 @@
     },
     {
       "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
+      "id": "E5",
+      "what": "PB3 LED stays off in ERR",
+      "expected": "(False, False)",
+      "actual": "(False, False)",
+      "status": "PASS",
+      "evidence": ""
+    },
+    {
+      "group": "E",
+      "group_title": "Automatic + ERR \u2014 manual moves must be REFUSED",
+      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.",
       "id": "E6",
-      "what": "PB3 LED reverts to a press mirror in ERR (jog feedback)",
-      "expected": "(True, False)",
-      "actual": "(True, False)",
-      "status": "PASS",
-      "evidence": ""
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E7",
-      "what": "PB3 in ERR does NOT log a spurious 'START pressed'",
-      "expected": "no START entry",
-      "actual": "none",
-      "status": "PASS",
-      "evidence": ""
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E8",
       "what": "PB3 in ERR does not clear the fault",
       "expected": "('ERR', 9)",
       "actual": "('ERR', 9)",
-      "status": "PASS",
-      "evidence": ""
-    },
-    {
-      "group": "E",
-      "group_title": "Automatic + ERR \u2014 the new jog window (2026-08-04)",
-      "group_note": "Fault raised for real: a bulb cycle is started with both plate sensors clear, so WAIT_PLATE times out with error 9.",
-      "id": "E9",
-      "what": "bStart was never written",
-      "expected": "False",
-      "actual": "False",
       "status": "PASS",
       "evidence": ""
     },
@@ -579,11 +524,11 @@
       "group_title": "Recovery \u2014 RESET homes, it does not jump to IDLE",
       "group_note": "A fault leaves the pistons anywhere, so IDLE would advertise 'ready' while it is not.",
       "id": "F0",
-      "what": "RESET homes; it does NOT jump straight to IDLE",
-      "expected": "ERR -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
-      "actual": "ERR -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
+      "what": "PB2 in ERR = RESET, and recovery runs its own chain",
+      "expected": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
+      "actual": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 17:01:03 ERR -> INIT_PUSH_RETRACTING | INFO 17:01:03 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 17:01:03 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 17:01:03 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 10:03:05 RESET pressed | INFO 10:03:05 ERR -> RECOVER_PUSH_RETR | INFO 10:03:05 RECOVER_PUSH_RETR -> RECOVER_SEP_RETR | INFO 10:03:05 RECOVER_SEP_RETR -> RECOVER_GRIP_RETR | INFO 10:03:05 RECOVER_GRIP_RETR -> IDLE"
     },
     {
       "group": "F",
@@ -639,108 +584,163 @@
       "actual": "{'GripL': False, 'GripR': False}",
       "status": "PASS",
       "evidence": ""
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G0",
+      "what": "PB1 held 0.40s (under the 1.00s preset) does nothing",
+      "expected": "IDLE",
+      "actual": "IDLE",
+      "status": "PASS",
+      "evidence": ""
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G1",
+      "what": "PB1 held 1.00s disarms to NOT_HOMED",
+      "expected": "NOT_HOMED",
+      "actual": "NOT_HOMED",
+      "status": "PASS",
+      "evidence": ""
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G2",
+      "what": "and it DISARMS rather than faulting",
+      "expected": "iErrorCode 0",
+      "actual": "iErrorCode 0",
+      "status": "PASS",
+      "evidence": "INFO 10:03:08 STOP pressed | INFO 10:03:08 IDLE -> NOT_HOMED"
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G3",
+      "what": "PB3 alone from IDLE re-homes, it does NOT run a bulb",
+      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
+      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
+      "status": "PASS",
+      "evidence": ""
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G4",
+      "what": "PB2+PB3 held starts a BULB from IDLE, not a re-home",
+      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE ...",
+      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE -> GRIP_EXTENDING",
+      "status": "PASS",
+      "evidence": "INFO 10:03:10 PB2+PB3 held: operator bulb start | INFO 10:03:10 External start pulse | INFO 10:03:10 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:10 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:10 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:10 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 10:03:10 CHECK_PLATE -> GRIP_EXTENDING"
     }
   ],
   "log_tail": [
     {
       "sev": "INFO",
-      "time": "17:01:03",
-      "msg": "INIT_GRIP_RETRACTING -> IDLE"
+      "time": "10:03:10",
+      "msg": "CHECK_PLATE -> GRIP_EXTENDING"
     },
     {
       "sev": "INFO",
-      "time": "17:01:03",
+      "time": "10:03:10",
+      "msg": "INIT_GRIP_RETRACTING -> CHECK_PLATE"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:10",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:01:03",
+      "time": "10:03:10",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:01:03",
-      "msg": "ERR -> INIT_PUSH_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:03",
-      "msg": "RESET pressed"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:02",
-      "msg": "persistent data saved"
-    },
-    {
-      "sev": "ERR",
-      "time": "17:01:01",
-      "msg": "WAIT_PLATE timed out (plate never arrived)"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:00",
-      "msg": "INIT_GRIP_RETRACTING -> WAIT_PLATE"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:00",
-      "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:00",
-      "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "17:01:00",
+      "time": "10:03:10",
       "msg": "IDLE -> INIT_PUSH_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:01:00",
-      "msg": "Sim start pressed"
+      "time": "10:03:10",
+      "msg": "External start pulse"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:10",
+      "msg": "PB2+PB3 held: operator bulb start"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:09",
       "msg": "INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:09",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:09",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:09",
       "msg": "IDLE -> INIT_PUSH_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:09",
       "msg": "START pressed"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:08",
       "msg": "INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:08",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "17:00:59",
+      "time": "10:03:08",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:08",
+      "msg": "NOT_HOMED -> INIT_PUSH_RETRACTING"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:08",
+      "msg": "START pressed"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:08",
+      "msg": "IDLE -> NOT_HOMED"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:08",
+      "msg": "STOP pressed"
+    },
+    {
+      "sev": "INFO",
+      "time": "10:03:05",
+      "msg": "RECOVER_GRIP_RETR -> IDLE"
     }
   ],
   "summary": {

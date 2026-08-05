@@ -206,14 +206,38 @@ class Plc:
     def log_idx(self):
         return self.r("GVL_Log.nWriteIdx", UDINT)
 
+    def settle_log(self, quiet=0.12, timeout=3.0):
+        """Wait until the log ring stops growing, so every in-flight entry has
+        landed before it is read.
+
+        Needed because the FB writes a state change in Section 4 but LOGS it in
+        Section 3, which runs earlier -- so a transition is recorded one scan
+        AFTER eStep changes. wait_step() therefore returns while the entry for
+        the state it just saw does not exist yet. Without this, asserting on the
+        newest entry is a race: that is exactly how the ERR-severity entry for a
+        CHECK_PLATE timeout came back missing while eSev/sSevText in the PLC
+        were perfectly correct."""
+        deadline = time.time() + timeout
+        last, stable_since = self.log_idx(), time.time()
+        while time.time() < deadline:
+            time.sleep(0.02)
+            now = self.log_idx()
+            if now != last:
+                last, stable_since = now, time.time()
+            elif time.time() - stable_since >= quiet:
+                return last
+        return last
+
     def log_since(self, idx0, n=20):
         """Entries written since log_idx() == idx0, oldest first.
 
-        The counter and the ring are read over separate ADS calls, so a burst
-        still in flight can lose its OLDEST entry from this listing. That is
-        cosmetic -- it only affects the evidence string. Never assert on the
-        presence of a specific entry here; assert on transitions() for the
-        chain, or on absence (a delta of zero), which is race-free."""
+        Calls settle_log() first, so both the newest-entry race (see there) and
+        the oldest-entry one below are closed.
+
+        The counter and the ring are still read over separate ADS calls, so in
+        principle a burst arriving DURING the read could lose its oldest entry.
+        Prefer transitions() for a chain, or a delta of zero for absence."""
+        self.settle_log()
         new = min(self.log_idx() - idx0, n)
         return list(reversed(self.log_head(new))) if new > 0 else []
 

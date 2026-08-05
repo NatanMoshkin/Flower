@@ -119,10 +119,29 @@ def run(net_id):
         p.park_all_home()
         p.set_plate(True)
 
+        # NORMALISE before asserting anything. The procedure used to assume it
+        # started from a clean machine, so a previous run that ended in ERR made
+        # group C fail for a reason that had nothing to do with group C: ERR is
+        # excluded from the Manual re-park, so "Manual -> Auto parks in
+        # NOT_HOMED" could not hold. Clear a latched fault, then disarm.
+        entry_step = p.step_name()
+        if p.step() == 99:
+            p.w("GVL_HMI.stMasterAuto.bReset", True, BOOL)
+            p.wait_step(0, timeout=10)
+        p.w(AUTO, True, BOOL)
+        time.sleep(SETTLE)
+        p.w("GVL_HMI.stMasterAuto.bStop", True, BOOL)
+        time.sleep(0.3)
+        if p.step_name() != "NOT_HOMED":
+            raise RuntimeError(
+                "could not normalise to NOT_HOMED (entered as %s, now %s)"
+                % (entry_step, p.step_name()))
+        print("  normalised: %s -> NOT_HOMED" % entry_step)
+
         env = {
             "started": started, "net_id": net_id, "ams_port": 851,
             "host": platform.node(), "python": platform.python_version(),
-            "step_at_entry": p.step_name(),
+            "step_at_entry": entry_step,
             "auto_at_entry": orig_auto,
             "tcp_disabled_for_run": True,
         }
@@ -208,9 +227,10 @@ def run(net_id):
                reached and got == want, evidence=fmt_log(entries))
 
         # ================================================================
-        group("E", "Automatic + ERR — the new jog window (2026-08-04)",
+        group("E", "Automatic + ERR — manual moves must be REFUSED",
               "Fault raised for real: a bulb cycle is started with both plate "
-              "sensors clear, so CHECK_PLATE times out with error 9.")
+              "sensors clear, so CHECK_PLATE times out with error 9. The jog "
+              "window that briefly existed here is gone -- these guard that.")
         p.w(PLATE_TMO, 700, UDINT)
         p.set_plate(False)
         idx0 = p.log_idx()
@@ -302,26 +322,39 @@ def run(net_id):
         record("G3", "PB3 alone from IDLE re-homes, it does NOT run a bulb",
                " -> ".join(want), " -> ".join(got) or "(none)", got == want)
 
+        # The claim under test is "the combo starts a BULB, not a re-home".
+        # Entering CHECK_PLATE is exactly that claim: it is the bulb-cycle exit
+        # of the retract chain, and G3 has just shown PB3 alone takes the other
+        # exit back to IDLE. Running the bulb to completion is NOT tested here
+        # -- the harness only asserts the retracted sensors, so the cycle would
+        # stall in GRIP_EXTENDING waiting for an extend sensor that never comes
+        # (that is field check FLD6, on real sensors).
         p.set_plate(True)
         idx0 = p.log_idx()
         p.w("GVL_IO.dIn[%d]" % PB_DI[2], True, BOOL)
         p.w("GVL_IO.dIn[%d]" % PB_DI[3], True, BOOL)
         time.sleep(hold_start + 0.4)
         p.release_all_pbs()
-        reached = p.wait_step(0, timeout=15)
+        reached = p.wait_step([20, 21], timeout=15)
         entries = p.log_since(idx0)
         got = transitions(entries)
-        record("G4", "PB2+PB3 held runs ONE bulb cycle from IDLE",
-               "through CHECK_PLATE and back to IDLE",
-               " -> ".join(got) or "(none)",
-               reached and "CHECK_PLATE" in got and got and got[-1] == "IDLE",
-               evidence=fmt_log(entries))
+        want = ["IDLE"] + HOMING + ["CHECK_PLATE"]
+        record("G4", "PB2+PB3 held starts a BULB from IDLE, not a re-home",
+               " -> ".join(want) + " ...", " -> ".join(got) or "(none)",
+               reached and got[:len(want)] == want, evidence=fmt_log(entries))
 
         log_tail = p.log_head(20)
 
         # ---------------- restore ---------------------------------------
         print("\n--- restoring PLC state ---")
         p.release_all_pbs()
+        # STOP is excluded from ERR by design, so a latched fault has to be
+        # RESET first or the panel is left sitting in ERR. G4 deliberately
+        # leaves the cycle mid-bulb, which then times out, so this matters.
+        p.park_all_home()
+        if p.step() == 99:
+            p.w("GVL_HMI.stMasterAuto.bReset", True, BOOL)
+            p.wait_step(0, timeout=8)
         p.w("GVL_HMI.stMasterAuto.bStop", True, BOOL)   # disarm to NOT_HOMED
         time.sleep(0.3)
         p.restore()
