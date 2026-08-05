@@ -24,6 +24,7 @@ three values and needs no branch for anything else:
 | PLC pushes | Mock replies | Meaning |
 |---|---|---|
 | `STATE:0` (IDLE) | `CMD:1` when it wants a bulb, else `CMD:0` | armed — start one cycle |
+| `STATE:50/51/52` (`RECOVER_*`) | `CMD:0` | recovering from a fault; wait |
 | `STATE:99` (ERR) | `CMD:2` | faulted — reset it; the PLC then homes itself and comes back as `STATE:0` |
 | anything else, incl. `STATE:40` (`NOT_HOMED`) and `STATE:30` (`MANUAL`) | `CMD:0` | wait |
 
@@ -109,7 +110,7 @@ New Client Connected Successfully: 192.168.1.50:49812
 [STATE] 40  NOT_HOMED
 [STATE] 10  INIT_PUSH_RETRACTING
 [STATE] 0   IDLE  -> CMD:1 start cycle
-[STATE] 20  WAIT_PLATE
+[STATE] 20  CHECK_PLATE
 [STATE] 22  GRIP_RETRACTING
 [STATE] 0   IDLE  -> CMD:1 start cycle
 ```
@@ -189,7 +190,7 @@ point at this file.
 | `Connected`, counters climbing, but no cycle ever starts | The reply is not a `CMD:` frame. If Last Rx on the Robot page reads `OK: SET STATE`, the server is a version without STATE handling — see [the ordering rule](#the-ordering-rule). |
 | One `New Client Connected` line, then **silence**, panel stuck on `Connecting` | The server was wedged on a dead socket. Fixed 2026-07-29 — but if you see it again, check for **more than one connection** from the panel: `Get-NetTCPConnection -LocalPort 6001`. See [Two sockets at once](#two-sockets-at-once). |
 | Mock looks dead but the panel says `Connected` | A **second instance** is holding the port and got the connection. Now refused at startup with `Cannot listen on 0.0.0.0:6001`, but check every open terminal. |
-| Mock prints `[STATE] 40 NOT_HOMED` forever | Correct and expected. The panel is in Auto but un-armed; press the green PB3 or the HMI START. |
+| Mock prints `[STATE] 40 NOT_HOMED` forever | Correct and expected. The panel is in Auto but un-armed; press the green PB3 or the HMI START. (From `IDLE`, the operator can also start one bulb by holding ORANGE + GREEN together for `tPbStartHoldMs`.) |
 | Mock prints `[STATE] 30 MANUAL` | The panel is in Manual. Nothing will run until it is switched to Automatic *and* armed. |
 | Cycle starts once then never again | Should no longer happen (fixed 2026-07-28, `nRobotCmd` is consumed as a level and cleared). If it does, check MAIN clears `nRobotCmd`. |
 | `[STATE] unparsable: …` | A malformed `STATE:` frame; the mock answers `CMD:0` and carries on. |

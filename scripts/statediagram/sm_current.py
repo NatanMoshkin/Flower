@@ -1,70 +1,142 @@
-"""CURRENT Auto state machine — verified against FB_MasterAutoCycle.TcPOU.
+"""AS-BUILT Auto state machine — verified against FB_MasterAutoCycle.TcPOU and
+against the live PLC (2026-08-05).
 
-Every claim was read from the ST source, not from CLAUDE.md. The two disagree in
-several places; the disagreements are listed on the page because a diagram that
-quietly matched the stale docs would be worse than no diagram at all.
+Every claim here was read from the ST source. The behaviour was then confirmed
+on the running PLC: scripts/pb_test/pb_test_procedure.py 57/57, and
+scripts/pb_test/cycle_trace.py 10/10 states driving exactly the coils listed in
+the popups.
 """
 
 from sm_common import (
     ROBOT_TABLE, attach_info, core_edges, main_states, override_states,
 )
-from sm_render import Edge, State, legend_html, page, render_svg
+from sm_render import BOX_W, Edge, State, legend_html, page, render_svg
+
+RECOVER = [("REC_PUSH", "RECOVER_PUSH_RETR", 50, 12, 16),
+           ("REC_SEP", "RECOVER_SEP_RETR", 51, 13, 17),
+           ("REC_GRIP", "RECOVER_GRIP_RETR", 52, 14, 18)]
+
+# The RECOVER states exist now, so they get real popups rather than "proposed".
+EXTRA = {
+    "REC_PUSH": [("drives", "bPushCmdRetract[1..3] := TRUE, after "
+                            "ResetAllCommands()"),
+                 ("exit", "bAllPushRetracted"),
+                 ("timer", "tStepTimeoutMs → <strong>error 12</strong>, distinct "
+                           "from arming's error 6")],
+    "REC_SEP": [("drives", "bSepCmdRetract[1..3] := TRUE"),
+                ("exit", "bAllSepRetracted"),
+                ("timer", "tStepTimeoutMs → <strong>error 13</strong>")],
+    "REC_GRIP": [("drives", "bGripCmdRetract[1..2] := TRUE"),
+                 ("exit", "bAllGripRetracted (OR) → IDLE, armed"),
+                 ("timer", "tStepTimeoutMs → <strong>error 14</strong>"),
+                 ("why", "the machine really is homed here, so advertising "
+                         "STATE:0 is honest")],
+}
 
 
 def build_states():
-    # ERR sits on row 15, BELOW the whole column, so the fault bus enters it at
-    # a row that aligns with no state. At ERR's old mid-column row the trunk's
-    # horizontal stub lined up with DWELL_PUSH, which cannot fault — it read as
-    # DWELL_PUSH's own edge.
-    return attach_info(main_states() + override_states() + [
-        State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — RESET only"),
-    ])
+    st = main_states() + override_states()
+    st.append(State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — RESET only"))
+    for k, name, val, code, row in RECOVER:
+        st.append(State(k, name, val, "init", 1, row,
+                        sub=f"timeout → error {code}"))
+    return attach_info(st, extras=EXTRA)
 
 
 def build_edges(states):
     by = {s.key: s for s in states}
     e = core_edges(by)
-    e.append(Edge("ERR:e", "INIT_PUSH:e", kind="recover",
-                  label="RESET\n(HMI button or\n robot CMD:2)",
-                  via=[(by["ERR"].x + 216 + 44, by["ERR"].cy),
-                       (by["ERR"].x + 216 + 44, by["INIT_PUSH"].cy + 16),
-                       (by["INIT_PUSH"].x + 216 + 16, by["INIT_PUSH"].cy + 16),
-                       (by["INIT_PUSH"].x + 216 + 16, by["INIT_PUSH"].cy)],
-                  label_at=(by["ERR"].x + 216 + 52, by["ERR"].cy - 26),
+    e.append(Edge("ERR:s", "REC_PUSH:n", kind="recover",
+                  label="RESET — HMI, orange PB2, or robot CMD:2"))
+    e.append(Edge("REC_PUSH:s", "REC_SEP:n", kind="recover", label="push retracted"))
+    e.append(Edge("REC_SEP:s", "REC_GRIP:n", kind="recover", label="sep retracted"))
+    e.append(Edge("REC_GRIP:e", "IDLE:e", kind="recover",
+                  label="grip retracted → armed",
+                  via=[(by["REC_GRIP"].x + BOX_W + 46, by["REC_GRIP"].cy),
+                       (by["REC_GRIP"].x + BOX_W + 46, by["IDLE"].cy - 16),
+                       (by["IDLE"].x + BOX_W + 18, by["IDLE"].cy - 16),
+                       (by["IDLE"].x + BOX_W + 18, by["IDLE"].cy)],
+                  label_at=(by["REC_GRIP"].x + BOX_W + 54, by["REC_GRIP"].cy - 20),
                   label_side="r"))
     return e
 
 
 BODY = """
-<h2>Sixteen assigned states</h2>
-<p>The badge on each box is its <code>E_MasterAutoStep</code> value. That value is
-also what <code>MAIN</code> pushes to the robot as <code>STATE:&lt;n&gt;</code>, so
-these numbers are an external contract, not internal bookkeeping. Numbers on the
-red fault bus are <code>iErrorCode</code> values.</p>
+<h2>Nineteen assigned states</h2>
+<p>The badge on each box is its <code>E_MasterAutoStep</code> value, which is also
+what <code>MAIN</code> pushes to the robot as <code>STATE:&lt;n&gt;</code> — an
+external contract, not internal bookkeeping. Numbers on the red fault bus are
+<code>iErrorCode</code> values.</p>
 
 {diagram}
 {legend}
 <p class="pophint">Click any state box (marked <strong>i</strong>) for the exact
-commands it drives, what it holds by omission, its exit guard and its timer.</p>
+commands it drives, its exit guard, its timer and its error code. Those command
+lists were confirmed against the running PLC — see
+<em>How this was verified</em> below.</p>
 
-<div class="callout">
-<h3>The one thing to take away: one chain, four callers</h3>
-<p>The three amber <code>INIT_*</code> states are a single retract chain, entered
-from <strong>four</strong> places for <strong>two</strong> different purposes —
-arming from <code>NOT_HOMED</code>, re-homing from <code>IDLE</code>, recovering
-from <code>ERR</code>, and as the front half of every bulb cycle. One internal
-boolean, <code>bHomeThenIdle</code>, decides which of the two exits
-<code>INIT_GRIP_RETRACTING</code> takes. Written at four sites, read at exactly
-one.</p>
-<p>Only the bulb-cycle caller wants the <code>WAIT_PLATE</code> exit. And
-<code>bHomeThenIdle</code> has <strong>no initialiser</strong>, so its
-cold-boot value is <code>FALSE</code> — which is the &ldquo;run a bulb&rdquo;
-direction. Nothing is broken today because all four entry points do write it,
-but the fail-safe default points the wrong way.</p>
+<div class="callout good">
+<h3>Recovery has its own chain</h3>
+<p><code>RESET</code> out of <code>ERR</code> runs
+<code>RECOVER_PUSH_RETR → RECOVER_SEP_RETR → RECOVER_GRIP_RETR</code> (50/51/52),
+not the shared <code>INIT_*</code> chain. Same motion and the same collision
+ordering — push, then sep, then grip — but its own identity, so a failed
+<em>recovery</em> reports error <strong>12/13/14</strong> and its own
+<code>sStepText</code> instead of looking exactly like a failed <em>arming</em>
+(6/7/8).</p>
+<p>It always exits to <code>IDLE</code>: at that point the machine really is
+homed, so advertising <code>STATE:0</code> is honest. The robot needed
+<strong>no new branch</strong> — it acts on 0 and 99 and treats everything else
+as &ldquo;wait&rdquo;.</p>
 </div>
 
+<div class="callout">
+<h3>The <code>INIT_*</code> chain still has three callers</h3>
+<p>Arming from <code>NOT_HOMED</code>, re-homing from <code>IDLE</code>, and the
+front half of every bulb cycle. <code>bHomeThenIdle</code> still picks which of
+the two exits <code>INIT_GRIP_RETRACTING</code> takes — but it is down from four
+writers to three, because fault recovery no longer borrows this chain.</p>
+<p>It still has <strong>no initialiser</strong>, so its cold-boot value
+<code>FALSE</code> is the &ldquo;run a bulb&rdquo; direction. Nothing is broken —
+all three entry points write it — but the fail-safe default points the wrong way.
+Replacing it with <code>eReturnTo : E_MasterAutoStep</code> is still worth doing:
+an uninitialised enum is <code>0</code> = <code>IDLE</code>.</p>
+</div>
+
+<h2>Panel buttons</h2>
+<p>Two of the three gestures in Automatic are multi-second <strong>holds</strong>,
+not edges — both are consequential, and a hold cannot be triggered by a knock or
+a brushed sleeve. Durations are editable on <code>AutoMain</code>.</p>
+<div class="tblwrap"><table>
+<thead><tr><th></th><th>PB1 — red</th><th>PB2 — orange</th><th>PB3 — green</th></tr></thead>
+<tbody>
+<tr><td><strong>Manual</strong></td><td>grip jog</td><td>Sep jog</td><td>Push jog</td></tr>
+<tr><td><strong>Automatic</strong></td>
+    <td><strong>held <code>tPbStopHoldMs</code></strong> → STOP, disarming to
+        <code>NOT_HOMED</code>. LED1 blinks while the hold counts.</td>
+    <td>in <code>ERR</code>: <strong>RESET</strong> (edge).<br>
+        with PB3: half of the start combo.</td>
+    <td><strong>START</strong> (edge) — home and arm.</td></tr>
+<tr><td><strong>PB2 + PB3 together</strong></td>
+    <td colspan="3"><strong>held <code>tPbStartHoldMs</code> from
+    <code>IDLE</code></strong> → run ONE bulb. The operator's parallel to the
+    robot's <code>CMD:1</code>, fed into the same <code>bExtStartPulse</code>
+    input.</td></tr>
+</tbody></table></div>
+<div class="callout">
+<h3>Press ORANGE before GREEN</h3>
+<p>The standalone PB3 START edge is suppressed while PB2 is held, so the combo
+does not fire a START on its way in. Pressing green first gives a plain START —
+which from <code>IDLE</code> is a harmless re-home, not a bulb. Confirmed on the
+PLC: <code>G3</code> shows PB3 alone re-homing, <code>G4</code> shows the combo
+entering <code>CHECK_PLATE</code>.</p>
+</div>
+<p><strong>Manual moves are available in Manual mode only.</strong> An ERR jog
+window existed briefly (2026-08-04) and was removed the next day by operator
+decision. <code>scripts/test_piston_jog_gate.py</code> and
+<code>pb_test</code> group E are now the negative guards on that removal.</p>
+
 <h2>Transition detail</h2>
-<p>Guards on the diagram are shortened to one line. The full set:</p>
 <div class="tblwrap"><table>
 <thead><tr><th>From</th><th>Guard</th><th>To</th><th>Sets</th></tr></thead>
 <tbody>
@@ -72,85 +144,129 @@ but the fail-safe default points the wrong way.</p>
     <td class="m">INIT_PUSH_RETRACTING</td><td class="m">bHomeThenIdle := TRUE</td></tr>
 <tr><td class="m">IDLE</td>
     <td class="m">bMachineAuto AND (bExtStartPulse OR fbTrigStartAssembly.Q OR fbSim_Idle.Q)</td>
-    <td class="m">INIT_PUSH_RETRACTING</td><td class="m">bHomeThenIdle := <strong>FALSE</strong></td></tr>
+    <td class="m">INIT_PUSH_RETRACTING</td>
+    <td class="m">bHomeThenIdle := <strong>FALSE</strong></td></tr>
 <tr><td class="m">IDLE</td><td class="m">bMachineAuto AND fbTrigStart.Q</td>
     <td class="m">INIT_PUSH_RETRACTING</td><td class="m">bHomeThenIdle := TRUE</td></tr>
-<tr><td class="m">ERR</td><td class="m">fbTrigReset.Q  (HMI button or robot CMD:2)</td>
-    <td class="m">INIT_PUSH_RETRACTING</td><td class="m">bHomeThenIdle := TRUE, error cleared</td></tr>
-<tr><td class="m">INIT_GRIP_RETRACTING</td><td class="m">grip retracted AND bHomeThenIdle</td>
+<tr><td class="m">INIT_GRIP_RETRACTING</td>
+    <td class="m">grip retracted AND bHomeThenIdle</td>
     <td class="m">IDLE</td><td class="m">—</td></tr>
-<tr><td class="m">INIT_GRIP_RETRACTING</td><td class="m">grip retracted AND NOT bHomeThenIdle</td>
-    <td class="m">WAIT_PLATE</td><td class="m">—</td></tr>
-<tr><td class="m">any except ERR</td><td class="m">fbTrigStop.Q</td>
-    <td class="m">NOT_HOMED</td><td class="m">iErrorCode := 0 — disarms, does not fault</td></tr>
-<tr><td class="m">any except NOT_HOMED, ERR</td><td class="m">NOT bMachineAuto  (level, every scan)</td>
+<tr><td class="m">INIT_GRIP_RETRACTING</td>
+    <td class="m">grip retracted AND NOT bHomeThenIdle</td>
+    <td class="m">CHECK_PLATE</td><td class="m">—</td></tr>
+<tr><td class="m">ERR</td>
+    <td class="m">fbTrigReset.Q — HMI, PB2, or robot CMD:2</td>
+    <td class="m">RECOVER_PUSH_RETR</td><td class="m">error cleared</td></tr>
+<tr><td class="m">RECOVER_GRIP_RETR</td><td class="m">grip retracted</td>
+    <td class="m">IDLE</td><td class="m">—</td></tr>
+<tr><td class="m">any except ERR</td>
+    <td class="m">fbTrigStop.Q — HMI, or PB1 held</td>
+    <td class="m">NOT_HOMED</td>
+    <td class="m">iErrorCode := 0 — disarms, does not fault</td></tr>
+<tr><td class="m">any except NOT_HOMED, ERR</td>
+    <td class="m">NOT bMachineAuto  (level, every scan)</td>
     <td class="m">NOT_HOMED</td><td class="m">—</td></tr>
 </tbody></table></div>
 
-<h2 id="unsafe">A defect worth fixing regardless of any redesign</h2>
-<div class="callout bad">
-<h3>The defensive <code>CASE ELSE</code> fails unsafe</h3>
-<p>Any <code>eStep</code> value with no CASE branch clears all coils and then
-does <code>stHmi.eStep := E_MasterAutoStep.IDLE</code>. <code>IDLE</code> is wire
-value <strong>0</strong> — the one value that makes the robot send
-<code>CMD:1</code> — and it is reached with the pistons in unknown positions.</p>
-<p>This is reachable: <code>GVL_HMI</code> carries the
-<code>TcHmiSymbol.AddSymbol</code> pragma, so <code>eStep</code> is writable over
-ADS by the HMI or any client; and <code>WAIT_POS2 (2)</code> is a declared
-enumerator with no branch today. <code>NOT_HOMED</code> is the correct landing
-state — it reports &ldquo;wait&rdquo; and requires a human START. Two-line change,
-independent of everything else on these pages.</p>
-</div>
+<h2>Every state resets its commands first</h2>
+<p>Each branch calls <code>ResetAllCommands()</code> — a METHOD on the FB, 20 call
+sites — and then re-asserts only the commands it owns. Before 2026-08-05 the
+bodies were a mix: eight of sixteen cleared the full Sep/Push set and the rest
+inherited FALSE from whichever state ran previously, so reading one branch in
+isolation could not tell you what the coils were doing.</p>
+<p>Behaviour is unchanged — each old body's net effect was already
+&ldquo;everything FALSE except what it listed&rdquo; — and that equivalence is
+what <code>cycle_trace.py</code> demonstrates rather than asserts.</p>
+<p>Note it clears <strong>commands, not coils</strong>.
+<code>FB_SolSpringPiston_2Pos</code> retains its coil when no command branch
+matches, so clearing mid-stroke holds the piston rather than dropping it. That is
+exactly why every state must re-assert what it wants, every scan.</p>
 
-<h2>Where the code and its own comments disagree</h2>
-<p>Found by reading the source against its documentation. The code is what runs;
-the diagram follows the code. None of these was introduced by this exercise.</p>
+<h2>Error codes</h2>
 <div class="tblwrap"><table>
-<thead><tr><th>The comments say</th><th>The code does</th><th>Why it matters</th></tr></thead>
+<thead><tr><th>Code</th><th>Meaning</th></tr></thead>
 <tbody>
-<tr><td>grip and plate aggregate with <code>AND</code></td>
-    <td><code>OR</code></td>
-    <td>Deliberate field deviation — GripSolR has no air. One sensor advances the cycle, so a single-gripper failure is invisible.</td></tr>
-<tr><td><code>bNoSensors</code> covers 4 movement states (codes 1/3/4/5)</td>
-    <td>the term is in <strong>nine</strong> states</td>
-    <td>With the flag set, codes <strong>1, 3, 4, 5, 6, 7, 8, 10, 11 are all unreachable</strong> — only code 9 can fire. This is why no movement-timeout path has ever been exercised on a bench.</td></tr>
-<tr><td>IDLE exits on <code>... OR stCfg.bContinuous</code>, so a persisted TRUE could start a cycle at power-up</td>
-    <td>IDLE never tests it. The FB writes <code>bContinuous</code> ten times and reads it <strong>zero</strong> times</td>
-    <td>The hazard <code>MAIN</code> force-clears it to prevent no longer exists in the FB. The force-clear is belt-and-braces now, not load-bearing.</td></tr>
-<tr><td>code 2 = WAIT_POS2 timeout; code 99 = operator STOP</td>
-    <td>neither is ever set</td>
-    <td>Both unreachable. Correctly documented as retired; do not reuse either number.</td></tr>
-<tr><td><code>bAnyRunning</code> is read by MAIN to force piston modes</td>
-    <td>never read anywhere</td>
-    <td>Dead output, misleading comment. It also reads TRUE in <code>NOT_HOMED</code>, where nothing runs.</td></tr>
-<tr><td>each state clears the commands it does not own</td>
-    <td>only 8 of 16 clear the full Sep/Push set; several mid-cycle states <strong>hold commands by omission</strong></td>
-    <td>Load-bearing for any Pause design — see that page.</td></tr>
+<tr><td class="m">0</td><td>OK</td></tr>
+<tr><td class="m">1 / 3 / 4 / 5</td>
+    <td>SEP_EXTENDING / PUSH_EXTENDING / PUSH_RETRACTING / SEP_RETRACTING timeout</td></tr>
+<tr><td class="m">6 / 7 / 8</td><td>the three <code>INIT_*</code> timeouts — arming</td></tr>
+<tr><td class="m">9</td><td>CHECK_PLATE timeout; suppressed by <code>bBypassPlateSensors</code></td></tr>
+<tr><td class="m">10 / 11</td><td>GRIP_EXTENDING / GRIP_RETRACTING timeout</td></tr>
+<tr><td class="m">12 / 13 / 14</td>
+    <td><strong>the three <code>RECOVER_*</code> timeouts</strong> — recovery,
+    deliberately distinct from 6/7/8</td></tr>
+<tr><td class="m">2, 99</td>
+    <td><strong>RETIRED</strong>, never set. Do not reuse — old logs and CSV
+    exports still carry them.</td></tr>
 </tbody></table></div>
+<p><strong>Caveat that still matters:</strong> the <code>OR (bNoSensors AND
+tonStep.Q)</code> term is present in <strong>twelve</strong> movement states now,
+so with that flag set codes 1/3/4/5/6/7/8/10/11/12/13/14 are <em>all</em>
+unreachable — only code 9 can fire. Every bench run so far has had it set, so no
+movement-timeout path has been exercised on any panel. That is field check
+<code>FLD6</code>.</p>
 
 <h2>Timers</h2>
-<p>A single shared <code>tonStep : TON</code>, re-armed whenever
-<code>eStep</code> changes. PT is chosen per state:</p>
 <div class="tblwrap"><table>
 <thead><tr><th>PT source</th><th>Default</th><th>States</th></tr></thead>
 <tbody>
 <tr><td class="m">tStepTimeoutMs</td><td class="m">10000 ms</td>
-    <td>the nine movement states — both INIT sets, both GRIP, all four Sep/Push</td></tr>
-<tr><td class="m">tPlateWaitTimeoutMs</td><td class="m">10000 ms</td><td>WAIT_PLATE</td></tr>
+    <td>twelve movement states — both INIT sets, the three RECOVER, both GRIP,
+    all four Sep/Push</td></tr>
+<tr><td class="m">tPlateWaitTimeoutMs</td><td class="m">10000 ms</td><td>CHECK_PLATE</td></tr>
 <tr><td class="m">tDwellPushMs</td><td class="m">2000 ms</td><td>DWELL_PUSH</td></tr>
 <tr><td class="m">tPushRetractedDwellMs</td><td class="m">500 ms</td><td>PUSH_RETRACTED_DWELL</td></tr>
 <tr><td class="m">tSepRetractedDwellMs</td><td class="m">500 ms</td><td>SEP_RETRACTED_DWELL</td></tr>
+<tr><td class="m">tPbStopHoldMs / tPbStartHoldMs</td><td class="m">1000 ms each</td>
+    <td>not step timers — the two PB hold gestures, in <code>MAIN</code></td></tr>
 <tr><td class="m">no timer</td><td class="m">—</td>
     <td>IDLE, NOT_HOMED, ERR — the ELSE branch holds <code>IN := FALSE</code></td></tr>
 </tbody></table></div>
-<p>Because <code>IN := FALSE</code> <em>resets</em> a TON's elapsed time rather
-than holding it, any future feature that stops the timer gives the state its full
-budget again on resume. That turns out to simplify Pause considerably.</p>
 
 <h2>What the robot sees</h2>
 <p>In Manual, <code>MAIN</code> masks the real step and reports
 <code>STATE:30</code>. In Automatic it puts the raw enum value on the wire.</p>
 {robot}
+
+<h2>Two deviations that are still live</h2>
+<div class="tblwrap"><table>
+<thead><tr><th>Deviation</th><th>Why it stays</th></tr></thead>
+<tbody>
+<tr><td>Grip and plate aggregate with <code>OR</code>, not <code>AND</code>, despite the <code>bAll</code> prefix</td>
+    <td><code>GripSolR</code> has no air and only one plate sensor is confirmed,
+    so <code>AND</code> would fault every cycle. The cost is real: a genuine
+    single-gripper failure is invisible, and error 10/11 can only fire when
+    <strong>both</strong> fail. Restore the ANDs when the right gripper has air.</td></tr>
+<tr><td>Plate sensors L/R are swapped between the IO list and <code>PRG_IoMap</code></td>
+    <td>Invisible while <code>bPlateOk</code> is an OR, but it mislabels the
+    <code>L</code>/<code>R</code> lamps on <code>Main.TcVIS</code>. Needs someone
+    at the machine to say which physical side is which.</td></tr>
+</tbody></table></div>
+<p>Two things that <em>were</em> on this list are now fixed: the defensive
+<code>CASE ELSE</code> landed on <code>IDLE</code> (wire value 0, &ldquo;send me a
+bulb&rdquo;) with the pistons in unknown positions and now lands on
+<code>NOT_HOMED</code>; and <code>MAIN</code>'s comment claiming
+<code>IDLE</code> tests <code>bContinuous</code> as a level was corrected — it is
+written ten times and read zero. <code>bAnyRunning</code> is still computed and
+never read.</p>
+
+<h2>How this was verified</h2>
+<ul>
+<li><code>scripts/pb_test/pb_test_procedure.py</code> — <strong>57/57</strong> over
+ADS: LED wiring, the three Manual jogs, Auto/<code>NOT_HOMED</code>,
+Auto/<code>IDLE</code>, Auto/<code>ERR</code> (jogs refused), recovery via PB2
+through the <code>RECOVER_*</code> chain, and both hold gestures including the
+under-duration press that must do nothing.</li>
+<li><code>scripts/pb_test/cycle_trace.py</code> — <strong>10/10</strong>. Runs one
+complete bulb with all eight pistons emulated and checks the coil pattern of
+every state against the popups above.</li>
+<li><code>scripts/test_master_cycle_arming.py</code> and
+<code>test_piston_jog_gate.py</code> — the arming transitions and the
+Manual-only jog gate as pure logic, no PLC.</li>
+</ul>
+<p>Not covered anywhere yet: the movement-timeout paths (see the
+<code>bNoSensors</code> caveat), and everything physical — contacts, lamps, valve
+wiring, air.</p>
 """
 
 
@@ -160,10 +276,17 @@ def build():
     body = BODY.format(diagram=f'<div class="diagram">{svg}</div>',
                        legend=legend_html(show_new=False), robot=ROBOT_TABLE)
     return page(
-        "Auto state machine — as it runs today",
+        "Auto state machine — as built",
         "167_01 Saad — Flower · Auto sequence",
-        "The sixteen assigned states of <code>FB_MasterAutoCycle</code>, their exit "
-        "guards, the fault paths and the two global overrides — read from the ST "
-        "source rather than from the documentation, which disagrees with it in six "
-        "places listed below.",
-        "auto-state-machine-current.html", body, states_for_popups=states)
+        "The nineteen assigned states of <code>FB_MasterAutoCycle</code> as the "
+        "source implements them, after the operator decisions of 2026-08-05: a "
+        "dedicated fault-recovery chain, <code>CHECK_PLATE</code>, "
+        "<code>ResetAllCommands</code> in every state, and two hold gestures on "
+        "the panel buttons.",
+        "auto-state-machine-current.html", body, states_for_popups=states,
+        status=("built",
+                "As built and tested — 2026-08-05",
+                "Read from the ST source, then confirmed on the live PLC: "
+                "<strong>57/57</strong> push-button checks and a full-cycle coil "
+                "trace matching <strong>10/10</strong> states. The other three "
+                "pages are the decision record that led here."))

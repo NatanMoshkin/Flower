@@ -43,11 +43,48 @@ _(active TODOs land here; deferred items go under "Out of scope
   Both presets are editable on `AutoMain` (added by
   `scripts/add_automain_pb_timers.py`, rows y=375/415 in the right column).
 
-  **Still to do:** build in TcXaeShell, download, then re-run
-  `python scripts/pb_test/pb_test_procedure.py` — its group E is now inverted
-  (jogs must be refused in `ERR`) and a new **group G** covers both hold
-  gestures. The three diagram docs under `docs/` still describe the *pre-decision*
-  design and need regenerating.
+  **Built, activated and TESTED on the live PLC 2026-08-05:**
+
+  - `scripts/pb_test/pb_test_procedure.py` — **57/57**. Group E is now inverted
+    (jogs must be *refused* in `ERR`) and a new **group G** covers both hold
+    gestures, including the under-duration press that must do nothing. `F0`
+    exercises the whole `ERR → RECOVER_* → IDLE` chain by pressing PB2, so the
+    new reset mapping is tested through the button rather than the field.
+  - **`scripts/pb_test/cycle_trace.py` (new) — 10/10.** Runs one *complete* bulb
+    with all eight pistons emulated (a follower makes each sensor agree with its
+    coil after a travel delay) and checks the coil pattern of every state against
+    what the source says it drives. This is the end-to-end evidence for the
+    `ResetAllCommands` refactor; `pb_test` cannot cover it, because it asserts
+    only the *retracted* sensors so a cycle stalls in `GRIP_EXTENDING` forever.
+  - All four Python suites pass, contract 229/229, VISU validator clean.
+
+  **Three harness bugs were found and fixed while testing — all in the test
+  code, none in the PLC.** Worth knowing because two of them produced red output
+  that looked like PLC faults:
+
+  1. The procedure **assumed it starts from a clean machine.** A previous run
+     ending in `ERR` made group C fail for a reason unrelated to group C: `ERR`
+     is excluded from the Manual re-park, so "Manual → Auto parks in
+     `NOT_HOMED`" could not hold. It now normalises at entry and reports what it
+     normalised from. Its teardown also could not clear `ERR`, because STOP is
+     excluded from `ERR` by design — it now RESETs first.
+  2. **`log_since()` raced the FB's own section ordering.** A state change is
+     made in Section 4 but *logged* in Section 3, which runs earlier, so the
+     entry appears one scan **after** `eStep` changes — and `wait_step()` returns
+     inside that window. That is how `E0` reported "NO ERR entry" while the PLC
+     had `eSev=3` / `sSevText='ERR'` recorded correctly. New `settle_log()`
+     waits for the ring to stop growing.
+  3. `cycle_trace` **tore its first snapshot**: commands become coils in `MAIN`
+     but only reach `dOut` on the next 5 ms `IOmapTask`, and the eight coils are
+     eight separate ADS reads — so the copy landed mid-snapshot and
+     `SEP_EXTENDING` came back with Sep1/Sep2 old and Sep3 new. It now settles
+     two IO cycles and re-confirms the state before trusting the sample.
+
+  **The four diagram docs are regenerated and now carry status banners** saying
+  where each stands: `current` is **as built** (19 states), `pause` is
+  **rejected**, `retract-all` is **partly implemented**, `combined` is
+  **superseded**. Read `docs/auto-state-machine-current.html` for the machine as
+  it runs; the other three are the decision record.
 
 - **`scripts/validate_automain.py` is stale** — it fails on
   `missing element 'Continuous'`, but that checkbox was deliberately deleted on
@@ -88,21 +125,18 @@ _(active TODOs land here; deferred items go under "Out of scope
   - **`DWELL_PUSH` is excluded from pause** — its guard is "dwell elapsed", so
     holding there keeps full pin load applied indefinitely. Pause takes effect
     one step later instead.
-  - **Manual commands are allowed in STOP and `ERR`.** The existing
-    `bJogEnable` window widens from `ERR` only to `ERR` **and** `NOT_HOMED`
-    (which is where STOP puts the machine). One condition in `MAIN`, and it
-    ships independently of everything else.
+  - ~~Manual commands allowed in STOP and `ERR`~~ **REVERSED 2026-08-05** —
+    no manual moves in any Automatic state. The `bJogEnable` window was deleted;
+    see the PANEL HARDWARE section. This also makes the `PB3`-in-`NOT_HOMED`
+    conflict moot, since nothing jogs there.
 
-  **The one open question — `PB3` in `NOT_HOMED`.** That is where STOP leaves the
-  machine and therefore where an operator wants to jog, but PB3 is START there
-  and its LED is blinking the arm prompt. One button cannot be both.
-  Recommendation: PB1 (grip) and PB2 (sep) jog there, PB3 stays START, and the
-  push jog remains available from `ERR` or from Manual. **Needs your call** — see
-  the callout on the combined page.
-
-  **~~create diagram of the current state machine~~ Done 2026-08-04.**
-  **~~create diagram with Pause/Continue~~ Done 2026-08-04.**
-  **~~create diagram with Retract-all separated from ERR~~ Done 2026-08-04.**
+  **Superseded — read the PANEL HARDWARE and state-machine sections instead.**
+  Of the three features analysed above, only the `RECOVER_*` chain shipped
+  (2026-08-05). Pause was rejected outright, the manual-in-Auto window was
+  reversed, and the retry counter + `bReset` split were ruled out because the
+  robot only sends `CMD:2` when a human presses a button on its own panel — so
+  it can never arrive unattended, which was the premise of that whole argument.
+  The four diagram pages carry status banners saying which is which.
 
   **The recommended order to implement in** (from the analysis behind those docs;
   the reasoning is on the retract-all page):
@@ -187,26 +221,17 @@ _(active TODOs land here; deferred items go under "Out of scope
   file was wrong for all six Sep/Push pistons** since `fd49d4f` and is now
   rebuilt from `docs/167_01_SAAD_PinPush_IO_List.xlsx`.
 
-- ~~Operator recovery from a mid-cycle grip fault~~ **Partly done
-  2026-08-04.** PB jogs now work while latched in `ERR` without leaving Auto
-  (`bJogEnable`, see the PB section). Recovery still homes and runs a **fresh
-  bulb** — resuming the interrupted one was not built, and is not currently
-  possible: nothing durably records which step faulted (`ePrevStep` is
-  overwritten with `ERR` on the transition scan; only `iErrorCode` survives).
+- ~~Operator recovery from a mid-cycle grip fault~~ **Settled 2026-08-05.**
+  The 2026-08-04 answer (PB jogs while latched in `ERR`) was **reversed** — no
+  manual moves in any Automatic state. What shipped instead is the dedicated
+  `RECOVER_*` chain: `ERR` → `RESET` (HMI, orange PB2, or robot `CMD:2`) →
+  `RECOVER_PUSH_RETR` → `SEP` → `GRIP` → `IDLE`, with its own error codes
+  12/13/14 so a failed recovery no longer looks identical to a failed arming.
 
-  **Two things to settle before trusting this on the machine:**
-
-  1. **The robot closes the jog window in ~1 s.** `ERR` → `STATE:99` → robot
-     `CMD:2` → the PLC clears the fault and homes. So `ERR` is *transient* in
-     production and the operator may never get to press anything. Switching to
-     **Manual** is what actually holds a fault open, because `nStateOut` then
-     reports `MANUAL (30)` and the robot answers `CMD:0` while `ERR` stays
-     latched. Options: leave it (jog is then only useful with the robot
-     stopped), or gate the `CMD:2` consumption behind an operator
-     acknowledgement.
-  2. **If the jam is real, homing faults too** — `INIT_GRIP_RETRACTING`
-     timeout, error 8 → `ERR` → `CMD:2` → retry, indefinitely. Each retry is
-     one `tStepTimeoutMs`. Not dangerous, but it will look like a loop.
+  Recovery still runs a **fresh bulb**; resuming the interrupted one was not
+  built and is still not possible — nothing durably records which step faulted
+  (`ePrevStep` is overwritten with `ERR` on the transition scan, and only
+  `iErrorCode` survives). To free a jam by hand, switch to **Manual**.
 
 - **Plate sensor L/R are swapped** between the field IO list and `PRG_IoMap`
   (sheet: R on `dIn[21]`, L on `dIn[22]`; code: the reverse). Invisible while
@@ -405,9 +430,9 @@ INIT_GRIP_RETRACTING(12) Drive GripCmdRetract[1..2]; wait AND of all
                         Sep/Push states so a manual jog left extended does
                         not collide with the arriving plate.
                         THE ONE PLACE THE TWO CALLERS DIVERGE: exits to IDLE
-                        when bHomeThenIdle (homing), else to WAIT_PLATE (bulb
+                        when bHomeThenIdle (homing), else to CHECK_PLATE (bulb
                         cycle). Everything above is identical for both.
-WAIT_PLATE (20)         Wait `bPlateSenL AND bPlateSenR` (robot has placed
+CHECK_PLATE (20)        Wait `bPlateSenL OR bPlateSenR` (robot has placed
                         the plate). Latched at start only; sensors not
                         monitored past this step. Timeout uses
                         `tPlateWaitTimeoutMs` (bounded by robot placement time).
@@ -430,12 +455,22 @@ GRIP_RETRACTING (22)    Drive GripCmdRetract[1..2]; wait AND of all
                         robot's next CMD:1 runs the next bulb.
 ERR (99)                Latched. iErrorCode = step's fault code.
                         nStateOut = 99, on which the robot answers CMD:2.
-                        RESET (that CMD:2, or the HMI button) clears the error
-                        and re-enters the INIT chain with bHomeThenIdle TRUE —
+                        RESET (that CMD:2, the HMI button, or the orange PB2)
+                        clears the error and enters the RECOVER chain below —
                         NOT straight to IDLE. A fault leaves the pistons
                         anywhere, so advertising IDLE(0) would claim "ready"
                         while it is not; and RESET landing in IDLE with the
                         robot still asking made RESET itself a start button.
+RECOVER_PUSH_RETR (50)  Fault-recovery retract chain, added 2026-08-05. Same
+RECOVER_SEP_RETR  (51)  motion and the same collision ordering as the INIT
+RECOVER_GRIP_RETR (52)  chain, but its own identity so a failed RECOVERY is
+                        distinguishable from a failed ARMING: error codes
+                        12/13/14 instead of 6/7/8, and its own sStepText.
+                        Entered ONLY from ERR on RESET. RECOVER_GRIP_RETR
+                        always exits to IDLE — at that point the machine really
+                        is homed, so advertising STATE:0 is honest. The robot
+                        needed no new branch: it acts on 0 and 99 and treats
+                        everything else as "wait".
 ```
 
 **FIELD DEVIATION: grip and plate aggregation is OR, not AND (since
@@ -476,6 +511,26 @@ PLC and robot, so this sentinel lives there rather than as a magic INT.
 `NOT_HOMED (40)` by contrast *is* a real assigned state, and sits in the same
 "not a sequence step" numeric class as 30 and 99.
 
+**Every state resets its commands first (2026-08-05).** Each branch of Section 4
+calls the new `ResetAllCommands` METHOD — 20 call sites — and then re-asserts
+only the commands it owns. Before that, eight of sixteen states cleared the full
+Sep/Push set and the rest inherited FALSE from whichever state ran previously, so
+reading one branch in isolation could not tell you what the coils were doing.
+Behaviour is unchanged, and `scripts/pb_test/cycle_trace.py` is what
+demonstrates that rather than asserting it: it runs a complete bulb with all
+eight pistons emulated and checks the coil pattern of all ten cycle states.
+
+It clears **commands, not coils** — `FB_SolSpringPiston_2Pos` retains its coil
+when no command branch matches, so clearing mid-stroke HOLDS the piston rather
+than dropping it. That is exactly why each state must re-assert what it wants
+every scan.
+
+**The defensive `CASE ELSE` now lands on `NOT_HOMED`, not `IDLE` (2026-08-05).**
+It used to snap any unhandled `eStep` to `IDLE` — wire value 0, the one value
+that makes the robot send `CMD:1` — with the pistons in unknown positions.
+Reachable, because `GVL_HMI` carries `TcHmiSymbol.AddSymbol` so `eStep` is
+ADS-writable, and `WAIT_POS2 (2)` is a declared enumerator with no branch.
+
 **Error codes** (`ST_HmiMasterAuto.iErrorCode : INT`, 0 = OK):
 
 | Code | Meaning                            |
@@ -488,19 +543,25 @@ PLC and robot, so this sentinel lives there rather than as a magic INT.
 | 6    | INIT_PUSH_RETRACTING timeout       |
 | 7    | INIT_SEP_RETRACTING timeout        |
 | 8    | INIT_GRIP_RETRACTING timeout       |
-| 9    | WAIT_PLATE timeout (plate not present) — suppressed by `bBypassPlateSensors` |
+| 9    | CHECK_PLATE timeout (plate not present) — suppressed by `bBypassPlateSensors` |
 | 10   | GRIP_EXTENDING timeout             |
 | 11   | GRIP_RETRACTING timeout            |
+| 12   | RECOVER_PUSH_RETR timeout — recovery, deliberately distinct from 6 |
+| 13   | RECOVER_SEP_RETR timeout — distinct from 7 |
+| 14   | RECOVER_GRIP_RETR timeout — distinct from 8 |
 | 99   | **RETIRED** — was "Operator STOP while running". STOP now disarms to `NOT_HOMED` instead of faulting. Do not reuse the number: old log entries and CSV exports still carry it. |
 
 (Code 2 was the retired `WAIT_POS2` timeout.)
 
 **Master sensorless mode** (`stMasterAutoCfg.bNoSensors`, default FALSE) —
-mirrors the per-piston `bNoSensors`. When TRUE, the 8 movement states
-(both INIT sets, both GRIP states, all 4 Sep/Push states) ignore sensor
-feedback and advance when `tStepTimeoutMs` expires — the timeout doubles
-as the fixed step duration, so error codes 1/3/4/5/6/7/8/10/11 cannot
-occur while sensorless. `WAIT_PLATE` uses its own `tPlateWaitTimeoutMs`
+mirrors the per-piston `bNoSensors`. When TRUE, the **twelve** movement states
+(both INIT sets, the three RECOVER states, both GRIP states, all 4 Sep/Push
+states) ignore sensor feedback and advance when `tStepTimeoutMs` expires — the
+timeout doubles as the fixed step duration, so error codes
+**1/3/4/5/6/7/8/10/11/12/13/14 all become unreachable** while sensorless. Note
+the doc used to say "the 4 movement states"; it was nine before the RECOVER
+chain and is twelve now. Every bench run so far has had this flag set, which is
+why no movement-timeout path has ever been exercised — see FLD6. `CHECK_PLATE` uses its own `tPlateWaitTimeoutMs`
 and still requires both plate sensors TRUE (bNoSensors doesn't skip the
 plate gate). Panel checkbox "No sensors (timed steps)" is the third
 checkbox on `AutoMain.TcVIS` at (20,335), bound to `stCfg.bNoSensors`
@@ -768,7 +829,7 @@ human presses START; and once armed, only the robot decides when a bulb runs.
   "returning from Manual needs a START" — no edge detection anywhere, the state
   is already un-armed when Auto comes back.
 - **`bHomeThenIdle`** picks which exit the shared `INIT_*` retract chain takes:
-  `IDLE` when homing, `WAIT_PLATE` when it is the front of a bulb cycle. Set by
+  `IDLE` when homing, `CHECK_PLATE` when it is the front of a bulb cycle. Set by
   whoever *enters* the chain, never from inside it — the three INIT states are
   shared and must not care which caller they serve.
 - **STOP disarms rather than faults.** Error code 99 is retired. STOP now goes to
@@ -844,7 +905,7 @@ can see plate presence without opening a page.
 Built by `scripts/add_main_plate_status.py`.
 
 **Bypass.** `stCfg.bBypassPlateSensors` (default FALSE, 4th checkbox on
-AutoMain at (20,375)). It removes **only the WAIT_PLATE timeout error**, not
+AutoMain at (20,375)). It removes **only the CHECK_PLATE timeout error**, not
 the wait:
 
 - the `bPlateSenL AND bPlateSenR` fast-path still advances the cycle, so
@@ -857,7 +918,7 @@ still needs time to place the plate — a bypass that advanced instantly would
 close the grippers on nothing.
 
 It is deliberately **separate from `bNoSensors`**, which by long-standing
-decision does not cover `WAIT_PLATE`. Skipping the plate gate is
+decision does not cover `CHECK_PLATE`. Skipping the plate gate is
 safety-relevant and should be an explicit choice, not something inherited
 from a bench-testing flag.
 
@@ -1076,43 +1137,39 @@ Button colours matter to the assignment: **PB1 red, PB2 orange, PB3 green.**
 
 | PB | DI | LED (DO) | In Automatic | In Manual |
 |---|---|---|---|---|
-| PB1 | dIn[13] | dOut[7] | **Ignored** (was the cycle-start bypass until 2026-07-29). | **Momentary**: held → both grip pistons extend, released → they retract (`bJogExtend` OR-merged into `FB_SolSpringPiston_2Pos` at MAIN call site). |
-| PB2 | dIn[14] | dOut[8] | Ignored. | **Momentary**: held → all 3 SepSol pistons extend, released → they retract. |
-| PB3 | dIn[15] | dOut[9] | **Operator START** — rising edge writes `stMasterAuto.bStart := TRUE`, i.e. "home the pistons and arm". Green button for the go-ahead. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
+| PB1 | dIn[13] | dOut[7] | **Held `tPbStopHoldMs`** (default 1000 ms) → STOP: writes `stMasterAuto.bStop`, disarming to `NOT_HOMED`. LED1 **blinks** while the hold counts. | **Momentary**: held → both grip pistons extend, released → they retract. |
+| PB2 | dIn[14] | dOut[8] | In `ERR`: **RESET** (rising edge → `bReset`). Otherwise: the other half of the start combo. | **Momentary**: held → all 3 SepSol pistons extend, released → they retract. |
+| PB3 | dIn[15] | dOut[9] | **Operator START** — rising edge writes `stMasterAuto.bStart`, i.e. "home the pistons and arm". Green button for the go-ahead. | **Momentary**: held → all 3 PushSol pistons extend, released → they retract. |
+| PB2 **+** PB3 | — | — | **Held `tPbStartHoldMs`** (default 1000 ms) from `IDLE` → run **one bulb**. The operator's parallel to the robot's `CMD:1`, OR-merged into the same `bExtStartPulse` input. | — |
 
-**All three jogs also work in Automatic while the master cycle is latched in
-`ERR` (2026-08-04).** So an operator can free a jammed piston in place without
-switching to Manual — which would park the cycle in `NOT_HOMED` and throw away
-the arming. Same momentary behaviour: held extends, released retracts.
+**Why two of them are holds and not edges (2026-08-05).** Both are
+consequential — one stops the machine, one starts a bulb — and a multi-second
+hold cannot be triggered by a knock or a brushed sleeve the way an edge can.
+Each `TON`'s `IN` *is* the gesture, so releasing the button resets the elapsed
+time; `.Q` is a level, so each is edge-detected to fire once per press. Both
+durations live in `stMasterAutoCfg` and are editable on `AutoMain` (rows y=375
+and y=415, added by `scripts/add_automain_pb_timers.py`).
 
-Mechanism: `MAIN` computes `bErrJogEnable := bMachineAuto AND (eStep = ERR)`
-and passes it to all eight pistons as the new `FB_SolSpringPiston_2Pos`
-**`bJogEnable`** input, which opens the FB's three jog branches (extend,
-retract, release) while `eMode` is Automatic.
+**PRESS ORANGE BEFORE GREEN.** The standalone PB3 START edge is suppressed
+while PB2 is held (`AND NOT GVL_App.bPb2`), so the combo cannot fire a START on
+its way in. Pressing green first gives a plain START, which from `IDLE` is a
+harmless re-home rather than a bulb. Verified on the PLC — `G3` is PB3 alone
+re-homing, `G4` is the combo entering `CHECK_PLATE`.
 
-Three points worth not undoing:
+**NO manual jog in ANY Automatic state (operator decision, 2026-08-05).** An
+`ERR` jog window shipped on 2026-08-04 and was removed the next day: manual
+moves belong in Manual mode. The `bJogEnable` input is gone from
+`FB_SolSpringPiston_2Pos`, `bErrJogEnable` is gone from `MAIN`, and all eight
+call sites are back to `bJogExtend := bManualMode AND GVL_App.bPbN`. The three
+jog branches in the piston ladder are gated on `eMode = Manual` alone.
 
-- **It is a dedicated input, not `MAIN` forcing `eMode := Manual` during
-  `ERR`.** `eMode` is the machine-wide "no option to double control"
-  interlock driven from `bAutoMode`; making it depend on `eStep` as well would
-  give that interlock two owners. `bJogEnable` opens the jog path *only* —
-  `bTarget*` still comes from the Automatic branch, and Section 0 still
-  force-clears `bSelected*`, so the HMI Extend/Retract radio buttons stay dead.
-- **The release branch is gated on the same condition.** If a momentary PB can
-  energise the coil, letting go must be able to drop it, or the first press
-  strands the piston extended with the machine still faulted.
-- **PB3's START is suppressed while `ERR`** (`AND NOT bErrJogEnable`), or every
-  Push jog would also log a spurious `START pressed`. Nothing is lost — the
-  `ERR` case ignores `bStart`; only `bReset` leaves `ERR`. PB3's LED becomes a
-  press mirror in `ERR` for jog feedback, keeping its blink-to-arm prompt for
-  `NOT_HOMED` only.
+`scripts/test_piston_jog_gate.py` is now the **negative** guard on that removal:
+a jog request in Automatic must do nothing, and the release edge must stay gated
+off so a mode switch mid-press cannot drop a coil the master cycle owns.
+`pb_test` group E does the same against the live PLC.
 
-`scripts/test_piston_jog_gate.py` ports the FB's solenoid ladder (Sections
-0/1/1a/1c/2) and asserts the gate — 17 cases including "Auto without the ERR
-window still ignores the PB", "releasing in ERR drops the coil", "the HMI radio
-buttons stay dead", and both leave-the-window-mid-press paths. Mutation-checked:
-regressing the release branch to the old Manual-only gate fails it. Run
-`python scripts/test_piston_jog_gate.py`.
+`scripts/test_piston_jog_gate.py` ports the ladder (Sections 0/1/1a/1c/2) and
+asserts the Manual-only gate. Run `python scripts/test_piston_jog_gate.py`.
 
 **End-to-end PB test against a live PLC: `scripts/pb_test/`** (see its README).
 57 checks over ADS covering all three buttons in Manual, Auto/`NOT_HOMED`,

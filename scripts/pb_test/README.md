@@ -32,18 +32,30 @@ is `Disabled` in the local bench `.tsproj`, so nothing else drives that memory.
 
 Piston position is simulated the same way (`park_all_home()` asserts every
 retracted sensor), which is more faithful than setting `bNoSensors` — the real
-sensor path is exercised, just with synthetic sensors.
+sensor path is exercised, just with synthetic sensors. Note this only ever
+asserts the *retracted* side, which is why a forward-running cycle stalls; see
+**The full-cycle companion** below.
 
-## What it checks — 57 checks in six groups
+## It normalises the machine at entry
+
+The procedure used to assume it started from a clean machine. A previous run that
+ended in `ERR` then made group C fail for a reason unrelated to group C: `ERR` is
+excluded from the Manual re-park, so "Manual → Auto parks in `NOT_HOMED`" could
+not hold. It now clears any latched fault, disarms, and reports what it
+normalised from — and its teardown RESETs before STOPping, because STOP is
+excluded from `ERR` by design.
+
+## What it checks — 57 checks in seven groups
 
 | Group | Covers |
 |---|---|
 | **A** | LED1/LED2/LED3 as press mirrors in Manual |
 | **B** | The three Manual jogs: PB1 grip, PB2 Sep, PB3 Push — held extends, released retracts, and the other six coils stay put |
 | **C** | Auto + `NOT_HOMED`: PB3's LED blinks the arm prompt, PB1/PB2 are ignored, PB3 = operator START and homes |
-| **D** | Auto + `IDLE`: **no** PB jog (the regression guard on `bJogEnable`), and PB3 re-homes rather than running a bulb |
-| **E** | Auto + `ERR`: the jog window added 2026-08-04 — all three jogs work, PB3's LED reverts to a press mirror, and PB3 neither clears the fault nor logs a spurious START |
-| **F** | `RESET` homes rather than jumping to `IDLE`, and the jog window closes again |
+| **D** | Auto + `IDLE`: **no** PB jog (manual moves are refused in every Automatic state), and PB3 re-homes rather than running a bulb |
+| **E** | Auto + `ERR`: manual moves must be **REFUSED** — the negative guard on the removal of the 2026-08-04 jog window. PB3's LED stays off and PB3 does not clear the fault |
+| **F** | The orange **PB2** is RESET in `ERR`, and recovery runs the dedicated `RECOVER_*` chain rather than the shared `INIT_*` one |
+| **G** | The two Automatic **hold** gestures: PB1 held disarms (and an under-duration press must not), and PB2+PB3 held starts a bulb while PB3 alone only re-homes |
 
 Roughly half the checks are **negative** — "these coils must NOT move". Those
 are the ones that prove the gates gate; a jog test that only ever presses in
@@ -83,10 +95,28 @@ memory read. Button contacts, LED lamps, valve wiring and the air circuit are
 all still unverified — those are field checks `FLD1`–`FLD4` in
 `docs/bench-checklist-arming.html`.
 
-**The ERR jog window is wider here than on the machine.** With a live robot,
+**Group E is a negative group now.** Manual moves are refused in every
+Automatic state (operator decision 2026-08-05), so E guards the *removal* of the
+jog window rather than the window itself.
+
+**`ERR` lasts longer here than on the machine.** With a live robot,
 `STATE:99` is answered `CMD:2` and the PLC clears the fault and homes about a
-second after entering `ERR`. Group E proves the jog *works*; it does not prove
-an operator will get the chance to use it. See the PB section of `CLAUDE.md`.
+second after entering `ERR` — so on the machine, groups E and F pass through a
+window an operator would barely see. That is fine for what they assert (jogs
+refused; recovery takes the `RECOVER_*` chain) but it is why freeing a jam by
+hand means switching to **Manual**.
+
+## The full-cycle companion
+
+`cycle_trace.py` in this directory runs ONE complete bulb with all eight pistons
+emulated — a follower makes each sensor agree with its coil after a travel delay
+— and checks the coil pattern of every state against what the source says it
+drives. That is the end-to-end evidence for the `ResetAllCommands` refactor.
+
+`pb_test_procedure.py` cannot do it: it asserts only the RETRACTED sensors, so a
+cycle stalls in `GRIP_EXTENDING` waiting for an extend sensor that never arrives.
+
+    python scripts/pb_test/cycle_trace.py
 
 ## Related
 

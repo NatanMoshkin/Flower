@@ -216,4 +216,16 @@ def build():
         "looking identical to a failed arming — and rename the shared chain to say "
         "what it actually is, keeping its wire values so the robot cannot notice.",
         "auto-state-machine-retract-all.html", body,
-        states_for_popups=states)
+        states_for_popups=states,
+        status=("partial",
+                "Partly implemented — 2026-08-05",
+                "The <code>RECOVER_*</code> chain (50/51/52) and error codes "
+                "12/13/14 <strong>shipped</strong>; see "
+                "<a href=\"auto-state-machine-current.html\">as built</a>. The "
+                "retry counter and the operator-vs-robot <code>bReset</code> "
+                "split did <strong>not</strong> — the operator ruled them out, "
+                "because the robot only sends <code>CMD:2</code> when a human "
+                "presses a button on its own panel, so it can never arrive "
+                "unattended. The argument for them below assumed otherwise. The "
+                "rename to <code>RETRACT_ALL_*</code> was also not done; the "
+                "chain is still <code>INIT_*</code>."))

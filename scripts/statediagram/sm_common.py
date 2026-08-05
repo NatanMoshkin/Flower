@@ -14,7 +14,7 @@ MAIN_ROWS = [
     ("INIT_PUSH", "INIT_PUSH_RETRACTING", 10, "init", 2),
     ("INIT_SEP", "INIT_SEP_RETRACTING", 11, "init", 3),
     ("INIT_GRIP", "INIT_GRIP_RETRACTING", 12, "init", 4),
-    ("WAIT_PLATE", "WAIT_PLATE", 20, "wait", 5),
+    ("CHECK_PLATE", "CHECK_PLATE", 20, "wait", 5),
     ("GRIP_EXT", "GRIP_EXTENDING", 21, "cycle", 6),
     ("SEP_EXT", "SEP_EXTENDING", 1, "cycle", 7),
     ("PUSH_EXT", "PUSH_EXTENDING", 3, "cycle", 8),
@@ -29,7 +29,7 @@ MAIN_ROWS = [
 SUBS = {
     "NOT_HOMED": "in Auto, NOT armed",
     "IDLE": "armed — awaiting CMD:1",
-    "WAIT_PLATE": "tPlateWaitTimeoutMs",
+    "CHECK_PLATE": "tPlateWaitTimeoutMs",
     "DWELL_PUSH": "tDwellPushMs",
     "PUSH_RET_DW": "tPushRetractedDwellMs",
     "SEP_RET_DW": "tSepRetractedDwellMs",
@@ -37,14 +37,14 @@ SUBS = {
 
 # The nine movement states share tStepTimeoutMs; each has its own error code.
 FAULTERS = [
-    ("INIT_PUSH", 6), ("INIT_SEP", 7), ("INIT_GRIP", 8), ("WAIT_PLATE", 9),
+    ("INIT_PUSH", 6), ("INIT_SEP", 7), ("INIT_GRIP", 8), ("CHECK_PLATE", 9),
     ("GRIP_EXT", 10), ("SEP_EXT", 1), ("PUSH_EXT", 3), ("PUSH_RET", 4),
     ("SEP_RET", 5), ("GRIP_RET", 11),
 ]
 
 # One-line guards only — the vertical gap between boxes is 44 px.
 CYCLE_CHAIN = [
-    ("WAIT_PLATE", "GRIP_EXT", "bPlateOk   (L OR R)"),
+    ("CHECK_PLATE", "GRIP_EXT", "bPlateOk   (L OR R)"),
     ("GRIP_EXT", "SEP_EXT", "grip extended   (L OR R)"),
     ("SEP_EXT", "PUSH_EXT", "all 3 sep extended"),
     ("PUSH_EXT", "DWELL_PUSH", "all 3 push extended"),
@@ -89,7 +89,7 @@ def core_edges(by, err_key="ERR", fault_arrow_on=None):
     e.append(Edge("INIT_GRIP:w", "IDLE:w", kind="op", label="home → armed",
                   via=[(RAIL_A, by["INIT_GRIP"].cy), (RAIL_A, by["IDLE"].cy)],
                   label_at=(RAIL_A - 8, by["INIT_GRIP"].cy - 26), label_side="l"))
-    e.append(Edge("INIT_GRIP:s", "WAIT_PLATE:n", label="→ run the bulb"))
+    e.append(Edge("INIT_GRIP:s", "CHECK_PLATE:n", label="→ run the bulb"))
 
     for src, dst, lab in CYCLE_CHAIN:
         e.append(Edge(f"{src}:s", f"{dst}:n", label=lab))
@@ -152,11 +152,14 @@ def _hold(t):
     return f'<span class="cmd hold">{t}</span>'
 
 
-# Per-state command detail for the click-to-open popups. Transcribed directly
-# from FB_MasterAutoCycle Section 4's CASE bodies — including the states that
-# HOLD a command by simply not writing it, which is the detail that matters
-# most when reasoning about a pause.
-NONE_DRIVEN = _off("all 10 commands FALSE")
+# Per-state command detail for the click-to-open popups, transcribed from
+# FB_MasterAutoCycle Section 4's CASE bodies.
+#
+# Since 2026-08-05 every branch calls ResetAllCommands() and then re-asserts only
+# what it owns, so "drives" is now the complete truth for a state -- there is no
+# longer anything held by omission. The rows that used to say "holds" are kept as
+# "was held" where the distinction explains an older reading of the code.
+NONE_DRIVEN = _off("ResetAllCommands() only — all 10 FALSE")
 
 COMMANDS = {
     "NOT_HOMED": [
@@ -172,27 +175,24 @@ COMMANDS = {
         ("physically", "at rest and armed; the robot may command a bulb"),
     ],
     "INIT_PUSH": [
-        ("drives", _on("bPushCmdRetract[1..3] := TRUE")),
-        ("clears", _off("Sep ext/ret, Push ext, Grip ext/ret")),
+        ("resets first + drives", _on("bPushCmdRetract[1..3] := TRUE")),
         ("exit", "bAllPushRetracted (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 6"),
         ("physically", "push pins driving home on their springs"),
     ],
     "INIT_SEP": [
-        ("drives", _on("bSepCmdRetract[1..3] := TRUE")),
-        ("clears", _off("Sep ext, Push ext/ret, Grip ext/ret")),
+        ("resets first + drives", _on("bSepCmdRetract[1..3] := TRUE")),
         ("exit", "bAllSepRetracted (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 7"),
         ("physically", "push already home; separators retracting"),
     ],
     "INIT_GRIP": [
-        ("drives", _on("bGripCmdRetract[1..2] := TRUE")),
-        ("clears", _off("all Sep/Push, Grip ext")),
+        ("resets first + drives", _on("bGripCmdRetract[1..2] := TRUE")),
         ("exit", "bAllGripRetracted — <strong>OR</strong>, not AND"),
         ("timer", "tStepTimeoutMs → error 8"),
         ("physically", "releasing the grippers; sep and push confirmed home"),
     ],
-    "WAIT_PLATE": [
+    "CHECK_PLATE": [
         ("drives", NONE_DRIVEN),
         ("exit", "bPlateOk = bPlateSenL <strong>OR</strong> bPlateSenR"),
         ("timer", "tPlateWaitTimeoutMs → error 9, suppressed by "
@@ -201,76 +201,65 @@ COMMANDS = {
                        "fixture placing the plate"),
     ],
     "GRIP_EXT": [
-        ("drives", _on("bGripCmdExtend[1..2] := TRUE") + _off("Grip ret := FALSE")),
-        ("holds", _hold("Sep/Push not written — held FALSE from WAIT_PLATE")),
+        ("resets first + drives", _on("bGripCmdExtend[1..2] := TRUE")),
         ("exit", "bAllGripExtended — <strong>OR</strong>, not AND"),
         ("timer", "tStepTimeoutMs → error 10"),
         ("physically", "grippers closing on the plate"),
     ],
     "SEP_EXT": [
-        ("drives", _on("bSepCmdExtend[1..3] := TRUE")
-                   + _on("bGripCmdExtend[1..2] := TRUE  (hold clamp)")
-                   + _off("Sep ret := FALSE")),
-        ("holds", _hold("Push not written; Grip ret not written")),
+        ("resets first + drives", _on("bSepCmdExtend[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE  (hold clamp)")),
         ("exit", "bAllSepExtended (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 1"),
         ("physically", "separator pins driving into the clamped plate"),
     ],
     "PUSH_EXT": [
-        ("drives", _on("bSepCmdExtend[1..3] := TRUE  (hold out)")
+        ("resets first + drives", _on("bSepCmdExtend[1..3] := TRUE  (hold out)")
                    + _on("bPushCmdExtend[1..3] := TRUE")
-                   + _on("bGripCmdExtend[1..2] := TRUE")
-                   + _off("Push ret := FALSE")),
-        ("holds", _hold("Sep ret and Grip ret not written")),
+                   + _on("bGripCmdExtend[1..2] := TRUE")),
         ("exit", "bAllPushExtended (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 3"),
         ("physically", "<strong>the force stroke</strong> — pins being driven "
                        "into the bulb base"),
     ],
     "DWELL_PUSH": [
-        ("drives", _on("bSepCmdExtend, bPushCmdExtend, bGripCmdExtend all TRUE")),
-        ("holds", _hold("no retract command is written at all")),
+        ("resets first + drives", _on("bSepCmdExtend, bPushCmdExtend, bGripCmdExtend all TRUE")),
         ("exit", "tDwellPushMs elapsed"),
         ("timer", "tDwellPushMs — a dwell, not a timeout. No error path."),
         ("physically", "everything held out against hard stops, full pin load"),
     ],
     "PUSH_RET": [
-        ("drives", _on("bSepCmdExtend[1..3] := TRUE  (sep stays out)")
+        ("resets first + drives", _on("bSepCmdExtend[1..3] := TRUE  (sep stays out)")
                    + _on("bPushCmdRetract[1..3] := TRUE")
                    + _on("bGripCmdExtend[1..2] := TRUE")
                    + _off("Push ext := FALSE")),
-        ("holds", _hold("Sep ret and Grip ret not written")),
         ("exit", "bAllPushRetracted (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 4"),
         ("physically", "push retracting on its springs, separators still out"),
     ],
     "PUSH_RET_DW": [
-        ("drives", _on("bSepCmdExtend[1..3] := TRUE")
-                   + _on("bGripCmdExtend[1..2] := TRUE")
-                   + _off("Push ext/ret := FALSE")),
+        ("resets first + drives", _on("bSepCmdExtend[1..3] := TRUE")
+                   + _on("bGripCmdExtend[1..2] := TRUE")),
         ("exit", "tPushRetractedDwellMs elapsed"),
         ("timer", "dwell, no error path"),
         ("physically", "push home, separators held out, plate clamped"),
     ],
     "SEP_RET": [
-        ("drives", _on("bSepCmdRetract[1..3] := TRUE")
+        ("resets first + drives", _on("bSepCmdRetract[1..3] := TRUE")
                    + _on("bGripCmdExtend[1..2] := TRUE")
                    + _off("Sep ext := FALSE")),
-        ("holds", _hold("Push not written at all; Grip ret not written")),
         ("exit", "bAllSepRetracted (AND of all 3)"),
         ("timer", "tStepTimeoutMs → error 5"),
         ("physically", "separators retracting, plate still clamped"),
     ],
     "SEP_RET_DW": [
-        ("drives", _on("bGripCmdExtend[1..2] := TRUE")
-                   + _off("all Sep/Push cleared")),
+        ("resets first + drives", _on("bGripCmdExtend[1..2] := TRUE")),
         ("exit", "tSepRetractedDwellMs elapsed"),
         ("timer", "dwell, no error path"),
         ("physically", "sep and push home; only the clamp still holding"),
     ],
     "GRIP_RET": [
-        ("drives", _on("bGripCmdRetract[1..2] := TRUE")
-                   + _off("all Sep/Push cleared, Grip ext := FALSE")),
+        ("resets first + drives", _on("bGripCmdRetract[1..2] := TRUE")),
         ("exit", "bAllGripRetracted — <strong>OR</strong>, not AND. "
                  "Then nCyclesCompleted + 1"),
         ("timer", "tStepTimeoutMs → error 11"),

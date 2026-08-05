@@ -23,7 +23,7 @@ for _n in list(RENAME.values()) + [r[1] for r in RECOVER]:
     assert len(_n) <= 20, f"{_n} is {len(_n)} chars — sStepText would truncate"
 
 # Which states admit which operator input, in the combined design.
-PAUSABLE = ["IDLE", "INIT_PUSH", "INIT_SEP", "INIT_GRIP", "WAIT_PLATE",
+PAUSABLE = ["IDLE", "INIT_PUSH", "INIT_SEP", "INIT_GRIP", "CHECK_PLATE",
             "GRIP_EXT", "SEP_EXT", "PUSH_EXT", "PUSH_RET", "PUSH_RET_DW",
             "SEP_RET", "SEP_RET_DW", "GRIP_RET"]
 MANUAL_OK = ["NOT_HOMED", "ERR"]
@@ -294,4 +294,15 @@ def build():
         "manual commands allowed in STOP and <code>ERR</code> — on one machine, "
         "with the implementation order and the one decision that still needs "
         "your call.",
-        "auto-state-machine-combined.html", body, states_for_popups=states)
+        "auto-state-machine-combined.html", body, states_for_popups=states,
+        status=("partial",
+                "Superseded — 2026-08-05",
+                "This was the proposal. What actually shipped is on "
+                "<a href=\"auto-state-machine-current.html\">as built</a>, and it "
+                "differs in three ways: <strong>no Pause</strong> (rejected), "
+                "<strong>no manual commands in any Automatic state</strong> "
+                "(also rejected — so the PB3-in-<code>NOT_HOMED</code> conflict "
+                "argued below never arose), and <strong>no retry counter or "
+                "<code>bReset</code> split</strong>. The <code>RECOVER_*</code> "
+                "chain and the enum plan did ship. Two hold gestures on PB1 and "
+                "PB2+PB3 were added, which this page does not describe."))

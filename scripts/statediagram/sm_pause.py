@@ -21,7 +21,7 @@ PAUSE_NOTES = {
     "INIT_SEP": [("pause here", "push and sep both confirmed home. Part-homed.")],
     "INIT_GRIP": [("pause here", "fully home and released — the safest hold "
                                  "point in the whole machine.")],
-    "WAIT_PLATE": [("pause here", "plate present, grippers open, nothing "
+    "CHECK_PLATE": [("pause here", "plate present, grippers open, nothing "
                                   "driven. Safe — but the robot arm may still "
                                   "be in the fixture.")],
     "GRIP_EXT": [("pause here", "plate clamped, coils held. Safe hold.")],
@@ -260,7 +260,7 @@ while paused</strong>.</p>
 <div class="callout">
 <h3>One thing Pause is not</h3>
 <p>Nothing here de-energises anything. Coils are <em>held</em>, the plate stays
-clamped, and in <code>WAIT_PLATE</code> the robot arm may still be moving in the
+clamped, and in <code>CHECK_PLATE</code> the robot arm may still be moving in the
 fixture. Pause is a process control, not a safety function, and must not be
 labelled, lamped or trained as one.</p>
 </div>
@@ -279,4 +279,12 @@ def build():
         "the orange PB2. The design point that makes it safe on spring-return "
         "pistons: the pause takes effect at the <em>step boundary</em>, once the "
         "exit guard is satisfied — so nothing is ever held mid-stroke.",
-        "auto-state-machine-pause.html", body, states_for_popups=states)
+        "auto-state-machine-pause.html", body, states_for_popups=states,
+        status=("rejected",
+                "Rejected — 2026-08-05. Not implemented.",
+                "The operator decided Pause is not needed: &ldquo;no need to "
+                "include PAUSED&rdquo;. Nothing on this page exists in the PLC "
+                "and <code>PAUSED (41)</code> was never added to the enum. Kept "
+                "for the analysis — in particular the hardware constraint that "
+                "spring-return pistons cannot be stopped mid-stroke, which "
+                "would govern any future attempt."))

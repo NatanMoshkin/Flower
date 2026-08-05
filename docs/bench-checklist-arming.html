@@ -239,7 +239,8 @@ footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule
   <div class="test" data-id="P1">
     <div class="test-top"><span class="id">P1</span>
       <h4>Build and download to the development panel</h4>
-      <div class="verdict"></div></div>
+      <div class="verdict" style="border-left-color:var(--caution)"><div class="tally" style="font-size:1rem">NOTE</div><p><strong>Written for the 2026-07-29 arming model.</strong> Still valid for the field and pre-machine sections, but three things have changed since: <code>WAIT_PLATE</code> is now <code>CHECK_PLATE</code> (renamed below, wire value 20 unchanged); fault recovery runs a dedicated <code>RECOVER_*</code> chain; and the panel buttons gained two hold gestures (PB1 held = STOP, PB2+PB3 held = start one bulb). The push-button behaviour is covered far more thoroughly by <code>scripts/pb_test/</code>, which now runs 57/57 against a live PLC.</p></div>
+<div class="verdict"></div></div>
     <dl class="rows">
       <dt>Do</dt><dd>Build in TcXaeShell, then Activate / download to the dev CP6606.</dd>
       <dt>Expect</dt><dd>Clean build. New symbols resolve: <code>E_MasterAutoStep.NOT_HOMED</code>,
@@ -254,7 +255,7 @@ footer { margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule
     <dl class="rows">
       <dt>Do</dt><dd>Tick <strong>No sensors (timed steps)</strong> and <strong>Bypass plate sensors</strong>.</dd>
       <dt>Expect</dt><dd>Both stay ticked. <code>bNoSensors</code> deliberately does <em>not</em> cover
-        <code>WAIT_PLATE</code> — without the second flag the cycle stops at
+        <code>CHECK_PLATE</code> — without the second flag the cycle stops at
         <code>iErrorCode 9</code>. You will deliberately un-tick it later in F1.</dd>
     </dl>
   </div>
@@ -381,7 +382,7 @@ INFO  INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING
 INFO  INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING
 INFO  INIT_GRIP_RETRACTING -&gt; IDLE</code></pre>
         <span class="lamp g">green steady</span> PB3 LED off.
-        Note it lands in <code>IDLE</code>, <strong>not</strong> <code>WAIT_PLATE</code>.</dd>
+        Note it lands in <code>IDLE</code>, <strong>not</strong> <code>CHECK_PLATE</code>.</dd>
     </dl>
   </div>
 
@@ -410,7 +411,7 @@ INFO  INIT_GRIP_RETRACTING -&gt; IDLE</code></pre>
       <dt>Do</dt><dd>From <code>IDLE</code>, let the mock issue <code>CMD:1</code>.</dd>
       <dt>Expect</dt><dd>Mock: <code>[STATE] 0   IDLE  -&gt; CMD:1 start cycle</code>.
         Log shows <code>External start pulse</code>, then the full sequence
-        <code>IDLE → INIT_* → WAIT_PLATE → GRIP_EXTENDING → SEP_EXTENDING → PUSH_EXTENDING →
+        <code>IDLE → INIT_* → CHECK_PLATE → GRIP_EXTENDING → SEP_EXTENDING → PUSH_EXTENDING →
         DWELL_PUSH → PUSH_RETRACTING → PUSH_RETRACTED_DWELL → SEP_RETRACTING →
         SEP_RETRACTED_DWELL → GRIP_RETRACTING → IDLE</code>.
         <code>nCyclesCompleted</code> +1. <span class="lamp g">green blinking</span> while running.</dd>
@@ -510,11 +511,11 @@ INFO  INIT_GRIP_RETRACTING -&gt; IDLE</code></pre>
       <div class="verdict"></div></div>
     <dl class="rows">
       <dt>Do</dt><dd><strong>Un-tick</strong> Bypass plate sensors, arm, then let the mock start a cycle.
-        With no plate sensors wired, <code>WAIT_PLATE</code> will time out.</dd>
+        With no plate sensors wired, <code>CHECK_PLATE</code> will time out.</dd>
       <dt>Expect</dt><dd><code>ERR</code>, <code>iErrorCode 9</code>,
-        text <code>WAIT_PLATE timed out (plate never arrived)</code>.
+        text <code>CHECK_PLATE timed out (plate never arrived)</code>.
         <span class="lamp r">red on</span> <span class="lamp off">green off</span><br>
-        Log: <code>ERR WAIT_PLATE timed out …</code>. Mock:
+        Log: <code>ERR CHECK_PLATE timed out …</code>. Mock:
         <code>[STATE] 99  ERR  -&gt; CMD:2 reset error</code>.</dd>
     </dl>
   </div>
@@ -742,7 +743,7 @@ INFO  INIT_GRIP_RETRACTING -&gt; IDLE</code></pre>
     <dl class="rows">
       <dt>Do</dt><dd>Un-tick <strong>Bypass plate sensors</strong>. Watch the L/R lamps on
         <code>Main</code> as a plate is placed and removed.</dd>
-      <dt>Expect</dt><dd>Both lamps follow the plate; <code>WAIT_PLATE</code> advances as soon as
+      <dt>Expect</dt><dd>Both lamps follow the plate; <code>CHECK_PLATE</code> advances as soon as
         both are TRUE rather than waiting out <code>tPlateWaitTimeoutMs</code>.
         With no plate it must still fault to <code>iErrorCode 9</code> — that path is already
         proven, this confirms the sensors themselves.</dd>
