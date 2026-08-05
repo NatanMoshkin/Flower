@@ -30,9 +30,15 @@ EXPECTED = {
     "START":                    ("VisuFbElemButton", "stMasterAutoCycle.bStart", M_TAP),
     "STOP":                     ("VisuFbElemButton", "stMasterAutoCycle.bStop",  M_TAP),
     "RESET":                    ("VisuFbElemButton", "stMasterAutoCycle.bReset", M_TAP),
-    "Continuous":               ("VisuFbCheckbox",   "stCfg.bContinuous",        M_BOOLVAR),
+    # No "Continuous" row. That checkbox was deliberately deleted on 2026-07-27
+    # by remove_continuous_checkbox.py -- bContinuous is dead twice over (MAIN
+    # force-clears it every scan, and FB_MasterAutoCycle dropped it from IDLE's
+    # cycle-start condition), so a control that visibly reverted when ticked was
+    # worse than no control. This validator kept expecting it and failed for
+    # nine days on a change that was correct.
     "Auto Mode":                ("VisuFbCheckbox",   "stCfg.bAutoMode",          M_BOOLVAR),
     "No sensors (timed steps)": ("VisuFbCheckbox",   "stCfg.bNoSensors",         M_BOOLVAR),
+    "Bypass plate sensors":     ("VisuFbCheckbox",   "stCfg.bBypassPlateSensors", M_BOOLVAR),
 }
 
 problems: list[str] = []
