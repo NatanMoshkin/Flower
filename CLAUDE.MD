@@ -57,7 +57,8 @@ _(active TODOs land here; deferred items go under "Out of scope
     what the source says it drives. This is the end-to-end evidence for the
     `ResetAllCommands` refactor; `pb_test` cannot cover it, because it asserts
     only the *retracted* sensors so a cycle stalls in `GRIP_EXTENDING` forever.
-  - All four Python suites pass, contract 229/229, VISU validator clean.
+  - All four Python suites pass, contract **231/231** (the two new PB hold
+    timers), VISU validator clean.
 
   **Three harness bugs were found and fixed while testing — all in the test
   code, none in the PLC.** Worth knowing because two of them produced red output
@@ -113,6 +114,42 @@ _(active TODOs land here; deferred items go under "Out of scope
   model — they mention `WAIT_PLATE` and never mention `NOT_HOMED`. Nothing
   generates them and nothing should be read from them.
   `docs/index.html` links everything with a status badge per entry.
+
+- **FlowerPyHmi is caught up — separate repo, branch
+  `feat/check-plate-recover-and-pb-hold-timers` (2026-08-05).** Everything the
+  PLC changed today was visible there as a wrong label or a missing field:
+  `CHECK_PLATE`, the three `RECOVER_*` names, error codes 12/13/14, and the two
+  hold timers (now editable on `main.html` next to the step timers). Its mock's
+  `bStart` was narrowed to `NOT_HOMED` only, because mirroring the *refusal*
+  matters as much as the happy path — a mock that still re-homed from `IDLE`
+  would make the web HMI look wrong against the real panel. Verified 84/84
+  pytest, contract 231/231, and **21/21 on the new `tools/live_api_check.py`**.
+
+  **Two things not to "fix" there:**
+
+  - The sim-step key stays **`WaitPlate`** — only the *state* was renamed, the
+    PLC symbol is still `bSimStep_WaitPlate`. The button's label reads
+    `CHECK PLATE`; the key behind it must not.
+  - `docs/validation-*.html` and `docs/bench-checklist.html` **keep** the old
+    name. They are dated records of what was observed at the time.
+
+  **`tools/live_api_check.py` is the new thing worth knowing about.** `pytest`
+  there covers the mock only, and the mock is a Python reimplementation of this
+  state machine — so it structurally cannot catch a renamed or retyped PLC
+  symbol, which is exactly what today's work was. That failure mode shows up as
+  a `?` in the step pill and only a live runtime reveals it. Two properties of
+  that tool are load-bearing: it makes a state long-lived (by withholding the
+  sensor it waits for) before asserting the state *renders*, because the poller
+  is 100 ms and several states last ~30 ms; and its piston emulator's `pause()`
+  waits for an acknowledgement rather than just clearing a flag — eight ADS
+  writes per pass can still land ~10 ms after the flag drops, enough to restore
+  the very sensor being withheld. That made one check pass then fail on
+  consecutive runs.
+
+  Two claims that app was making are also corrected: `main.html` said **both**
+  plate sensors must be TRUE (it is an OR — see the field-deviation note), and
+  its `operation.html` asserted `bBypassPlateSensors` **does not exist** in
+  `ST_HmiMasterAutoCfg`. It does.
 
 - ~~The PB2+PB3 combo request can be silently lost~~ **FIXED 2026-08-05 by
   removing `START` in `IDLE`.** `bComboStartPulse` is still a one-scan pulse and
@@ -1107,7 +1144,8 @@ structs, so the new member rides along.
 
 Widening `ST_LogEntry` turned out to be safe for FlowerPyHmi: it reads the
 ring *per-field by symbol name* (`plc_log.py:29-31`), not as a packed struct,
-so no symbol was removed — `check_pyhmi_contract.py` still resolves 229/229.
+so no symbol was removed — `check_pyhmi_contract.py` still resolved 229/229 at
+the time (231/231 since the PB hold timers landed 2026-08-05).
 It also keeps its own `SEV_NAMES` map and renders from `eSev`, so the 0..3 →
 name mapping now exists in two places. Left that way deliberately: Python has
 no need of the PLC's string, and coupling it would buy nothing.
@@ -1532,7 +1570,7 @@ second source of truth that nothing keeps in step.
 - ~~Delete deprecated fields in `ST_HmiRobot`.~~ **Done 2026-07-26** —
   `bAtPos1/2/3`, `bTx*` and `bRxResetError` removed. Nothing referenced them:
   no POU, no VISU page, and `scripts/check_pyhmi_contract.py` still resolves
-  229/229 FlowerPyHmi symbols without them.
+  229/229 FlowerPyHmi symbols without them (231/231 since 2026-08-05).
 
 - **Remove `stBridgeCfg` / `ST_LogBridgeCfg` — spans both repos.**
   `GVL_Log.stBridgeCfg` (log dir, level, retention days/MB, poll ms) existed

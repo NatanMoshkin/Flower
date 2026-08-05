@@ -1,16 +1,16 @@
 {
   "env": {
-    "started": "2026-08-05 10:02:54",
+    "started": "2026-08-05 11:59:51",
     "net_id": "127.0.0.1.1.1",
     "ams_port": 851,
     "host": "LP-NatanM",
     "python": "3.12.10",
     "step_at_entry": "NOT_HOMED",
-    "auto_at_entry": true,
+    "auto_at_entry": false,
     "tcp_disabled_for_run": true,
     "step_at_exit": "NOT_HOMED",
-    "auto_at_exit": true,
-    "finished": "2026-08-05 10:03:16"
+    "auto_at_exit": false,
+    "finished": "2026-08-05 12:00:17"
   },
   "results": [
     {
@@ -174,9 +174,9 @@
       "id": "C1",
       "what": "PB3 LED blinks 'press me to arm' (unpressed)",
       "expected": "both ON and OFF observed",
-      "actual": "ON x15, OFF x17 over 32 samples @50ms",
+      "actual": "ON x17, OFF x15 over 32 samples @50ms",
       "status": "PASS",
-      "evidence": "###........########.........####"
+      "evidence": "...########........#########...."
     },
     {
       "group": "C",
@@ -264,7 +264,7 @@
       "expected": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "actual": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 10:03:00 START pressed | INFO 10:03:00 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 10:03:00 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:00 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:01 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 11:59:58 START pressed | INFO 11:59:58 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 11:59:58 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 11:59:58 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 11:59:58 INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "group": "C",
@@ -392,11 +392,11 @@
       "group_title": "Automatic + IDLE \u2014 armed, still no PB jog",
       "group_note": "Only the robot's CMD:1 may start a bulb. PB jogs must stay shut here, and in every other Automatic state.",
       "id": "D4",
-      "what": "PB3 in IDLE re-homes, it does NOT run a bulb cycle",
-      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
-      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
+      "what": "PB3 in IDLE does NOTHING (no re-home, no bulb)",
+      "expected": "IDLE throughout, press logged",
+      "actual": "IDLE, transitions: none, logged: True",
       "status": "PASS",
-      "evidence": "INFO 10:03:02 START pressed | INFO 10:03:02 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:02 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:02 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:02 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 11:59:59 START pressed"
     },
     {
       "group": "E",
@@ -407,7 +407,7 @@
       "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
       "status": "PASS",
-      "evidence": "INFO 10:03:03 Sim start pressed | INFO 10:03:03 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:03 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:03 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:03 INIT_GRIP_RETRACTING -> CHECK_PLATE | ERR 10:03:04 CHECK_PLATE timed out (plate never arrived)"
+      "evidence": "INFO 12:00:00 Sim start pressed | INFO 12:00:00 IDLE -> INIT_PUSH_RETRACTING | INFO 12:00:00 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 12:00:00 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 12:00:00 INIT_GRIP_RETRACTING -> CHECK_PLATE | ERR 12:00:01 CHECK_PLATE timed out (plate never arrived)"
     },
     {
       "group": "E",
@@ -528,7 +528,7 @@
       "expected": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
       "actual": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 10:03:05 RESET pressed | INFO 10:03:05 ERR -> RECOVER_PUSH_RETR | INFO 10:03:05 RECOVER_PUSH_RETR -> RECOVER_SEP_RETR | INFO 10:03:05 RECOVER_SEP_RETR -> RECOVER_GRIP_RETR | INFO 10:03:05 RECOVER_GRIP_RETR -> IDLE"
+      "evidence": "INFO 12:00:03 RESET pressed | INFO 12:00:03 ERR -> RECOVER_PUSH_RETR | INFO 12:00:03 RECOVER_PUSH_RETR -> RECOVER_SEP_RETR | INFO 12:00:03 RECOVER_SEP_RETR -> RECOVER_GRIP_RETR | INFO 12:00:03 RECOVER_GRIP_RETR -> IDLE"
     },
     {
       "group": "F",
@@ -616,16 +616,16 @@
       "expected": "iErrorCode 0",
       "actual": "iErrorCode 0",
       "status": "PASS",
-      "evidence": "INFO 10:03:08 STOP pressed | INFO 10:03:08 IDLE -> NOT_HOMED"
+      "evidence": "INFO 12:00:05 STOP pressed | INFO 12:00:05 IDLE -> NOT_HOMED"
     },
     {
       "group": "G",
       "group_title": "The two Automatic hold gestures",
       "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
       "id": "G3",
-      "what": "PB3 alone from IDLE re-homes, it does NOT run a bulb",
-      "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
-      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
+      "what": "PB3 alone from IDLE does nothing \u2014 no state change",
+      "expected": "IDLE, no transitions",
+      "actual": "IDLE, no transitions",
       "status": "PASS",
       "evidence": ""
     },
@@ -638,114 +638,125 @@
       "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE ...",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE -> GRIP_EXTENDING",
       "status": "PASS",
-      "evidence": "INFO 10:03:10 PB2+PB3 held: operator bulb start | INFO 10:03:10 External start pulse | INFO 10:03:10 IDLE -> INIT_PUSH_RETRACTING | INFO 10:03:10 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 10:03:10 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 10:03:10 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 10:03:10 CHECK_PLATE -> GRIP_EXTENDING"
+      "evidence": "INFO 12:00:08 PB2+PB3 held: operator bulb start | INFO 12:00:08 External start pulse | INFO 12:00:08 IDLE -> INIT_PUSH_RETRACTING | INFO 12:00:08 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 12:00:08 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 12:00:08 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 12:00:08 CHECK_PLATE -> GRIP_EXTENDING"
+    },
+    {
+      "group": "G",
+      "group_title": "The two Automatic hold gestures",
+      "group_note": "PB1 held disarms. PB2+PB3 held runs one bulb, the operator's parallel to the robot's CMD:1. Both durations are read live from stMasterAutoCfg.",
+      "id": "G5",
+      "what": "GREEN-before-ORANGE still starts the bulb (no lost request)",
+      "expected": "reaches CHECK_PLATE with no spurious re-home first",
+      "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE -> GRIP_EXTENDING",
+      "status": "PASS",
+      "evidence": "INFO 12:00:10 START pressed | INFO 12:00:11 PB2+PB3 held: operator bulb start | INFO 12:00:11 External start pulse | INFO 12:00:11 IDLE -> INIT_PUSH_RETRACTING | INFO 12:00:11 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 12:00:12 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 12:00:12 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 12:00:12 CHECK_PLATE -> GRIP_EXTENDING"
     }
   ],
   "log_tail": [
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:12",
       "msg": "CHECK_PLATE -> GRIP_EXTENDING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:12",
       "msg": "INIT_GRIP_RETRACTING -> CHECK_PLATE"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:12",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:11",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:11",
       "msg": "IDLE -> INIT_PUSH_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:11",
       "msg": "External start pulse"
     },
     {
       "sev": "INFO",
-      "time": "10:03:10",
+      "time": "12:00:11",
       "msg": "PB2+PB3 held: operator bulb start"
     },
     {
       "sev": "INFO",
-      "time": "10:03:09",
-      "msg": "INIT_GRIP_RETRACTING -> IDLE"
-    },
-    {
-      "sev": "INFO",
-      "time": "10:03:09",
-      "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "10:03:09",
-      "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "10:03:09",
-      "msg": "IDLE -> INIT_PUSH_RETRACTING"
-    },
-    {
-      "sev": "INFO",
-      "time": "10:03:09",
+      "time": "12:00:10",
       "msg": "START pressed"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "NOT_HOMED -> INIT_PUSH_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "START pressed"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
-      "msg": "IDLE -> NOT_HOMED"
+      "time": "12:00:10",
+      "msg": "GRIP_EXTENDING -> NOT_HOMED"
     },
     {
       "sev": "INFO",
-      "time": "10:03:08",
+      "time": "12:00:10",
       "msg": "STOP pressed"
     },
     {
       "sev": "INFO",
-      "time": "10:03:05",
-      "msg": "RECOVER_GRIP_RETR -> IDLE"
+      "time": "12:00:08",
+      "msg": "CHECK_PLATE -> GRIP_EXTENDING"
+    },
+    {
+      "sev": "INFO",
+      "time": "12:00:08",
+      "msg": "INIT_GRIP_RETRACTING -> CHECK_PLATE"
+    },
+    {
+      "sev": "INFO",
+      "time": "12:00:08",
+      "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
+    },
+    {
+      "sev": "INFO",
+      "time": "12:00:08",
+      "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
+    },
+    {
+      "sev": "INFO",
+      "time": "12:00:08",
+      "msg": "IDLE -> INIT_PUSH_RETRACTING"
     }
   ],
   "summary": {
-    "total": 57,
-    "pass": 57,
+    "total": 58,
+    "pass": 58,
     "fail": 0
   }
 }
