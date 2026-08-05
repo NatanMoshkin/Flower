@@ -2,8 +2,33 @@
 
 ## TODO:
 
-- **FlowerPyHmi Manual page: move the per-piston Auto controls to their own
-  page, and add a Bypass-plate-sensors checkbox.**
+- ~~**FlowerPyHmi Manual page: move the per-piston Auto controls to their own
+  page, and add a Bypass-plate-sensors checkbox.**~~ **BOTH DONE 2026-08-05**
+  (FlowerPyHmi `137d154`, `27f9215`). Option **(b)** was chosen — moved to
+  `/piston-auto` and labelled non-functional, **structs kept in the PLC**.
+  Three things worth knowing about how it landed:
+
+  - The banner is the deliverable, not the move. It records that
+    START/STOP/RESET/ACK write real ADS-writable symbols that nothing
+    consumes — a button that succeeds and does nothing is worse than one
+    that errors, and it is invisible from the UI.
+  - The page is **deliberately not in the top nav**: promoting inert controls
+    to a top-level destination is the opposite of what the banner is for. It
+    is reached from a note left where the cards used to be.
+  - The old page had the AUTO cards under a heading reading “Manual
+    Control”, with the real manual cards below as “Manual (diagnostics)”.
+    Both are now named for what they are.
+
+  The Bypass checkbox needed a `Field("bBypassPlateSensors", PLCTYPE_BOOL)`
+  as expected — contract is now **232/232**. Two smaller things came out of
+  it: the mock had never seeded `tPbStopHoldMs`/`tPbStartHoldMs`, so mock mode
+  showed a **0 ms** hold (an edge) for two controls that are deliberately
+  holds; and **five places called this a “16-state” machine**. It is **19**,
+  derived from the source rather than counted by hand: 19 CASE branches, 19
+  distinct `eStep` assignment targets, with only `MANUAL` (a wire sentinel)
+  and `WAIT_POS2` (retired) declared and never assigned.
+
+  <details><summary>the original analysis, kept for the reasoning</summary>
 
   **Read this before doing it — `FB_PistonAutoCycle` is dead code in the panel
   solution.** The asked-for check was done 2026-08-05 and the answer changes the
@@ -37,6 +62,8 @@
   `MASTER_AUTO_CFG_FIELDS`, so the checkbox needs a `Field("bBypassPlateSensors",
   PLCTYPE_BOOL)` added as well as the control. That moves the contract count
   231 → 232, so `scripts/check_pyhmi_contract.py` will need re-running.
+
+  </details>
 
 - **Rename START → ENABLE AUTO on both HMIs, and add a real START that runs a
   bulb from `IDLE` (the HMI equivalent of the two-PB combo).** Applies to
