@@ -103,9 +103,15 @@ def run(net_id):
         AUTO = "GVL_HmiPersistent.stMasterAutoCfg.bAutoMode"
         PLATE_TMO = "GVL_HmiPersistent.stMasterAutoCfg.tPlateWaitTimeoutMs"
         TCP = "GVL_Robot.bTcpEnable"
+        NOSENS = "GVL_HmiPersistent.stMasterAutoCfg.bNoSensors"
+        BYPASS = "GVL_HmiPersistent.stMasterAutoCfg.bBypassPlateSensors"
         orig_auto = p.save(AUTO, BOOL)
         p.save(PLATE_TMO, UDINT)
         p.save(TCP, BOOL)
+        # Both are PERSISTENT, so they survive a power cycle AND a rebuild --
+        # see below for why that broke a whole run.
+        orig_nosens = p.save(NOSENS, BOOL)
+        orig_bypass = p.save(BYPASS, BOOL)
         for i in range(1, 25):
             p.save(f"GVL_IO.dIn[{i}]", BOOL)
 
@@ -124,6 +130,28 @@ def run(net_id):
         # group C fail for a reason that had nothing to do with group C: ERR is
         # excluded from the Manual re-park, so "Manual -> Auto parks in
         # NOT_HOMED" could not hold. Clear a latched fault, then disarm.
+        # ...and normalise the two bench flags, which is not optional. Both are
+        # PERSISTENT. Left TRUE by an earlier session they invalidate most of
+        # this procedure, and NOT by failing honestly:
+        #   bBypassPlateSensors suppresses the CHECK_PLATE timeout ERROR, so the
+        #     E/F groups cannot provoke error 9 at all -- the cycle carries on
+        #     into GRIP_EXTENDING instead of latching ERR;
+        #   bNoSensors then advances every movement state on tStepTimeoutMs
+        #     rather than on sensors, so the machine walks the whole bulb on
+        #     timers and the coil assertions see the master cycle driving, not
+        #     the jog they were testing.
+        # Observed 2026-08-05: 14 of 58 checks failed this way after a rebuild,
+        # with symptoms (coils energised in Auto/IDLE, PUSH_EXTENDING where IDLE
+        # was expected) that read exactly like PLC faults. Same lesson as the
+        # eStep normalisation below -- assume nothing about the machine we
+        # inherit, and report what was changed.
+        p.w(NOSENS, False, BOOL)
+        p.w(BYPASS, False, BOOL)
+        time.sleep(SETTLE)
+        if orig_nosens or orig_bypass:
+            print("  normalised: bNoSensors=%s bBypassPlateSensors=%s -> both FALSE"
+                  % (orig_nosens, orig_bypass))
+
         entry_step = p.step_name()
         if p.step() == 99:
             p.w("GVL_HMI.stMasterAuto.bReset", True, BOOL)
@@ -143,6 +171,8 @@ def run(net_id):
             "host": platform.node(), "python": platform.python_version(),
             "step_at_entry": entry_step,
             "auto_at_entry": orig_auto,
+            "nosensors_at_entry": orig_nosens,
+            "bypass_plate_at_entry": orig_bypass,
             "tcp_disabled_for_run": True,
         }
 
