@@ -8,7 +8,8 @@ the popups.
 """
 
 from sm_common import (
-    ROBOT_TABLE, attach_info, core_edges, main_states, override_states,
+    ROBOT_TABLE, attach_info, core_edges, main_states, operator_rows,
+    override_states,
 )
 from sm_render import BOX_W, Edge, State, legend_html, page, render_svg
 
@@ -16,31 +17,19 @@ RECOVER = [("REC_PUSH", "RECOVER_PUSH_RETR", 50, 12, 16),
            ("REC_SEP", "RECOVER_SEP_RETR", 51, 13, 17),
            ("REC_GRIP", "RECOVER_GRIP_RETR", 52, 14, 18)]
 
-# The RECOVER states exist now, so they get real popups rather than "proposed".
-EXTRA = {
-    "REC_PUSH": [("drives", "bPushCmdRetract[1..3] := TRUE, after "
-                            "ResetAllCommands()"),
-                 ("exit", "bAllPushRetracted"),
-                 ("timer", "tStepTimeoutMs → <strong>error 12</strong>, distinct "
-                           "from arming's error 6")],
-    "REC_SEP": [("drives", "bSepCmdRetract[1..3] := TRUE"),
-                ("exit", "bAllSepRetracted"),
-                ("timer", "tStepTimeoutMs → <strong>error 13</strong>")],
-    "REC_GRIP": [("drives", "bGripCmdRetract[1..2] := TRUE"),
-                 ("exit", "bAllGripRetracted (OR) → IDLE, armed"),
-                 ("timer", "tStepTimeoutMs → <strong>error 14</strong>"),
-                 ("why", "the machine really is homed here, so advertising "
-                         "STATE:0 is honest")],
-}
-
-
 def build_states():
     st = main_states() + override_states()
     st.append(State("ERR", "ERR", 99, "fault", 1, 15, sub="latched — RESET only"))
     for k, name, val, code, row in RECOVER:
         st.append(State(k, name, val, "init", 1, row,
                         sub=f"timeout → error {code}"))
-    return attach_info(st, extras=EXTRA)
+    # Every state gets a "panel buttons" row saying what PB1/PB2/PB3 do THERE.
+    # That is state-dependent -- STOP works everywhere except ERR, RESET only in
+    # ERR, START only in NOT_HOMED and IDLE, the combo only from IDLE -- so no
+    # single table can express it and the popups are the right place. The
+    # RECOVER states' command detail comes from COMMANDS like every other state,
+    # because they are real states now.
+    return attach_info(st, extras=operator_rows())
 
 
 def build_edges(states):
@@ -71,9 +60,13 @@ external contract, not internal bookkeeping. Numbers on the red fault bus are
 {diagram}
 {legend}
 <p class="pophint">Click any state box (marked <strong>i</strong>) for the exact
-commands it drives, its exit guard, its timer and its error code. Those command
-lists were confirmed against the running PLC — see
-<em>How this was verified</em> below.</p>
+commands it drives, its exit guard, its timer, its error code — and
+<strong>what each panel button does in that state</strong>, which is not the same
+everywhere: STOP works in every state <em>except</em> <code>ERR</code>, RESET
+only <em>in</em> <code>ERR</code>, START only in <code>NOT_HOMED</code> and
+<code>IDLE</code>, and the start combo only from <code>IDLE</code>. The command
+lists were confirmed against the running PLC — see <em>How this was
+verified</em>.</p>
 
 <div class="callout good">
 <h3>Recovery has its own chain</h3>

@@ -163,14 +163,14 @@ NONE_DRIVEN = _off("ResetAllCommands() only — all 10 FALSE")
 
 COMMANDS = {
     "NOT_HOMED": [
-        ("drives", NONE_DRIVEN),
-        ("clears", "iErrorCode := 0, sErrorText := ''"),
+        ("resets first + drives", NONE_DRIVEN),
+        ("also clears", "iErrorCode := 0, sErrorText := ''"),
         ("timer", "none — falls to the Section 3 ELSE"),
         ("physically", "everything at its spring-return home, nothing energised"),
     ],
     "IDLE": [
-        ("drives", NONE_DRIVEN),
-        ("clears", "iErrorCode := 0, sErrorText := ''"),
+        ("resets first + drives", NONE_DRIVEN),
+        ("also clears", "iErrorCode := 0, sErrorText := ''"),
         ("timer", "none"),
         ("physically", "at rest and armed; the robot may command a bulb"),
     ],
@@ -265,9 +265,32 @@ COMMANDS = {
         ("timer", "tStepTimeoutMs → error 11"),
         ("physically", "releasing the plate — last motion of the bulb"),
     ],
+    "REC_PUSH": [
+        ("resets first + drives", _on("bPushCmdRetract[1..3] := TRUE")),
+        ("exit", "bAllPushRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → <strong>error 12</strong> — distinct from "
+                  "arming's error 6, which is the whole point of this chain"),
+        ("physically", "push pins driving home on their springs, recovering "
+                       "from a fault"),
+    ],
+    "REC_SEP": [
+        ("resets first + drives", _on("bSepCmdRetract[1..3] := TRUE")),
+        ("exit", "bAllSepRetracted (AND of all 3)"),
+        ("timer", "tStepTimeoutMs → <strong>error 13</strong>"),
+        ("physically", "push already home; separators retracting"),
+    ],
+    "REC_GRIP": [
+        ("resets first + drives", _on("bGripCmdRetract[1..2] := TRUE")),
+        ("exit", "bAllGripRetracted — <strong>OR</strong>, not AND → IDLE"),
+        ("timer", "tStepTimeoutMs → <strong>error 14</strong>"),
+        ("physically", "releasing the grippers; sep and push confirmed home"),
+        ("why IDLE", "the machine really IS homed at this point, so advertising "
+                     "STATE:0 to the robot is honest"),
+    ],
     "ERR": [
-        ("drives", NONE_DRIVEN),
-        ("exit", "only Section 2 RESET — HMI button or robot CMD:2"),
+        ("resets first + drives", NONE_DRIVEN),
+        ("exit", "only Section 2 RESET — HMI button, orange PB2, or robot "
+                 "CMD:2 → enters RECOVER_PUSH_RETR"),
         ("timer", "none"),
         ("physically", "coils dropped, so every piston has spring-returned "
                        "home. The plate is released."),
@@ -279,30 +302,6 @@ COMMANDS = {
 # they WOULD drive — flagged as proposed so nobody mistakes them for existing
 # behaviour.
 PROPOSED = {
-    "REC_PUSH": [
-        ("proposed", "<strong>New state — does not exist yet.</strong>"),
-        ("drives", "bPushCmdRetract[1..3] := TRUE  (same motion as RETRACT_ALL_PUSH)"),
-        ("exit", "bAllPushRetracted"),
-        ("timer", "tStepTimeoutMs → <strong>error 12</strong>, distinct from "
-                  "arming's error 6"),
-        ("why", "identical motion, different identity — so a failed recovery is "
-                "no longer indistinguishable from a failed arming"),
-    ],
-    "REC_SEP": [
-        ("proposed", "<strong>New state — does not exist yet.</strong>"),
-        ("drives", "bSepCmdRetract[1..3] := TRUE"),
-        ("exit", "bAllSepRetracted"),
-        ("timer", "tStepTimeoutMs → <strong>error 13</strong>"),
-    ],
-    "REC_GRIP": [
-        ("proposed", "<strong>New state — does not exist yet.</strong>"),
-        ("drives", "bGripCmdRetract[1..2] := TRUE"),
-        ("exit", "bAllGripRetracted (OR) → IDLE, armed"),
-        ("timer", "tStepTimeoutMs → <strong>error 14</strong>"),
-        ("escalates", "on the 3rd consecutive failed attempt: latch ERR and "
-                      "refuse the robot's CMD:2, so the operator's window stays "
-                      "open indefinitely"),
-    ],
     "PAUSED": [
         ("proposed", "<strong>Wire value only — never assigned to eStep.</strong>"),
         ("drives", "nothing of its own. The interrupted step keeps asserting its "
@@ -314,6 +313,64 @@ PROPOSED = {
         ("leaves on", "PB2 again (Continue), START, STOP, Manual, or entering ERR"),
     ],
 }
+
+
+def _pb(t):
+    return f'<span class="cmd on">{t}</span>'
+
+
+def _pbno(t):
+    return f'<span class="cmd off">{t}</span>'
+
+
+# What the three panel buttons do IN THIS STATE, verified against MAIN's gates
+# and FB Section 2/4:
+#   PB1 held  -> bStop.  Section 2 acts in EVERY state except ERR.
+#   PB2 edge  -> bReset, but MAIN gates it on eStep = ERR, so ERR only.
+#   PB3 edge  -> bStart. Consumed by the NOT_HOMED and IDLE branches ONLY;
+#                everywhere else it is auto-cleared and merely LOGGED.
+#   PB2+PB3   -> bExtStartPulse. Consumed by the IDLE branch only.
+_STOP_WORKS = _pb("PB1 held → STOP, disarms to NOT_HOMED")
+_START_LOGGED = _pbno("PB3 → logs 'START pressed', no effect here")
+_NO_RESET = _pbno("PB2 → nothing (RESET is ERR-only)")
+_NO_COMBO = _pbno("PB2+PB3 → nothing (bulb start is IDLE-only)")
+
+OPERATOR = {
+    "NOT_HOMED": [
+        (_pb("PB3 → START: home the pistons and ARM") + _pbno(
+            "PB1 held → STOP, but already disarmed — no change") + _NO_RESET
+         + _NO_COMBO)],
+    "IDLE": [
+        (_pb("PB2+PB3 held → run ONE bulb (= robot CMD:1)")
+         + _pb("PB3 alone → START: re-home, NOT a bulb")
+         + _STOP_WORKS + _NO_RESET)],
+    "ERR": [
+        (_pb("PB2 → RESET: enter the RECOVER chain")
+         + _pbno("PB1 held → nothing: STOP is excluded from ERR")
+         + _START_LOGGED + _NO_COMBO)],
+    "_MOTION": [
+        (_STOP_WORKS + _START_LOGGED + _NO_RESET + _NO_COMBO)],
+    "_RECOVER": [
+        (_pb("PB1 held → STOP, which ABORTS the recovery → NOT_HOMED")
+         + _START_LOGGED + _NO_RESET + _NO_COMBO)],
+}
+
+MOTION_KEYS = ["INIT_PUSH", "INIT_SEP", "INIT_GRIP", "CHECK_PLATE", "GRIP_EXT",
+               "SEP_EXT", "PUSH_EXT", "DWELL_PUSH", "PUSH_RET", "PUSH_RET_DW",
+               "SEP_RET", "SEP_RET_DW", "GRIP_RET"]
+RECOVER_KEYS = ["REC_PUSH", "REC_SEP", "REC_GRIP"]
+
+
+def operator_rows():
+    """key -> [(label, html)] describing the panel buttons in that state."""
+    out = {}
+    for k in ("NOT_HOMED", "IDLE", "ERR"):
+        out[k] = [("panel buttons", OPERATOR[k][0])]
+    for k in MOTION_KEYS:
+        out[k] = [("panel buttons", OPERATOR["_MOTION"][0])]
+    for k in RECOVER_KEYS:
+        out[k] = [("panel buttons", OPERATOR["_RECOVER"][0])]
+    return out
 
 
 def info_for(key, extra=None):
