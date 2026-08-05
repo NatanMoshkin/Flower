@@ -43,7 +43,12 @@
      IDLE                    Armed. bExtStartPulse (robot CMD:1) OR
                              SimStartAssembly OR SimIdle -> INIT chain with
                              bHomeThenIdle FALSE (a bulb cycle).
-                             Operator START here re-homes (bHomeThenIdle TRUE).
+                             Operator START here is IGNORED (2026-08-05).
+                             It used to re-home and come back, which was a no-op
+                             in outcome and let a green-before-orange press of
+                             the PB2+PB3 combo lose its bulb request: the combo's
+                             one-scan pulse landed mid INIT_* chain, where
+                             nothing consumes it. Section 0b logs the refusal.
      INIT_PUSH_RETRACTING    drive PushCmdRetract[1..3]; wait AND of all
                              PushIsRetracted. Guarantees pistons are home before
                              a cycle starts, even if a prior manual move left
@@ -52,22 +57,33 @@
                              SepIsRetracted. Push must retract first (see INIT
                              above) because sep retract with push extended is
                              the same collision case avoided end-of-cycle.
-     INIT_GRIP_RETRACTING    drive GripCmdRetract[1..2]; wait AND of all
-                             GripIsRetracted. Defensive symmetry with the INIT
+     INIT_GRIP_RETRACTING    drive GripCmdRetract[1..2]; wait bGripIsRetracted[1]
+                             OR [2] -- the same OR deviation as the two GRIP
+                             states below, so error 8 shares their blind spot:
+                             it fires only if BOTH grippers fail to come home.
+                             Defensive symmetry with the INIT
                              Sep/Push states, so a manual jog left extended
                              does not collide with the arriving plate.
                              THE ONE PLACE THE TWO CALLERS DIVERGE: exits to
                              IDLE when bHomeThenIdle, else to CHECK_PLATE.
-     CHECK_PLATE              wait bPlateSenL AND bPlateSenR (robot has placed
-                             the plate on the fixture). Latched at start only;
+     CHECK_PLATE              wait bPlateOk = bPlateSenL OR bPlateSenR (robot
+                             has placed the plate on the fixture). OR, not AND:
+                             only one plate sensor is confirmed wired, so an AND
+                             would fault every cycle. Deliberate field deviation
+                             -- see the plate/grip note in CLAUDE.md before
+                             "fixing" it. Latched at start only;
                              sensors are not monitored past this step.
                              stCfg.bBypassPlateSensors removes the timeout
                              ERROR only -- the sensor fast-path still applies,
                              and on expiry the cycle continues instead of
                              raising error 9. bNoSensors does NOT cover this
                              state.
-     GRIP_EXTENDING          drive GripCmdExtend[1..2]; wait AND of all
-                             GripIsExtended. Plate is clamped from both sides.
+     GRIP_EXTENDING          drive GripCmdExtend[1..2]; wait bGripIsExtended[1]
+                             OR [2] -- again OR, not AND, because GripSolR has
+                             no air on the machine. COST: with either sensor
+                             satisfying it, a genuine single-gripper failure is
+                             invisible and the cycle can run on a plate clamped
+                             from one side; error 10 fires only if BOTH fail.
      SEP_EXTENDING           drive SepCmdExtend[1..3]; wait AND of all SepIsExtended.
                              Grip stays extended for every state below.
      PUSH_EXTENDING          drive PushCmdExtend[1..3]; wait AND of all PushIsExtended
@@ -76,17 +92,30 @@
      PUSH_RETRACTED_DWELL    wait tPushRetractedDwellMs
      SEP_RETRACTING          drive SepCmdRetract[1..3]; wait AND of all SepIsRetracted
      SEP_RETRACTED_DWELL     wait tSepRetractedDwellMs
-     GRIP_RETRACTING         drive GripCmdRetract[1..2]; wait AND of all
-                             GripIsRetracted. Releases the plate; increment
-                             nCyclesCompleted; back to IDLE.
+     GRIP_RETRACTING         drive GripCmdRetract[1..2]; wait bGripIsRetracted[1]
+                             OR [2] (same OR deviation as GRIP_EXTENDING, and
+                             error 11 has the same blind spot). Releases the
+                             plate; increment nCyclesCompleted; back to IDLE --
+                             still armed, so the robot's next CMD:1 runs another.
      ERR                     latched; iErrorCode set to step code. Reports
                              STATE:99, on which the robot answers CMD:2. RESET
-                             (that CMD:2, or the HMI button) clears the error and
-                             re-enters the INIT chain with bHomeThenIdle TRUE --
-                             NOT straight to IDLE. A fault leaves the pistons
-                             anywhere, so advertising IDLE(0) would claim ready
-                             while it is not, and RESET landing in IDLE with the
-                             robot still asking made RESET itself a start button.
+                             (that CMD:2, the HMI button, or the orange PB2)
+                             clears the error and enters the RECOVER_* chain
+                             below -- NOT the INIT chain, and NOT straight to
+                             IDLE. A fault leaves the pistons anywhere, so
+                             advertising IDLE(0) would claim ready while it is
+                             not, and RESET landing in IDLE with the robot still
+                             asking made RESET itself a start button.
+     RECOVER_PUSH_RETR       Fault-recovery retract chain (50/51/52), added
+     RECOVER_SEP_RETR        2026-08-05. Same motion and the same collision
+     RECOVER_GRIP_RETR       ordering as the INIT chain, but its own identity so
+                             a failed RECOVERY is distinguishable from a failed
+                             ARMING: error codes 12/13/14 instead of 6/7/8, and
+                             its own sStepText. Entered ONLY from ERR on RESET.
+                             RECOVER_GRIP_RETR always exits to IDLE -- by then
+                             the machine really is homed, so reporting STATE:0 is
+                             honest. The robot needed no new branch: it acts on 0
+                             and 99 and treats everything else as "wait".
 
    Error codes:
      0  = OK
@@ -101,6 +130,9 @@
           -- suppressed while stCfg.bBypassPlateSensors is set
     10  = GRIP_EXTENDING timed out
     11  = GRIP_RETRACTING timed out
+    12  = RECOVER_PUSH_RETR timed out  -- recovery, deliberately distinct from 6
+    13  = RECOVER_SEP_RETR timed out   -- distinct from 7
+    14  = RECOVER_GRIP_RETR timed out  -- distinct from 8
     99  = RETIRED (was 'Operator STOP while running'). STOP now disarms to
           NOT_HOMED instead of faulting -- see Section 2. Do not reuse the
           number: old log entries and CSV exports still carry it.
@@ -116,10 +148,17 @@
    let a bench operator advance any waiting step without physical sensors.
    Rising-edge triggered; the FB auto-clears the flag after consumption.
 
-   Sensorless mode (stCfg.bNoSensors): the 4 movement states ignore sensor
-   feedback and advance when tStepTimeoutMs expires — the timeout doubles
-   as the fixed step duration. Error codes 1/3/4/5 cannot occur while
-   sensorless. *)
+   Sensorless mode (stCfg.bNoSensors): the TWELVE movement states ignore
+   sensor feedback and advance when tStepTimeoutMs expires — the timeout
+   doubles as the fixed step duration. Those twelve are both INIT_* sets
+   (3), the three RECOVER_* states, both GRIP states and the four Sep/Push
+   states. So error codes 1/3/4/5/6/7/8/10/11/12/13/14 are ALL unreachable
+   while sensorless — this said "the 4 movement states" and "1/3/4/5",
+   which was wrong before the RECOVER chain existed and is wronger now.
+   CHECK_PLATE is deliberately NOT covered: it keeps its own
+   tPlateWaitTimeoutMs and still needs a plate sensor, so error 9 stays
+   reachable. Every bench run so far has had this flag set, which is why no
+   movement-timeout path has ever been exercised on a panel. *)
 VAR_INPUT
     (* External start pulse (rising-edge; one scan wide). MAIN fires this
        when the robot's CMD:1 arrives via TCP, or a physical PB1 rising
