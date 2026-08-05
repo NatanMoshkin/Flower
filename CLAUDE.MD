@@ -227,7 +227,18 @@ _(active TODOs land here; deferred items go under "Out of scope
   without a start: the pulse would become droppable again, and the latch would
   then be the right fix.
 
-- **`FB_MasterAutoCycle`'s header block is stale — six fixes, comments only.**
+- ~~**`FB_MasterAutoCycle`'s header block is stale.**~~ **DONE 2026-08-05**
+  (`2fdb429`) — eight fixes, not six: sweeping for the AND pattern after
+  fixing `CHECK_PLATE` and the two `GRIP` states turned up
+  `INIT_GRIP_RETRACTING` with the same claim, which reading had missed.
+  Verified programmatically rather than by eye: every error code the code
+  assigns is now documented, every CASE branch has a header entry, and the
+  only surviving “AND of all” lines are the six Sep/Push states that really
+  do aggregate with AND. Comments only — no LineIds churn, `ProductVersion`
+  still `3.1.4024.16`. Original list kept below for the record.
+
+  <details><summary>the eight, as found</summary>
+
   Found 2026-08-05 while re-checking this list. The RECOVER chain shipped that
   day and the file's own documentation block was never updated with it, so the
   header now contradicts the code below it. No logic changes; every item is a
@@ -252,10 +263,16 @@ _(active TODOs land here; deferred items go under "Out of scope
   inside a comment explaining that it deliberately does **not** apply. Twelve
   states actually carry the term.
 
-- **`scripts/validate_automain.py` is stale** — it fails on
-  `missing element 'Continuous'`, but that checkbox was deliberately deleted on
-  2026-07-27 by `remove_continuous_checkbox.py`. Verified pre-existing (fails
-  identically on HEAD). Drop that expectation from the validator.
+  </details>
+
+- ~~**`scripts/validate_automain.py` is stale**~~ — **DONE 2026-08-05**
+  (`6ab9718`). The `Continuous` expectation is gone (that checkbox was
+  deliberately deleted on 2026-07-27) and the validator now passes: 23 elements,
+  all direct children, identities unique. Also added the **fourth checkbox**,
+  `Bypass plate sensors`, which had been on the page since 2026-07-26 with no
+  expectation covering it — the same silent coverage hole that let the
+  `Continuous` row rot. Negative-tested by pointing the new row at a wrong symbol
+  and confirming it reports the mismatch instead of passing.
 
 
 - **Update the Auto state machine.** Three decision documents are built and are
