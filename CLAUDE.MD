@@ -34,9 +34,16 @@ _(active TODOs land here; deferred items go under "Out of scope
 
   **Two operator-facing consequences worth knowing:**
 
-  1. **Press ORANGE before GREEN for the combo.** The standalone PB3 START edge
-     is suppressed while PB2 is held, so pressing green first gives a plain
-     START — which from `IDLE` is a harmless re-home, not a bulb.
+  1. **Press ORANGE before GREEN for the combo — and it is not cosmetic.** The
+     standalone PB3 START edge is suppressed while PB2 is held, so the combo
+     cannot fire a START on its way in. Green-first does fire one, and the
+     machine re-homes; what happens to the cycle request then depends on how
+     long that takes. **Both outcomes measured on the PLC 2026-08-05:** if
+     homing finishes inside the hold (bench, ~30 ms) you get a pointless
+     re-home *and then* the cycle; if it is still homing when the hold
+     completes (measured 2.33 s chain vs 1 s hold) the pulse lands in
+     `INIT_SEP_RETRACTING`, is **silently dropped**, and no bulb runs. See the
+     next TODO.
   2. **PB1's LED blinks while the STOP hold counts**, so a hold-to-act button
      is not silent guesswork.
 
@@ -112,6 +119,24 @@ _(active TODOs land here; deferred items go under "Out of scope
   model — they mention `WAIT_PLATE` and never mention `NOT_HOMED`. Nothing
   generates them and nothing should be read from them.
   `docs/index.html` links everything with a status badge per entry.
+
+- **The PB2+PB3 combo request can be silently lost.** `bComboStartPulse` is a
+  one-scan pulse and `bExtStartPulse` is consumed **only** by the `IDLE` branch,
+  so a pulse that lands while the machine is anywhere else is dropped. Because
+  `fbTrigPbCombo` is an `R_TRIG` on the hold timer, it fires **once per press** —
+  holding longer does not re-offer it. Reproduced on the live PLC: with homing
+  slowed to 2.33 s against a 1 s hold, green-first gave `IDLE → INIT_* → IDLE`
+  and no cycle.
+
+  Nothing is unsafe about it — a lost request means nothing happens — but it is
+  a fumbled gesture with no feedback, which operators will read as a broken
+  button. Contrast the robot's `CMD:1`, which self-heals because the robot
+  re-asserts it on every keep-alive.
+
+  Fix, if wanted: latch the request while both buttons remain held and consume
+  it when `IDLE` is next reached, rather than pulsing once. That is the same
+  level-consume-and-clear shape MAIN already uses for `nRobotCmd`. Cheap, but it
+  changes a start path, so it wants its own commit and a `pb_test` case.
 
 - **`scripts/validate_automain.py` is stale** — it fails on
   `missing element 'Continuous'`, but that checkbox was deliberately deleted on

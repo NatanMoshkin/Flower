@@ -276,8 +276,16 @@ GVL_HMI.stGripSolR.eMode := eMachineMode;  GVL_HMI.stGripSolR.bMode := bMachineA
 
    PB3-vs-combo disambiguation: the standalone START edge is suppressed while
    PB2 is pressed, so the combo does not fire START on the way in. Press ORANGE
-   first, then GREEN. Pressing green first gives a plain START, which from IDLE
-   is a harmless re-home.
+   first, then GREEN.
+
+   Green-first is NOT harmless, and it was measured rather than assumed. It
+   fires a plain START, so the machine re-homes. bComboStartPulse is one scan
+   and bExtStartPulse is consumed ONLY by the IDLE branch, so:
+     - homing done inside the hold  -> pointless re-home, then the cycle runs
+     - still homing when it expires -> pulse DROPPED, no cycle, and the R_TRIG
+                                       will not re-offer it while held
+   On the machine, with real strokes, the second is the case to expect. See the
+   TODO in CLAUDE.md about latching the request instead of pulsing it.
 
    * LED1 mirrors the press, and BLINKS while the STOP hold is counting.
    * LED2 mirrors the press.
@@ -394,7 +402,8 @@ END_IF
 
 (* --- PB3 edge -> START ----------------------------------------------------
    Suppressed while PB2 is pressed so the PB2+PB3 combo does not fire a START on
-   its way in. Consequence worth knowing: press ORANGE first, then GREEN. *)
+   its way in. Press ORANGE first, then GREEN -- green-first can silently lose
+   the cycle request, see the header. *)
 fbTrigPb3(CLK := GVL_App.bPb3);
 IF bMachineAuto AND NOT GVL_App.bPb2 AND fbTrigPb3.Q THEN
     GVL_HMI.stMasterAuto.bStart := TRUE;

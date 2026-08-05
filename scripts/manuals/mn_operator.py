@@ -239,11 +239,17 @@ def blocks():
           "וחוזרת למצב מוכן."),
         Note("warn", "Press ORANGE first, then GREEN",
              "לחץ קודם על הכתום, אחר כך על הירוק",
-             f"If you press {GRN} first, the machine reads it as START on its "
-             "own and simply re-homes instead of running a cycle. No harm done "
-             "— just release and try again, orange first.",
-             f"אם תלחץ קודם {GRN_H}, המכונה תפרש זאת כלחיצת התחלה בלבד ותאפס "
-             "מקום במקום להריץ מחזור. אין נזק — שחרר ונסה שוב, כתום קודם."),
+             f"Pressing {GRN} first is read as a plain START, so the machine "
+             "re-homes. What happens next depends on how long that takes: if it "
+             "finishes quickly the cycle still runs afterwards, but if it is "
+             "still homing when the hold completes, <strong>your request is "
+             "lost</strong> and nothing runs. Release both and press again, "
+             "orange first.",
+             f"לחיצה על {GRN_H} תחילה נקראת כהתחלה רגילה, ולכן המכונה מאפסת "
+             "מקום. מה שקורה אחר כך תלוי בכמה זמן זה לוקח: אם זה מסתיים מהר "
+             "המחזור עדיין ירוץ אחר כך, אך אם המכונה עדיין מאפסת מקום כשההחזקה "
+             "מסתיימת, <strong>הבקשה שלך אובדת</strong> ושום דבר לא ירוץ. שחרר "
+             "את שניהם ולחץ שוב, כתום קודם."),
 
         # ---------------------------------------------------------------- 9
         H("9 &middot; Safety", "9 &middot; בטיחות", anchor="safety"),

@@ -512,12 +512,27 @@ a brushed sleeve. Durations are editable on <code>AutoMain</code>.</p>
     input.</td></tr>
 </tbody></table></div>
 <div class="callout">
-<h3>Press ORANGE before GREEN</h3>
+<h3>Press ORANGE before GREEN — and it is not merely cosmetic</h3>
 <p>The standalone PB3 START edge is suppressed while PB2 is held, so the combo
-does not fire a START on its way in. Pressing green first gives a plain START —
-which from <code>IDLE</code> is a harmless re-home, not a bulb. Confirmed on the
-PLC: <code>G3</code> shows PB3 alone re-homing, <code>G4</code> shows the combo
-entering <code>CHECK_PLATE</code>.</p>
+cannot fire a START on its way in. Press green first, though, and the START fires
+before PB2 arrives: the machine re-homes. What happens to the cycle request then
+depends on timing, and <strong>both outcomes were measured on the PLC</strong>:</p>
+<ul>
+<li><strong>Homing finishes before the hold completes</strong> (bench case, ~30 ms
+with the pistons already home): the combo pulse lands while <code>eStep</code> is
+back at <code>IDLE</code>, so you get a pointless re-home <em>and then</em> the
+cycle. Observed chain:
+<code>IDLE → INIT_* → IDLE → INIT_* → CHECK_PLATE</code>.</li>
+<li><strong>Homing is still running when the hold completes</strong> (measured with
+a 2.33 s chain against a 1 s hold): the pulse fires while <code>eStep</code> is
+<code>INIT_SEP_RETRACTING</code>. <code>bExtStartPulse</code> is consumed
+<em>only</em> by the <code>IDLE</code> branch, so it is <strong>silently
+dropped</strong> — and because the combo's <code>R_TRIG</code> fires once per
+press, holding longer does not help. Observed chain:
+<code>IDLE → INIT_* → IDLE</code>, no bulb.</li>
+</ul>
+<p>On the machine, with real strokes, the second case is the one to expect. That
+makes the button order functional rather than cosmetic.</p>
 </div>
 <p><strong>Manual moves are available in Manual mode only.</strong> An ERR jog
 window existed briefly (2026-08-04) and was removed the next day by operator
