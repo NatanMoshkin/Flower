@@ -2,6 +2,71 @@
 
 ## TODO:
 
+- **FlowerPyHmi Manual page: move the per-piston Auto controls to their own
+  page, and add a Bypass-plate-sensors checkbox.**
+
+  **Read this before doing it — `FB_PistonAutoCycle` is dead code in the panel
+  solution.** The asked-for check was done 2026-08-05 and the answer changes the
+  job: the FB exists as a POU, but **`MAIN` never declares or calls a single
+  instance of it**. `MAIN`'s own comment at the piston call sites says so —
+  *"The master cycle is the only auto driver"* — and each `fbXxxSolN(...)` wires
+  `bAutoCmdExtend := fbMasterAutoCycle.bXxxCmdExtend[i]` with **no OR-merge** of
+  a per-piston auto FB. So:
+
+  - The eight `GVL_HMI.st<Piston>Auto` structs exist and are `AddSymbol`-exposed,
+    but **nothing writes them**. The only POU that touches the family at all is
+    `FB_PersistentAutoSave`, and only to watch the `*AutoCfg` structs for its
+    flush timer.
+  - FlowerPyHmi polls `GVL_HMI.st<Piston>Auto` (`piston_auto.py`) and renders a
+    tile per piston. Those tiles are **inert**: `eStep` can only ever read 0, and
+    their Start/Stop buttons write fields no code consumes.
+
+  So this is not a layout task. Decide first **which of three** it is:
+  (a) wire `FB_PistonAutoCycle` up in `MAIN`, OR-merged with the master cycle as
+  the old per-piston DECISION section below describes — note that section is
+  **stale for this solution**, it documents the deleted `Flower_PLC_HMI` dev
+  mirror; (b) move the tiles to their own page *and label them as non-functional*;
+  or (c) remove them from FlowerPyHmi and delete the dead structs. Moving inert
+  controls to a tidier page without saying they are inert is the one option that
+  makes things worse.
+
+  **The Bypass checkbox is a smaller job than it looks, but not zero.**
+  `stMasterAutoCfg.bBypassPlateSensors` exists in the PLC and is live (it
+  suppresses only the `CHECK_PLATE` timeout error, not the wait — see the plate
+  sensor section). But FlowerPyHmi **does not poll it at all**: it is absent from
+  `MASTER_AUTO_CFG_FIELDS`, so the checkbox needs a `Field("bBypassPlateSensors",
+  PLCTYPE_BOOL)` added as well as the control. That moves the contract count
+  231 → 232, so `scripts/check_pyhmi_contract.py` will need re-running.
+
+- **Rename START → ENABLE AUTO on both HMIs, and add a real START that runs a
+  bulb from `IDLE` (the HMI equivalent of the two-PB combo).** Applies to
+  FlowerPyHmi *and* the panel's classic VISU.
+
+  **Label-only on the rename — do not rename the PLC symbol.** The field stays
+  `stHmi.bStart`; only the button text becomes `ENABLE AUTO`. Same trap as
+  `bSimStep_WaitPlate`, whose *state* was renamed while the symbol stayed put:
+  renaming the symbol would break every binding, the contract check, and the
+  robot-side nothing — for a caption.
+
+  **The new START needs its own field. Do not re-add `fbTrigStart.Q` to `IDLE`'s
+  exit condition.** `bStart` already means "home and arm" in `NOT_HOMED`; making
+  the same field also mean "run a bulb" in `IDLE` gives one symbol two meanings
+  that differ by state, which is precisely the shape that produced the
+  green-before-orange lost-request defect fixed on 2026-08-05. Instead add a
+  dedicated field (e.g. `bStartCycle`) and **OR it into `bExtStartPulse`
+  alongside `bComboStartPulse`**, so the combo, the robot's `CMD:1` and the HMI
+  button all arrive through the one path that `IDLE` consumes.
+
+  Worth knowing: **the panel VISU has no bulb-start control today at all** —
+  nothing on any `.TcVIS` binds `bSimStartAssembly`, so on the panel a bulb can
+  only be started by the robot or the PB2+PB3 hold. FlowerPyHmi already has RUN
+  BULB, which pulses `bSimStartAssembly`. Do **not** simply bind the VISU button
+  to that flag: it is documented as the *bench stand-in* for the robot's `CMD:1`,
+  and using it as a production control erases that distinction. The new field is
+  what keeps "operator started a bulb" and "someone simulated the robot"
+  separable in the log ring.
+
+
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
 
@@ -162,6 +227,31 @@ _(active TODOs land here; deferred items go under "Out of scope
   without a start: the pulse would become droppable again, and the latch would
   then be the right fix.
 
+- **`FB_MasterAutoCycle`'s header block is stale — six fixes, comments only.**
+  Found 2026-08-05 while re-checking this list. The RECOVER chain shipped that
+  day and the file's own documentation block was never updated with it, so the
+  header now contradicts the code below it. No logic changes; every item is a
+  comment.
+
+  | # | What the header says | What the code does |
+  |---|---|---|
+  | 1 | error-code table stops at **11** | assigns **12/13/14** at lines 796/811/826 |
+  | 2 | `ERR`: RESET "re-enters the **INIT** chain" | enters the **RECOVER** chain — actively wrong about the 2026-08-05 change |
+  | 3 | sequence listing has **no `RECOVER_*` states** | three of them, values 50/51/52 |
+  | 4 | sensorless covers "the **4** movement states", codes "**1/3/4/5**" | **12** states, codes **1/3/4/5/6/7/8/10/11/12/13/14** |
+  | 5 | `CHECK_PLATE` waits "`bPlateSenL` **AND** `bPlateSenR`" (header line 61) and "Both plate sensors must confirm TRUE" (branch comment) | guard is `bPlateOk`, an **OR** — the documented field deviation |
+  | 6 | `GRIP_EXTENDING` / `GRIP_RETRACTING` "wait **AND** of all" | also an OR, and the header does not flag it as a deviation |
+
+  Items 5 and 6 are the same defect that was corrected in FlowerPyHmi's
+  `main.html` on 2026-08-05 (it claimed both plate sensors were required); it
+  sits in the PLC source too. Item 2 is the one that would actively mislead
+  whoever debugs a failed recovery next, since it names the wrong chain.
+
+  Item 4's count is worth stating precisely, because a naive grep gets it wrong:
+  **thirteen** CASE branches mention `bNoSensors`, but `CHECK_PLATE`'s mention is
+  inside a comment explaining that it deliberately does **not** apply. Twelve
+  states actually carry the term.
+
 - **`scripts/validate_automain.py` is stale** — it fails on
   `missing element 'Continuous'`, but that checkbox was deliberately deleted on
   2026-07-27 by `remove_continuous_checkbox.py`. Verified pre-existing (fails
@@ -252,8 +342,10 @@ _(active TODOs land here; deferred items go under "Out of scope
     piston retracts on power loss, so a persisted pause would resume a sequence
     whose assumptions are all void. `GVL_HMI` scrubs it for free.
 
-- **`FB_MasterAutoCycle`'s defensive `CASE ELSE` fails unsafe.** Any `eStep`
-  value with no CASE branch clears the coils and then assigns
+- ~~**`FB_MasterAutoCycle`'s defensive `CASE ELSE` fails unsafe.**~~ **FIXED
+  2026-08-05**, verified in the source: the default branch is now
+  `ResetAllCommands(); stHmi.eStep := E_MasterAutoStep.NOT_HOMED;`. Kept for the
+  reasoning, which is why the fix matters. It used to assign
   `stHmi.eStep := E_MasterAutoStep.IDLE` — wire value **0**, the one value that
   makes the robot send `CMD:1` — reached with the pistons in unknown positions.
   Reachable: `GVL_HMI` carries `TcHmiSymbol.AddSymbol` so `eStep` is ADS-writable,
@@ -314,7 +406,10 @@ _(active TODOs land here; deferred items go under "Out of scope
   `bPlateOk` is an OR, but the `L`/`R` lamps on `Main.TcVIS` are mislabelled.
   Needs someone at the machine to say which physical side is which.
 
-- `Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.
+- ~~`Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.~~
+  **Done** (`d123cac`) — verified ignored, with a `.gitignore` comment saying
+  why: the files are bound to one target's System ID, so they are useless on
+  any other machine.
 
 
 
