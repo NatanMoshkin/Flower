@@ -8,6 +8,17 @@ archived entry says what superseded it.
 from mn_render import H, Links, Note, P, ltr, page
 
 LIVE = [
+    ("http://127.0.0.1:8765/docs/viewer.html?doc=../docs/plans/log-csv-file.md",
+     "PLAN: CSV log file on the PLC", "תכנית: קובץ לוג CSV בבקר",
+     "Implementation plan for writing the log to a CSV file on the panel itself, "
+     "so a record survives a power cycle with no laptop attached. "
+     "NOT BUILT YET — this describes what is intended, not how the machine behaves. "
+     "Needs the local server, like the CLAUDE.md link below.",
+     "תכנית יישום לכתיבת הלוג לקובץ CSV בבקר עצמו, "
+     "כדי שהתיעוד ישרוד כיבוי חשמל ללא מחשב מחובר. "
+     "טרם יושם — זה מתאר את המתכנן, לא את ההתנהגות הנוכחית. "
+     "דורש את השרת המקומי, כמו הקישור ל-CLAUDE.md מתחת.",
+     "data", "plan — not built", "תכנית — טרם יושם"),
     ("http://127.0.0.1:8765/docs/viewer.html?doc=../CLAUDE.md",
      "CLAUDE.md — decisions &amp; open work", "CLAUDE.md — החלטות ועבודה פתוחה",
      "The live source of truth: the TODO list grouped by state, every "

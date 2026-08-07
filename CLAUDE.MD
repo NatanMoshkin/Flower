@@ -5,6 +5,23 @@
 
 ### Active — nothing is blocking these
 
+- **Durable CSV log on the PLC itself.** Planned 2026-08-07, **not started**.
+  Full plan: **[`docs/plans/log-csv-file.md`](docs/plans/log-csv-file.md)** —
+  also the first link on `docs/index.html`. Read it before touching `GVL_Log`.
+
+  The panel log is RAM only, so a fault overnight with no laptop attached
+  leaves nothing to read. Four decisions are already taken: daily file with a
+  size cap as a guard, INFO and above only (never DBG, which would bury the
+  file in 1 Hz robot keep-alives and burn Compact Flash), a total-MB cap that
+  deletes oldest first, and **a throwaway spike on the real CP6606 before any
+  of it gets built** — there is no file I/O anywhere in this PLC today and no
+  prior art for a WinCE path in either repo, and the Python bridge died of
+  exactly that kind of unverified target assumption.
+
+  **Merge this branch to `master` first** — see the item below; the plan
+  explains why that order is the lower-risk one and why a fresh
+  `feat/plc-csv-log` off an updated `master` is the right base.
+
 - **Commit the robot's real `src2.lua`.** **Verified 2026-08-07:** the copy in
   `167_01_Saad_Flower/Robot/167-01-Saad/src2.lua` contains **zero** `CMD:` or
   `STATE:` strings, so it is still the pre-2026-07-28 revision whose generic
