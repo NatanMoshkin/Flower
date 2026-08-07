@@ -47,8 +47,12 @@ EXPECTED = {
     # stCfg.* rows -- AutoMain is embedded as a frame in Main and declares
     # stCfg, but GVL_HMI is reached globally.
     "Auto Mode":                ("VisuFbCheckbox",   "GVL_HMI.bAutoMode",        M_BOOLVAR),
-    "No sensors (timed steps)": ("VisuFbCheckbox",   "stCfg.bNoSensors",         M_BOOLVAR),
-    "Bypass plate sensors":     ("VisuFbCheckbox",   "stCfg.bBypassPlateSensors", M_BOOLVAR),
+    # The two bench checkboxes and all seven timer rows MOVED to AutoConfig on
+    # 2026-08-06 (TODO #1): AutoMain is embedded as a frame in Main, so tuning
+    # controls were sitting on the home screen where an operator running bulbs
+    # has no reason to see them. They are checked by validate_autoconfig.py now.
+    # Auto Mode deliberately stayed -- it is a machine MODE, not a tuning value,
+    # and it is no longer part of stCfg at all.
 }
 
 problems: list[str] = []

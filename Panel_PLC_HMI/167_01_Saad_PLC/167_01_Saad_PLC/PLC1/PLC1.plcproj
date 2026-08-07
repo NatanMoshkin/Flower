@@ -150,6 +150,10 @@
       <SubType>Code</SubType>
       <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
     </Compile>
+    <Compile Include="VISU\AutoConfig.TcVIS">
+      <SubType>Code</SubType>
+      <DependentUpon>VISU\VisualizationManager.TcVMO</DependentUpon>
+    </Compile>
     <Compile Include="VISU\VisualizationManager.TcVMO">
       <SubType>Code</SubType>
     </Compile>

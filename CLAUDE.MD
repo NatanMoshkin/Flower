@@ -3,10 +3,47 @@
 ## TODO:
 
 _____________________________________________________________________________
-1. AutoMain VISU (panel HMI screen):
-  - copy the screen and name It to AutoConfig
-  - create navigation from Main and back
-  - AutoConfig will take all stCfg
+1. ~~AutoMain VISU (panel HMI screen)~~ **DONE 2026-08-06, NOT YET COMPILED.**
+  New `AutoConfig.TcVIS` (18 elements) reached from Main, with a Back button.
+  AutoMain drops from 24 elements to **8** -- step/error text, ENABLE AUTO /
+  START / STOP / RESET, and Auto Mode. Built by
+  `scripts/build_autoconfig_page.py` + `finish_autoconfig_page.py`, validated by
+  the new `scripts/validate_autoconfig.py`.
+
+  **The bindings had to change FORM, not just page.** AutoMain is embedded as a
+  frame in Main and declares `stCfg : ST_HmiMasterAutoCfg`, so its controls bound
+  to `stCfg.tDwellPushMs`. AutoConfig is *navigated to*, and a navigated page
+  receives no interface parameters -- so all 16 moved controls are retargeted to
+  absolute `GVL_HmiPersistent.stMasterAutoCfg.*`. Left relative they would have
+  bound to nothing and read zero while looking perfectly fine. That is the one
+  check `validate_autoconfig.py` exists for.
+
+  **Auto Mode deliberately did NOT move**, even though it looks like config: it
+  is a machine *mode*, not a tuning value, and after item 2 it is not part of
+  `stCfg` at all.
+
+  Main's nav row went 4 buttons -> 5, re-spaced to 150 px at 153 pitch from x=20.
+
+  **Three mistakes worth recording, all mine, all caught by checking rather than
+  by reading:**
+
+  - **TextIDs 1200/1201 were NOT free** -- they belong to the Logs page ("Log"
+    and "Enabled"), and registering the new labels there silently overwrote two
+    live captions. Restored, and the new labels moved to 1302/1303, verified
+    absent first. The whole 1200-1267 range is Logs. **Check before allocating a
+    TextID** -- the same discipline that was applied to 1106 and skipped here.
+  - **The hand-picked GUID namespace `-1002xxxxxxxx` was already the Robot
+    page's**, so Main's new nav button collided with a Robot element. Exactly the
+    "two scripts counting 1,2,3 into one space" failure the VISU skill warns
+    about. Moved to `-1006...`, verified absent across all 8 pages first.
+    `validate_visu.py` is what caught it.
+  - `fix_visu_object_guids.py` **must** be run on the clone, and it is what
+    re-issued AutoConfig's ~60 generated-object GUIDs. A render check would not
+    have caught leaving them: the page displays perfectly and the *build* fails,
+    naming AutoMain rather than the clone.
+
+  Registered in `PLC1.plcproj` with its `<DependentUpon>` -- without that the
+  page renders in the IDE and does not exist to the build.
 2. ~~ST_HmiMasterAutoCfg~~ **DONE 2026-08-06, NOT YET COMPILED.**
   - ~~Remove bContinuous~~ Gone from `ST_HmiMasterAutoCfg`, and with it **15 dead
     writes** in `FB_MasterAutoCycle` plus MAIN's force-clear. It was written 15

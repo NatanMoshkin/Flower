@@ -646,6 +646,21 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"1100"</v>
+              <v n="TextDefault">"Auto Config"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1302"</v>
+              <v n="TextDefault">"Back"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
+              <v n="TextID">"1303"</v>
+              <v n="TextDefault">"Auto Config"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"550"</v>
               <v n="TextDefault">"Pistons Manual"</v>
               <l n="LanguageTexts" t="ArrayList" />
@@ -677,9 +692,9 @@
             </o>
           </l>
           <l n="Languages" t="ArrayList" />
-          <v n="GuidInit">{a6002d15-623e-4faf-8ae5-e9be102d2cf2}</v>
-          <v n="GuidReInit">{0deb8ed5-e012-44f0-a003-854d03a1c3cf}</v>
-          <v n="GuidExitX">{3b4504fe-a0b4-4ace-8b97-a53cc8ba5169}</v>
+          <v n="GuidInit">{12ce45fc-afc3-43f3-a202-57b0092b979d}</v>
+          <v n="GuidReInit">{040e15ab-d960-498c-ae5d-f59215226061}</v>
+          <v n="GuidExitX">{1413715c-4c54-4929-b80f-cd740f673249}</v>
         </o>
       </Data>
       <TypeList>
