@@ -48,19 +48,19 @@ STRUCT
     // from a bench-testing flag.
     bBypassPlateSensors     : BOOL  := FALSE;
 
-    // While TRUE, IDLE immediately starts the next cycle (no START or
-    // robot CMD:1 edge needed). Uncheck to stop after the cycle returns
-    // to IDLE. Cleared by the FB on entry to ERR so a RESET does not
-    // instantly restart motion.
-    bContinuous             : BOOL  := FALSE;
-
-    // Global machine mode — single source of truth for every piston's mode.
-    // BOOL so the classic VISU HMI (boolean-only) binds a checkbox directly,
-    // matching the per-piston bMode convention. FALSE = Manual (operator jogs
-    // each piston; master cycle held in IDLE). TRUE = Automatic (MasterAutoCycle
-    // owns all six pistons). Enforced every scan in MAIN onto each piston's
-    // eMode AND bMode, so there is no per-piston double-control.
-    bAutoMode               : BOOL := FALSE;
+    // NOTE bAutoMode used to live here and does NOT any more (2026-08-06).
+    // It moved to GVL_HMI.bAutoMode -- plain VAR_GLOBAL, initialised TRUE -- so
+    // that every power-up comes back in Automatic instead of restoring whatever
+    // mode the operator happened to leave selected. Persisting it was the older
+    // decision (2026-07-27) and it had the property that a technician who
+    // switched to Manual to jog a piston found the machine still in Manual after
+    // a reboot; the machine's normal condition is Automatic, so that is now the
+    // condition it boots into. It is safe because arming is separate: eStep still
+    // defaults to NOT_HOMED, so nothing moves until someone presses ENABLE AUTO.
+    //
+    // This struct is now purely operator-tunable CONFIG -- timers and the two
+    // bench flags -- which is also what makes it a coherent unit to put on its
+    // own AutoConfig page.
 END_STRUCT
 END_TYPE
 ]]></Declaration>

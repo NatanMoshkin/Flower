@@ -120,7 +120,6 @@ END_VAR
    The timers, bNoSensors and bBypassPlateSensors are untouched too — they
    are operator config and persisting them is the point of the flush.
    ========================================== *)
-GVL_HmiPersistent.stMasterAutoCfg.bContinuous := FALSE;
 
 (* ==========================================
    0a. LOG WALL CLOCK
@@ -226,7 +225,7 @@ END_IF
 
 fbMasterAutoCycle(
     bExtStartPulse := bRobotStartPulse OR bComboStartPulse,
-    bMachineAuto   := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode,
+    bMachineAuto   := GVL_HMI.bAutoMode,
     stHmi          := GVL_HMI.stMasterAuto,
     stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
     stRobot        := GVL_Robot.stRobot
@@ -239,7 +238,7 @@ fbMasterAutoCycle(
    bMode<->eMode, so forcing only one would let a stray toggle propagate for a
    scan; forcing both closes that gap. In Automatic the master cycle owns all
    six pistons; in Manual the operator jogs them and the cycle is held in IDLE. *)
-bMachineAuto := GVL_HmiPersistent.stMasterAutoCfg.bAutoMode;
+bMachineAuto := GVL_HMI.bAutoMode;
 eMachineMode := SEL(bMachineAuto, E_ControlMode.Manual, E_ControlMode.Automatic);
 GVL_HMI.stSepSol1.eMode  := eMachineMode;  GVL_HMI.stSepSol1.bMode  := bMachineAuto;
 GVL_HMI.stPushSol1.eMode := eMachineMode;  GVL_HMI.stPushSol1.bMode := bMachineAuto;
@@ -514,7 +513,7 @@ fbGripSolR(
    sentinel while bAutoMode=FALSE so the robot knows the panel is out of
    auto and won't issue CMD:1.
    ========================================== *)
-IF NOT GVL_HmiPersistent.stMasterAutoCfg.bAutoMode THEN
+IF NOT GVL_HMI.bAutoMode THEN
     GVL_Robot.stParams.nStateOut := INT#30;   (* MANUAL *)
 ELSE
     GVL_Robot.stParams.nStateOut := TO_INT(GVL_HMI.stMasterAuto.eStep);

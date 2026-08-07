@@ -100,7 +100,12 @@ def run(net_id):
     started = time.strftime("%Y-%m-%d %H:%M:%S")
     with Plc(net_id) as p:
         # ---------------- snapshot everything we touch ------------------
-        AUTO = "GVL_HmiPersistent.stMasterAutoCfg.bAutoMode"
+        # Volatile GVL_HMI since 2026-08-06, not the persistent cfg struct.
+        # It no longer survives a power cycle -- the panel always boots
+        # Automatic -- but this procedure still saves and restores it, because
+        # it is the machine mode and leaving it flipped would surprise the next
+        # person at the panel.
+        AUTO = "GVL_HMI.bAutoMode"
         PLATE_TMO = "GVL_HmiPersistent.stMasterAutoCfg.tPlateWaitTimeoutMs"
         TCP = "GVL_Robot.bTcpEnable"
         NOSENS = "GVL_HmiPersistent.stMasterAutoCfg.bNoSensors"

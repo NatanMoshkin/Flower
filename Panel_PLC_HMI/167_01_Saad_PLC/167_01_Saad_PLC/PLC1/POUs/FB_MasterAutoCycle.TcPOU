@@ -29,7 +29,7 @@
 
    So the machine cannot move after a power cycle, after Manual, or after a
    STOP until an operator presses START; and once armed, only the robot decides
-   when a bulb runs. stCfg.bContinuous is no longer consulted at all (MAIN also
+   when a bulb runs. bContinuous is gone entirely (2026-08-06) -- it was written
    force-clears it every scan) -- it was the last path that could start motion
    with nothing external gating it.
 
@@ -169,7 +169,7 @@ VAR_INPUT
        consumed separately below via their own R_TRIGs. *)
     bExtStartPulse        : BOOL;
 
-    (* Global machine-mode gate (stCfg.bAutoMode). While FALSE the cycle is
+    (* Global machine-mode gate (GVL_HMI.bAutoMode). While FALSE the cycle is
        held in IDLE: every start trigger is ignored and a running cycle is
        aborted back to IDLE. This is the hard interlock that stops the
        operator or a stray robot edge starting motion while the machine is
@@ -409,7 +409,6 @@ IF fbTrigStop.Q AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
     stHmi.iErrorCode := 0;
     stHmi.sErrorText := '';
     stHmi.eStep      := E_MasterAutoStep.NOT_HOMED;
-    stCfg.bContinuous := FALSE;
 END_IF;
 
 IF fbTrigReset.Q AND stHmi.eStep = E_MasterAutoStep.ERR THEN
@@ -443,7 +442,6 @@ END_IF;
    Manual->Auto edge detection is needed — the state is simply already
    NOT_HOMED, and the operator's START homes it. *)
 IF NOT bMachineAuto AND stHmi.eStep <> E_MasterAutoStep.NOT_HOMED AND stHmi.eStep <> E_MasterAutoStep.ERR THEN
-    stCfg.bContinuous := FALSE;
     stHmi.eStep       := E_MasterAutoStep.NOT_HOMED;
 END_IF;
 
@@ -524,7 +522,7 @@ CASE stHmi.eStep OF
 
         (* ONLY THE ROBOT STARTS A BULB CYCLE.
 
-           fbTrigStart.Q (operator START) and stCfg.bContinuous were both
+           fbTrigStart.Q (operator START) and the retired stCfg.bContinuous were
            removed from this condition. That is the point of the whole arming
            model: START means "home and arm", and Continuous would re-arm with
            nothing external gating it at all. What is left is the robot's CMD:1
@@ -617,7 +615,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 6;
             stHmi.sErrorText := 'INIT_PUSH_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.INIT_SEP_RETRACTING:
@@ -633,7 +630,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 7;
             stHmi.sErrorText := 'INIT_SEP_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.INIT_GRIP_RETRACTING:
@@ -660,7 +656,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 8;
             stHmi.sErrorText := 'INIT_GRIP_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.CHECK_PLATE:
@@ -689,7 +684,6 @@ CASE stHmi.eStep OF
                 stHmi.iErrorCode := 9;
                 stHmi.sErrorText := 'CHECK_PLATE timed out (plate never arrived)';
                 stHmi.eStep := E_MasterAutoStep.ERR;
-                stCfg.bContinuous := FALSE;
             END_IF;
         END_IF;
 
@@ -706,7 +700,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 10;
             stHmi.sErrorText := 'GRIP_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.SEP_EXTENDING:
@@ -726,7 +719,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 1;
             stHmi.sErrorText := 'SEP_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.PUSH_EXTENDING:
@@ -745,7 +737,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 3;
             stHmi.sErrorText := 'PUSH_EXTENDING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.DWELL_PUSH:
@@ -780,7 +771,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 4;
             stHmi.sErrorText := 'PUSH_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.PUSH_RETRACTED_DWELL:
@@ -812,7 +802,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 5;
             stHmi.sErrorText := 'SEP_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.SEP_RETRACTED_DWELL:
@@ -836,14 +825,13 @@ CASE stHmi.eStep OF
 
         IF bAllGripRetracted OR fbSim_GripRet.Q OR (stCfg.bNoSensors AND tonStep.Q) THEN
             stHmi.nCyclesCompleted := stHmi.nCyclesCompleted + 1;
-            (* Back to IDLE. If bContinuous is still checked, IDLE re-arms
-               the next cycle by itself on the next scan. *)
+            (* Back to IDLE -- still ARMED, so the robot's next CMD:1 (or an
+               operator START) runs the next bulb. Nothing re-arms by itself. *)
             stHmi.eStep := E_MasterAutoStep.IDLE;
         ELSIF tonStep.Q THEN
             stHmi.iErrorCode := 11;
             stHmi.sErrorText := 'GRIP_RETRACTING timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     (* ---- FAULT-RECOVERY RETRACT CHAIN (2026-08-05) ------------------
@@ -865,7 +853,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 12;
             stHmi.sErrorText := 'RECOVER push retract timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.RECOVER_SEP_RETR:
@@ -880,7 +867,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 13;
             stHmi.sErrorText := 'RECOVER sep retract timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.RECOVER_GRIP_RETR:
@@ -895,7 +881,6 @@ CASE stHmi.eStep OF
             stHmi.iErrorCode := 14;
             stHmi.sErrorText := 'RECOVER grip retract timed out';
             stHmi.eStep := E_MasterAutoStep.ERR;
-            stCfg.bContinuous := FALSE;
         END_IF;
 
     E_MasterAutoStep.ERR:

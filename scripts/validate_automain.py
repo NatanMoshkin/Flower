@@ -41,7 +41,12 @@ EXPECTED = {
     # cycle-start condition), so a control that visibly reverted when ticked was
     # worse than no control. This validator kept expecting it and failed for
     # nine days on a change that was correct.
-    "Auto Mode":                ("VisuFbCheckbox",   "stCfg.bAutoMode",          M_BOOLVAR),
+    # bAutoMode moved OUT of ST_HmiMasterAutoCfg on 2026-08-06 into plain
+    # GVL_HMI (volatile, initialised TRUE) so every boot comes up Automatic.
+    # The binding is therefore ABSOLUTE now, not interface-relative like the
+    # stCfg.* rows -- AutoMain is embedded as a frame in Main and declares
+    # stCfg, but GVL_HMI is reached globally.
+    "Auto Mode":                ("VisuFbCheckbox",   "GVL_HMI.bAutoMode",        M_BOOLVAR),
     "No sensors (timed steps)": ("VisuFbCheckbox",   "stCfg.bNoSensors",         M_BOOLVAR),
     "Bypass plate sensors":     ("VisuFbCheckbox",   "stCfg.bBypassPlateSensors", M_BOOLVAR),
 }

@@ -12,8 +12,11 @@ all bound to absolute globals:
   - START button     GVL_HMI.stMasterAuto.bStart     (VisuFbElemButton, tap)
   - STOP  button     GVL_HMI.stMasterAuto.bStop      (VisuFbElemButton, tap)
   - RESET button     GVL_HMI.stMasterAuto.bReset     (VisuFbElemButton, tap)
-  - Continuous chk   GVL_HmiPersistent.stMasterAutoCfg.bContinuous (VisuFbCheckbox)
-  - Auto Mode chk    GVL_HmiPersistent.stMasterAutoCfg.bAutoMode   (VisuFbCheckbox)
+  - (Continuous chk  RETIRED. The control was deleted 2026-07-27 and the field
+                     itself deleted from ST_HmiMasterAutoCfg 2026-08-06. Do NOT
+                     re-add it if this script is ever re-run.)
+  - Auto Mode chk    GVL_HMI.bAutoMode   (VisuFbCheckbox; moved out of the cfg
+                     struct 2026-08-06, so this binding is ABSOLUTE not stCfg-relative)
 
 Run against the pristine committed stub (empty VisualElementList); the script
 does not know how to de-dupe a prior injection, so restore first:

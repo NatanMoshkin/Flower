@@ -36,6 +36,30 @@ VAR_GLOBAL
     // Runtime state for the master (multi-piston + robot-coordinated) auto
     // sequence. Config for it lives in GVL_HmiPersistent.stMasterAutoCfg.
     stMasterAuto   : ST_HmiMasterAuto := (Name := 'MasterAuto');
+
+    // Global machine mode — the single source of truth for every piston's mode.
+    // FALSE = Manual (operator jogs each piston; the master cycle is held in
+    // NOT_HOMED). TRUE = Automatic (FB_MasterAutoCycle owns all eight pistons).
+    // MAIN enforces it every scan onto each piston's eMode AND bMode, so there
+    // is no per-piston double-control -- "no option to double control".
+    //
+    // DELIBERATELY NOT PERSISTENT, and deliberately not in stMasterAutoCfg
+    // (moved out of it 2026-08-06). This GVL is plain VAR_GLOBAL, so the
+    // initialiser below is re-applied on every cold boot and every download:
+    // the machine always comes up in Automatic, which is its normal condition,
+    // rather than restoring whatever mode was last selected.
+    //
+    // Safe because arming is a separate axis: stMasterAuto.eStep defaults to
+    // NOT_HOMED, which reports STATE:40 -- the robot reads that as "wait" -- so
+    // nothing can move until an operator presses ENABLE AUTO. Booting Automatic
+    // decides WHO may drive the pistons, not WHETHER they may move.
+    //
+    // Consequence worth knowing: a technician who selects Manual to jog a piston
+    // and then power-cycles comes back in Automatic, where the PB jogs are off by
+    // design. Re-select Manual after a reboot.
+    // BOOL rather than E_ControlMode so the classic VISU binds a checkbox
+    // directly, matching the per-piston bMode convention.
+    bAutoMode      : BOOL := TRUE;
 END_VAR
 ]]></Declaration>
   </GVL>

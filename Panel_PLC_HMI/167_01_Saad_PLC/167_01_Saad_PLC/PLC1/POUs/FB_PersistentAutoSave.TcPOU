@@ -86,7 +86,7 @@ END_VAR]]></Declaration>
    restored from bootdata. Baselining from the declared defaults instead
    would make every start look dirty and fire a pointless write.
    MAIN's cold-boot block runs before this FB is called, so the cleared
-   bAutoMode / bContinuous are part of the baseline and do not count as an
+   The remaining cfg flags are part of the baseline and do not count as an
    edit either.
    ========================================== *)
 IF NOT bInit THEN

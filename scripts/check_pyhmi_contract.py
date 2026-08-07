@@ -107,6 +107,11 @@ def pyhmi_symbols():
     read += [f"{rb.ROBOT_ROOT}.{f.name}" for f in rb.ROBOT_READ_FIELDS]
     read += [rb.robot_param_symbol(f.name) for f in rb.ROBOT_STATE_FIELDS]
     read += [rb.robot_param_symbol(f.name) for f in rb.ROBOT_PARAM_FIELDS]
+    # bAutoMode is a GVL_HMI-level symbol since 2026-08-06, not a cfg struct
+    # member, so dropping out of MASTER_AUTO_CFG_FIELDS also dropped it out of
+    # this check. state.py still polls it, so that was a silent coverage hole:
+    # a typo in the new path would resolve nowhere and nothing would say so.
+    read += [ma.AUTO_MODE_SYMBOL]
     read += [ma.PLATE_SEN_L_SYMBOL, ma.PLATE_SEN_R_SYMBOL]
     read += [pl.LOG_ENABLED_SYMBOL, pl.LOG_DEBUG_SYMBOL, pl.LOG_WRITE_IDX_SYMBOL]
     for p in pi.PISTONS:

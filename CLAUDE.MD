@@ -2,6 +2,55 @@
 
 ## TODO:
 
+_____________________________________________________________________________
+1. AutoMain VISU (panel HMI screen):
+  - copy the screen and name It to AutoConfig
+  - create navigation from Main and back
+  - AutoConfig will take all stCfg
+2. ~~ST_HmiMasterAutoCfg~~ **DONE 2026-08-06, NOT YET COMPILED.**
+  - ~~Remove bContinuous~~ Gone from `ST_HmiMasterAutoCfg`, and with it **15 dead
+    writes** in `FB_MasterAutoCycle` plus MAIN's force-clear. It was written 15
+    times and read **zero** times, so no code path could start anything with it.
+    **The per-piston `ST_HmiPistonAutoCfg.bContinuous` is a DIFFERENT field, is
+    genuinely read by `FB_PistonAutoCycle` (line 170) to decide whether to re-arm
+    after its retract dwell, and STAYS.** Two same-named fields in two structs is
+    a real trap -- a FlowerPyHmi test now asserts the piston one survives, so a
+    future cleanup cannot take it by association.
+  - ~~bAutoMode default TRUE on startup~~ **Moved out of the struct** into plain
+    `GVL_HMI.bAutoMode := TRUE` (volatile). Since `GVL_HMI` is plain
+    `VAR_GLOBAL`, that initialiser is re-applied on every cold boot and download,
+    so the panel **always comes up in Automatic** instead of restoring whatever
+    mode was last selected. Chosen over merely defaulting the persistent field
+    TRUE, which would only have applied to a fresh download -- after
+    commissioning the stored value wins, the same trap as `sRobotHost`.
+
+    **Safe because arming is a separate axis:** `eStep` still defaults to
+    `NOT_HOMED`, which reports `STATE:40` and the robot reads as "wait", so
+    nothing moves until an operator presses ENABLE AUTO. Booting Automatic
+    decides *who may drive* the pistons, not *whether they may move*.
+
+    **Consequence to know:** a technician who selects Manual to jog a piston and
+    then power-cycles comes back in **Automatic**, where the PB jogs are off by
+    design -- so a PB2 press will do nothing until Manual is re-selected.
+
+  Only **3 real code reads** existed (`MAIN` 229/242/517); everything else was
+  comment. The `AutoMain` checkbox binding became **absolute**
+  (`GVL_HMI.bAutoMode`) rather than `stCfg`-relative, and `validate_automain`
+  expects that. FlowerPyHmi keeps its API surface unchanged on purpose --
+  `data-master-cfg="bAutoMode"` and `POST /api/master_auto/config/bAutoMode`
+  still work, because to an operator it is the same machine-mode checkbox; only
+  `_read_master_auto_cfg` and `_ma_config` know the symbol moved.
+
+  Side finding: dropping `bAutoMode` out of `MASTER_AUTO_CFG_FIELDS` also dropped
+  it out of `check_pyhmi_contract.py`, since that mirrors the field lists -- a
+  silent coverage hole where a typo in the new path would have resolved nowhere
+  with nothing to say so. Now covered explicitly: **253/253**.
+
+  This also leaves `ST_HmiMasterAutoCfg` as **purely operator-tunable config** --
+  7 timers + 2 bench flags, no machine state -- which is what makes it a coherent
+  unit to put on its own AutoConfig page for item 1.
+
+______________________________________________________________________________
 - ~~**FlowerPyHmi Manual page: move the per-piston Auto controls to their own
   page, and add a Bypass-plate-sensors checkbox.**~~ **BOTH DONE 2026-08-05**
   (FlowerPyHmi `137d154`, `27f9215`). Option **(b)** was chosen — moved to

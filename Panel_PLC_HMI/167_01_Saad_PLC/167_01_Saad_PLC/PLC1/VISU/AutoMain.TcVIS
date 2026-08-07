@@ -1408,7 +1408,7 @@
                     </o>
                     <o>
                       <v n="Id">743958181L</v>
-                      <v n="Value">"stCfg.bAutoMode"</v>
+                      <v n="Value">"GVL_HMI.bAutoMode"</v>
                     </o>
                     <o>
                       <v n="Id">2597686782L</v>

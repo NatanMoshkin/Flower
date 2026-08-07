@@ -75,7 +75,8 @@ def main():
     seen, bad = {}, []
     with Plc(a.net) as p:
         p._travel, p._since = {}, {}
-        AUTO = "GVL_HmiPersistent.stMasterAutoCfg.bAutoMode"
+        # Volatile GVL_HMI since 2026-08-06, not the persistent cfg struct.
+        AUTO = "GVL_HMI.bAutoMode"
         TCP = "GVL_Robot.bTcpEnable"
         p.save(AUTO, BOOL)
         p.save(TCP, BOOL)
