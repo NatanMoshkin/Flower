@@ -45,11 +45,31 @@
 
 ---
 
-- **Remove `stBridgeCfg` / `ST_LogBridgeCfg`** — ready to do, deferred by choice
-  rather than blocked. It is inert, but it makes a shipped FlowerPyHmi page render
-  a visibly blank "Log bridge config" block. Full recipe, ordering constraint and
-  the reason `check_pyhmi_contract.py` will *not* notice it either way are under
-  **Out of scope (Future)** at the bottom of this file.
+- ~~**Remove `stBridgeCfg` / `ST_LogBridgeCfg`**~~ **DONE 2026-08-07** —
+  FlowerPyHmi `21e747c`, PLC `6b88015`. Removed in that order, which was the point:
+  deleting the symbol first would have made `read_many` log *"dropping N
+  unresolvable symbol(s)"*, and that reads like a real fault.
+
+  **`check_pyhmi_contract.py` reported 253/253 before AND after**, exactly as the
+  recipe predicted — it mirrors `_cycle_symbols()` and these symbols were never in
+  it, since they had their own `read_many`. That is the documented blind spot, not
+  a pass. A cross-repo grep is what confirmed the removal.
+
+  Two traps that a name-based cleanup would have walked into:
+
+  - **`.bridge-cfg` is not bridge-specific.** `settings.html` uses it for two
+    unrelated definition lists, so deleting the CSS rule on the strength of its
+    name would have broken an unrelated page. Only `.bridge-cfg-title` and
+    `.ro-tag` became unused. Verified after the fact by confirming both settings
+    lists still compute `display: grid`.
+  - **`PLCTYPE_UDINT`** in `plc_log.py` was orphaned *by* this change;
+    **`PLCTYPE_BOOL`** was already unused before it. Both dropped, the distinction
+    recorded.
+
+  `docs/archive/configuration.html` and `archive/open-issues.html` still list it as
+  pending. Left alone — dated snapshots, same convention as the validation records.
+
+  **NOT YET COMPILED.**
 
 
 ### Blocked — waiting on the machine or on an operator decision
@@ -1994,7 +2014,9 @@ second source of truth that nothing keeps in step.
   no POU, no VISU page, and `scripts/check_pyhmi_contract.py` still resolves
   229/229 FlowerPyHmi symbols without them (231/231 since 2026-08-05).
 
-- **Remove `stBridgeCfg` / `ST_LogBridgeCfg` — spans both repos.**
+- ~~**Remove `stBridgeCfg` / `ST_LogBridgeCfg` — spans both repos.**~~ **DONE
+  2026-08-07.** The recipe below is kept because its ordering argument and its
+  warning about `check_pyhmi_contract.py` both proved exactly right in practice.
   `GVL_Log.stBridgeCfg` (log dir, level, retention days/MB, poll ms) existed
   *solely* so the retired `RobotBridge/log_pump.py` could publish its own
   logger configuration for an HMI to display. With the bridge retired
