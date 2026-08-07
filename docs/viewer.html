@@ -170,7 +170,13 @@
 <script>
 (function () {
   const REPO = 'Flower';
-  const REPO_ROOT_HINT = 'C:\\Users\\Natan.Moshkin\\source\\repos\\Flower';
+  // Deliberately NOT an absolute path. This used to hardcode
+  // C:\Users\...\repos\Flower, which stopped being where the repo lives, so the
+  // error messages below told the reader to cd somewhere that did not exist.
+  // serve-docs.ps1 resolves the repo root from its own location, so a relative
+  // instruction cannot go stale.
+  const SERVE_HINT = '.\\scripts\\serve-docs.bat';
+  const REPO_ROOT_HINT = '&lt;repo root&gt;';
 
   // ---- URL param ----
   const params = new URLSearchParams(location.search);
@@ -373,10 +379,12 @@
       title = 'Cannot fetch under file:// — a local HTTP server is needed.';
       bodyHtml = ''
         + '<p>Chromium and Firefox block <code>fetch()</code> for <code>file://</code> URLs.</p>'
-        + '<p><b>Fix:</b> run the docs server from the repo root, then open this page over HTTP.</p>'
-        + '<pre>' + REPO_ROOT_HINT + '\\scripts\\serve-docs.bat</pre>'
-        + '<p>or manually:</p>'
+        + '<p><b>Fix:</b> from the repo root, double-click or run:</p>'
+        + '<pre>' + SERVE_HINT + '</pre>'
+        + '<p>It serves the repo root on port 8765 and opens the index. Or manually:</p>'
         + '<pre>cd ' + REPO_ROOT_HINT + '\npython -m http.server 8765\n# then browse to  http://127.0.0.1:8765/docs/index.html</pre>'
+        + '<p>To read the project TODO / decision log:</p>'
+        + '<pre>http://127.0.0.1:8765/docs/viewer.html?doc=../CLAUDE.md</pre>'
         + '<p>You can also open the raw markdown:</p>'
         + '<ul>'
         + '  <li><a href="' + escapeAttr(docPath) + '">Open <code>' + escapeHtml(docPath) + '</code> (raw text)</a></li>'
@@ -388,6 +396,7 @@
         + '<p>The path <code>' + escapeHtml(docPath) + '</code> uses <code>..</code> to reach outside <code>docs/</code>, and the server refuses because it is above the served root.</p>'
         + '<p><b>Fix:</b> stop the current server (Ctrl+C) and restart it from the <b>repo root</b>:</p>'
         + '<pre>cd ' + REPO_ROOT_HINT + '\npython -m http.server 8765\n# then browse to  http://127.0.0.1:8765/docs/index.html\n#            NOT  http://127.0.0.1:8765/index.html</pre>'
+        + '<p>Or just run <code>' + SERVE_HINT + '</code>, which roots itself correctly.</p>'
         + '<ul>'
         + '  <li><a href="' + escapeAttr(docPath) + '">Try the raw file</a> — will 404 too if the server is still docs-rooted.</li>'
         + '  <li><a href="index.html">← Back to index</a></li>'

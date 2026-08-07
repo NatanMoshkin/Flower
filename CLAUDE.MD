@@ -2,7 +2,107 @@
 
 ## TODO:
 
-_____________________________________________________________________________
+### Active — nothing is blocking these
+
+- **Commit the robot's real `src2.lua`.** **Verified 2026-08-07:** the copy in
+  `167_01_Saad_Flower/Robot/167-01-Saad/src2.lua` contains **zero** `CMD:` or
+  `STATE:` strings, so it is still the pre-2026-07-28 revision whose generic
+  `NAME:VALUE` branch swallows `STATE:0` and answers `OK: SET STATE`. The command
+  channel is one-way dead against what is in git. The machine runs a newer,
+  **uncommitted** revision that does emit `CMD:1`.
+
+  This is the only place a real, working artefact exists nowhere in version
+  control. Everything on the PLC side of the protocol — `ParseCmd`, the
+  level-consume in `MAIN`, `STATE:<n>` — is committed and tested against a robot
+  revision nobody can check out. `scripts/mock_robot/` and
+  `RobotBridge/Client_working_example/dummy_server.py` implement the contract
+  correctly and are the reference, but they are not what runs the cell.
+
+- **Verify TcXaeShell 4024 on the panel can open 4026-saved files.** CLAUDE.md has
+  said "confirm early, not at merge time" since 2026-08-04 and it is still
+  unconfirmed, while the exposure has grown: **26 of 37 PLC source files now carry
+  a `3.1.4026.x` `ProductVersion`** (28 of them already on `master`, so this is
+  inherited rather than introduced by the current branch). The 11 still on the
+  panel's `3.1.4024.16` are the files edited by script — `FB_MasterAutoCycle`,
+  `MAIN`, `PRG_IoMap` and all eight `.TcVIS` pages — because those edits preserve
+  the stamp byte-wise.
+
+  If 4024 refuses a 4026-saved file, it is discovered at panel-deployment time,
+  which is the worst moment. One panel-side open-and-build settles it.
+
+- **Merge this branch to `master`.** `feat/err-manual-jog-and-io-docs` is **27
+  commits** ahead. The hazard is known and specific: the four bench-config files
+  (`.sln`, `.tsproj`, `PLC1.plcproj`, `VisualizationManager.TcVMO`) are
+  permanently modified in the working tree for Local + TC 4026 and **must not go
+  with it**. Note `PLC1.plcproj` is the awkward one — it is both a bench file and
+  where new VISU pages must be registered, so it needs hunk-level care every time
+  (done that way for `AutoConfig` in `e7859c7`).
+
+- **Remove `stBridgeCfg` / `ST_LogBridgeCfg`** — ready to do, deferred by choice
+  rather than blocked. It is inert, but it makes a shipped FlowerPyHmi page render
+  a visibly blank "Log bridge config" block. Full recipe, ordering constraint and
+  the reason `check_pyhmi_contract.py` will *not* notice it either way are under
+  **Out of scope (Future)** at the bottom of this file.
+
+### Blocked — waiting on the machine or on an operator decision
+
+- **`FLD6`: the movement-timeout paths have never been exercised on any panel.**
+  Every bench run so far has had `bNoSensors` set, and with it the **twelve**
+  movement states advance on `tStepTimeoutMs` instead of on sensors — so error
+  codes 1/3/4/5/6/7/8/10/11/12/13/14 are all unreachable. Needs one bench run with
+  the flag clear and a sensor deliberately withheld.
+
+  **Sharper since 2026-08-06:** `bNoSensors` and `bBypassPlateSensors` are
+  `PERSISTENT` and survive a power cycle, while `bAutoMode` no longer does. So a
+  restart now brings the panel back in **Automatic with both bench flags still
+  set** — one less thing that resets itself. `scripts/pb_test` normalises both at
+  entry and reports what it normalised from, which is how 14 false failures got
+  diagnosed on 2026-08-05; do not read a red `pb_test` as a PLC fault before
+  checking the persisted config.
+
+- **Reassign LED1 / LED2 to functional statuses.** Partly done 2026-07-29 — LED3
+  already blinks "press me to arm" in `NOT_HOMED`. LED1 and LED2 are still dumb
+  press mirrors; the remaining candidates are LED2 = error latched and LED1 = TCP
+  connected. Each is a one-line change in `MAIN`'s status-lamp section. Deferred
+  until operator preference is known — this is a question, not a task.
+
+- **An acknowledgement gate on the robot's `CMD:2`** — **not built**, and only
+  worth building if operator-paced fault recovery is wanted in production. Today
+  `ERR` is transient: the robot answers `STATE:99` with `CMD:2` within about a
+  second, so the fault clears before anyone reaches the panel. What actually holds
+  a fault open is switching to **Manual**, where `nStateOut` reports `MANUAL (30)`
+  and the Manual re-park deliberately excludes `ERR`.
+
+- **Plate sensor L/R are swapped** between the field IO list and `PRG_IoMap`
+  (sheet: R on `dIn[21]`, L on `dIn[22]`; code: the reverse). Invisible while
+  `bPlateOk` is an OR, but the `L`/`R` lamps on `Main.TcVIS` are mislabelled.
+  Needs someone at the machine to say which physical side is which.
+
+### Standing constraints — not tasks, but read before committing
+
+- **Solution target is Local + TC 4026 for bench development** (no panel
+  needed). Lives in the working tree across four files and **must never be
+  merged back**: `167_01_Saad_PLC.sln` (VS 17.10, real `TwinCAT OS (x64)`
+  build configs), `167_01_Saad_PLC.tsproj` (`TcVersion` 4026.25,
+  `TargetNetId` replaced by `Target64Bit="true"`, EtherCAT device
+  `Disabled="true"`), `PLC1.plcproj` (`ProgramVersion` 4026.25), and
+  `VisualizationManager.TcVMO` (hotkey `DevId`).
+
+  **The churn does not stop at those four.** Every `.TcPOU` / `.TcDUT` saved
+  by the 4026 IDE gets its `ProductVersion` attribute rewritten (the panel's
+  files are stamped `3.1.4024.16`) and its `LineIds` regenerated — inside the
+  same files as the logic, so it cannot be excluded by path. Check the
+  stamp before committing.
+
+  **Unverified risk:** that TcXaeShell 4024 on the panel will still open a
+  project the 4026 IDE has saved. Confirm early, not at merge time.
+
+### Done — kept for the reasoning, not for the status
+
+Struck-through items are complete. They are kept because most of them record *why*
+a decision went the way it did, or a trap that cost real time; the status line is
+the least useful part. Nothing here needs action.
+
 1. ~~AutoMain VISU (panel HMI screen)~~ **DONE 2026-08-06, NOT YET COMPILED.**
   New `AutoConfig.TcVIS` (18 elements) reached from Main, with a Back button.
   AutoMain drops from 24 elements to **8** -- step/error text, ENABLE AUTO /
@@ -44,6 +144,7 @@ _____________________________________________________________________________
 
   Registered in `PLC1.plcproj` with its `<DependentUpon>` -- without that the
   page renders in the IDE and does not exist to the build.
+
 2. ~~ST_HmiMasterAutoCfg~~ **DONE 2026-08-06, NOT YET COMPILED.**
   - ~~Remove bContinuous~~ Gone from `ST_HmiMasterAutoCfg`, and with it **15 dead
     writes** in `FB_MasterAutoCycle` plus MAIN's force-clear. It was written 15
@@ -88,6 +189,7 @@ _____________________________________________________________________________
   unit to put on its own AutoConfig page for item 1.
 
 ______________________________________________________________________________
+
 - ~~**FlowerPyHmi Manual page: move the per-piston Auto controls to their own
   page, and add a Bypass-plate-sensors checkbox.**~~ **BOTH DONE 2026-08-05**
   (FlowerPyHmi `137d154`, `27f9215`). Option **(b)** was chosen — moved to
@@ -330,6 +432,108 @@ _(active TODOs land here; deferred items go under "Out of scope
   **superseded**. Read `docs/auto-state-machine-current.html` for the machine as
   it runs; the other three are the decision record.
 
+- ~~The PB2+PB3 combo request can be silently lost~~ **FIXED 2026-08-05 by
+  removing `START` in `IDLE`.** `bComboStartPulse` is still a one-scan pulse and
+  `bExtStartPulse` is still consumed only by the `IDLE` branch — but nothing can
+  now move the machine out of `IDLE` except a genuine start, so the pulse cannot
+  land somewhere that ignores it. Fixed at the cause rather than by latching the
+  pulse, which was the other option considered.
+
+  Worth keeping in mind if a future change ever adds a way to leave `IDLE`
+  without a start: the pulse would become droppable again, and the latch would
+  then be the right fix.
+
+- ~~**`FB_MasterAutoCycle`'s header block is stale.**~~ **DONE 2026-08-05**
+  (`2fdb429`) — eight fixes, not six: sweeping for the AND pattern after
+  fixing `CHECK_PLATE` and the two `GRIP` states turned up
+  `INIT_GRIP_RETRACTING` with the same claim, which reading had missed.
+  Verified programmatically rather than by eye: every error code the code
+  assigns is now documented, every CASE branch has a header entry, and the
+  only surviving “AND of all” lines are the six Sep/Push states that really
+  do aggregate with AND. Comments only — no LineIds churn, `ProductVersion`
+  still `3.1.4024.16`. Original list kept below for the record.
+
+  <details><summary>the eight, as found</summary>
+
+  Found 2026-08-05 while re-checking this list. The RECOVER chain shipped that
+  day and the file's own documentation block was never updated with it, so the
+  header now contradicts the code below it. No logic changes; every item is a
+  comment.
+
+  | # | What the header says | What the code does |
+  |---|---|---|
+  | 1 | error-code table stops at **11** | assigns **12/13/14** at lines 796/811/826 |
+  | 2 | `ERR`: RESET "re-enters the **INIT** chain" | enters the **RECOVER** chain — actively wrong about the 2026-08-05 change |
+  | 3 | sequence listing has **no `RECOVER_*` states** | three of them, values 50/51/52 |
+  | 4 | sensorless covers "the **4** movement states", codes "**1/3/4/5**" | **12** states, codes **1/3/4/5/6/7/8/10/11/12/13/14** |
+  | 5 | `CHECK_PLATE` waits "`bPlateSenL` **AND** `bPlateSenR`" (header line 61) and "Both plate sensors must confirm TRUE" (branch comment) | guard is `bPlateOk`, an **OR** — the documented field deviation |
+  | 6 | `GRIP_EXTENDING` / `GRIP_RETRACTING` "wait **AND** of all" | also an OR, and the header does not flag it as a deviation |
+
+  Items 5 and 6 are the same defect that was corrected in FlowerPyHmi's
+  `main.html` on 2026-08-05 (it claimed both plate sensors were required); it
+  sits in the PLC source too. Item 2 is the one that would actively mislead
+  whoever debugs a failed recovery next, since it names the wrong chain.
+
+  Item 4's count is worth stating precisely, because a naive grep gets it wrong:
+  **thirteen** CASE branches mention `bNoSensors`, but `CHECK_PLATE`'s mention is
+  inside a comment explaining that it deliberately does **not** apply. Twelve
+  states actually carry the term.
+
+  </details>
+
+- ~~**`scripts/validate_automain.py` is stale**~~ — **DONE 2026-08-05**
+  (`6ab9718`). The `Continuous` expectation is gone (that checkbox was
+  deliberately deleted on 2026-07-27) and the validator now passes: 23 elements,
+  all direct children, identities unique. Also added the **fourth checkbox**,
+  `Bypass plate sensors`, which had been on the page since 2026-07-26 with no
+  expectation covering it — the same silent coverage hole that let the
+  `Continuous` row rot. Negative-tested by pointing the new row at a wrong symbol
+  and confirming it reports the mismatch instead of passing.
+
+- ~~**`FB_MasterAutoCycle`'s defensive `CASE ELSE` fails unsafe.**~~ **FIXED
+  2026-08-05**, verified in the source: the default branch is now
+  `ResetAllCommands(); stHmi.eStep := E_MasterAutoStep.NOT_HOMED;`. Kept for the
+  reasoning, which is why the fix matters. It used to assign
+  `stHmi.eStep := E_MasterAutoStep.IDLE` — wire value **0**, the one value that
+  makes the robot send `CMD:1` — reached with the pistons in unknown positions.
+  Reachable: `GVL_HMI` carries `TcHmiSymbol.AddSymbol` so `eStep` is ADS-writable,
+  and `WAIT_POS2 (2)` is a declared enumerator with no branch today. Should be
+  `NOT_HOMED`. Two lines, independent of everything else.
+
+- ~~Create branch for the next task~~ **Done 2026-08-04** —
+  `feat/err-manual-jog-and-io-docs`.
+
+- ~~check the current Push Buttons actions~~ **Done 2026-08-04.** Behaviour
+  was correct and matches the IO list; **four comments were not** and are
+  fixed: `MAIN`'s PB block (still described PB1 as a cycle-start bypass),
+  `MAIN` section 0 (still claimed power-up comes back in IDLE and a robot may
+  start a cycle — the exact hazard closed on 2026-07-29), `PRG_IoMap`'s PB
+  note, and `FB_MasterAutoCycle`'s Section 2 header. The **IO table in this
+  file was wrong for all six Sep/Push pistons** since `fd49d4f` and is now
+  rebuilt from `docs/167_01_SAAD_PinPush_IO_List.xlsx`.
+
+- ~~Operator recovery from a mid-cycle grip fault~~ **Settled 2026-08-05.**
+  The 2026-08-04 answer (PB jogs while latched in `ERR`) was **reversed** — no
+  manual moves in any Automatic state. What shipped instead is the dedicated
+  `RECOVER_*` chain: `ERR` → `RESET` (HMI, orange PB2, or robot `CMD:2`) →
+  `RECOVER_PUSH_RETR` → `SEP` → `GRIP` → `IDLE`, with its own error codes
+  12/13/14 so a failed recovery no longer looks identical to a failed arming.
+
+  Recovery still runs a **fresh bulb**; resuming the interrupted one was not
+  built and is still not possible — nothing durably records which step faulted
+  (`ePrevStep` is overwritten with `ERR` on the transition scan, and only
+  `iErrorCode` survives). To free a jam by hand, switch to **Manual**.
+
+- ~~`Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.~~
+  **Done** (`d123cac`) — verified ignored, with a `.gitignore` comment saying
+  why: the files are bound to one target's System ID, so they are useless on
+  any other machine.
+
+### Records and superseded proposals
+
+Finished work and rejected options. These read like open items because they are
+written in the same shape as the rest of the list — they are not.
+
 - **Operator + technician manuals, bilingual (2026-08-05).**
   `docs/operator-manual.html` (simple, panel-facing) and
   `docs/technician-manual.html` (sequence, error codes, settings, IO, robot
@@ -392,65 +596,6 @@ _(active TODOs land here; deferred items go under "Out of scope
   plate sensors must be TRUE (it is an OR — see the field-deviation note), and
   its `operation.html` asserted `bBypassPlateSensors` **does not exist** in
   `ST_HmiMasterAutoCfg`. It does.
-
-- ~~The PB2+PB3 combo request can be silently lost~~ **FIXED 2026-08-05 by
-  removing `START` in `IDLE`.** `bComboStartPulse` is still a one-scan pulse and
-  `bExtStartPulse` is still consumed only by the `IDLE` branch — but nothing can
-  now move the machine out of `IDLE` except a genuine start, so the pulse cannot
-  land somewhere that ignores it. Fixed at the cause rather than by latching the
-  pulse, which was the other option considered.
-
-  Worth keeping in mind if a future change ever adds a way to leave `IDLE`
-  without a start: the pulse would become droppable again, and the latch would
-  then be the right fix.
-
-- ~~**`FB_MasterAutoCycle`'s header block is stale.**~~ **DONE 2026-08-05**
-  (`2fdb429`) — eight fixes, not six: sweeping for the AND pattern after
-  fixing `CHECK_PLATE` and the two `GRIP` states turned up
-  `INIT_GRIP_RETRACTING` with the same claim, which reading had missed.
-  Verified programmatically rather than by eye: every error code the code
-  assigns is now documented, every CASE branch has a header entry, and the
-  only surviving “AND of all” lines are the six Sep/Push states that really
-  do aggregate with AND. Comments only — no LineIds churn, `ProductVersion`
-  still `3.1.4024.16`. Original list kept below for the record.
-
-  <details><summary>the eight, as found</summary>
-
-  Found 2026-08-05 while re-checking this list. The RECOVER chain shipped that
-  day and the file's own documentation block was never updated with it, so the
-  header now contradicts the code below it. No logic changes; every item is a
-  comment.
-
-  | # | What the header says | What the code does |
-  |---|---|---|
-  | 1 | error-code table stops at **11** | assigns **12/13/14** at lines 796/811/826 |
-  | 2 | `ERR`: RESET "re-enters the **INIT** chain" | enters the **RECOVER** chain — actively wrong about the 2026-08-05 change |
-  | 3 | sequence listing has **no `RECOVER_*` states** | three of them, values 50/51/52 |
-  | 4 | sensorless covers "the **4** movement states", codes "**1/3/4/5**" | **12** states, codes **1/3/4/5/6/7/8/10/11/12/13/14** |
-  | 5 | `CHECK_PLATE` waits "`bPlateSenL` **AND** `bPlateSenR`" (header line 61) and "Both plate sensors must confirm TRUE" (branch comment) | guard is `bPlateOk`, an **OR** — the documented field deviation |
-  | 6 | `GRIP_EXTENDING` / `GRIP_RETRACTING` "wait **AND** of all" | also an OR, and the header does not flag it as a deviation |
-
-  Items 5 and 6 are the same defect that was corrected in FlowerPyHmi's
-  `main.html` on 2026-08-05 (it claimed both plate sensors were required); it
-  sits in the PLC source too. Item 2 is the one that would actively mislead
-  whoever debugs a failed recovery next, since it names the wrong chain.
-
-  Item 4's count is worth stating precisely, because a naive grep gets it wrong:
-  **thirteen** CASE branches mention `bNoSensors`, but `CHECK_PLATE`'s mention is
-  inside a comment explaining that it deliberately does **not** apply. Twelve
-  states actually carry the term.
-
-  </details>
-
-- ~~**`scripts/validate_automain.py` is stale**~~ — **DONE 2026-08-05**
-  (`6ab9718`). The `Continuous` expectation is gone (that checkbox was
-  deliberately deleted on 2026-07-27) and the validator now passes: 23 elements,
-  all direct children, identities unique. Also added the **fourth checkbox**,
-  `Bypass plate sensors`, which had been on the page since 2026-07-26 with no
-  expectation covering it — the same silent coverage hole that let the
-  `Continuous` row rot. Negative-tested by pointing the new row at a wrong symbol
-  and confirming it reports the mismatch instead of passing.
-
 
 - **Update the Auto state machine.** Three decision documents are built and are
   the input for this — read them before touching `FB_MasterAutoCycle`:
@@ -536,16 +681,6 @@ _(active TODOs land here; deferred items go under "Out of scope
     piston retracts on power loss, so a persisted pause would resume a sequence
     whose assumptions are all void. `GVL_HMI` scrubs it for free.
 
-- ~~**`FB_MasterAutoCycle`'s defensive `CASE ELSE` fails unsafe.**~~ **FIXED
-  2026-08-05**, verified in the source: the default branch is now
-  `ResetAllCommands(); stHmi.eStep := E_MasterAutoStep.NOT_HOMED;`. Kept for the
-  reasoning, which is why the fix matters. It used to assign
-  `stHmi.eStep := E_MasterAutoStep.IDLE` — wire value **0**, the one value that
-  makes the robot send `CMD:1` — reached with the pistons in unknown positions.
-  Reachable: `GVL_HMI` carries `TcHmiSymbol.AddSymbol` so `eStep` is ADS-writable,
-  and `WAIT_POS2 (2)` is a declared enumerator with no branch today. Should be
-  `NOT_HOMED`. Two lines, independent of everything else.
-
 - **Two more stale-doc items found 2026-08-04, both now corrected above:**
   `bContinuous` is written ten times and read zero times (the PERSISTENT section
   claimed IDLE still tests it), and `bNoSensors` carries its term in **nine**
@@ -553,59 +688,6 @@ _(active TODOs land here; deferred items go under "Out of scope
   1/3/4/5/6/7/8/10/11 are *all* unreachable. `bAnyRunning` is also dead: computed,
   never read, and its comment claims MAIN uses it. Error codes 2 and 99 are
   unreachable, correctly documented as retired.
-
-- **Solution target is Local + TC 4026 for bench development** (no panel
-  needed). Lives in the working tree across four files and **must never be
-  merged back**: `167_01_Saad_PLC.sln` (VS 17.10, real `TwinCAT OS (x64)`
-  build configs), `167_01_Saad_PLC.tsproj` (`TcVersion` 4026.25,
-  `TargetNetId` replaced by `Target64Bit="true"`, EtherCAT device
-  `Disabled="true"`), `PLC1.plcproj` (`ProgramVersion` 4026.25), and
-  `VisualizationManager.TcVMO` (hotkey `DevId`).
-
-  **The churn does not stop at those four.** Every `.TcPOU` / `.TcDUT` saved
-  by the 4026 IDE gets its `ProductVersion` attribute rewritten (the panel's
-  files are stamped `3.1.4024.16`) and its `LineIds` regenerated — inside the
-  same files as the logic, so it cannot be excluded by path. Check the
-  stamp before committing.
-
-  **Unverified risk:** that TcXaeShell 4024 on the panel will still open a
-  project the 4026 IDE has saved. Confirm early, not at merge time.
-
-- ~~Create branch for the next task~~ **Done 2026-08-04** —
-  `feat/err-manual-jog-and-io-docs`.
-
-- ~~check the current Push Buttons actions~~ **Done 2026-08-04.** Behaviour
-  was correct and matches the IO list; **four comments were not** and are
-  fixed: `MAIN`'s PB block (still described PB1 as a cycle-start bypass),
-  `MAIN` section 0 (still claimed power-up comes back in IDLE and a robot may
-  start a cycle — the exact hazard closed on 2026-07-29), `PRG_IoMap`'s PB
-  note, and `FB_MasterAutoCycle`'s Section 2 header. The **IO table in this
-  file was wrong for all six Sep/Push pistons** since `fd49d4f` and is now
-  rebuilt from `docs/167_01_SAAD_PinPush_IO_List.xlsx`.
-
-- ~~Operator recovery from a mid-cycle grip fault~~ **Settled 2026-08-05.**
-  The 2026-08-04 answer (PB jogs while latched in `ERR`) was **reversed** — no
-  manual moves in any Automatic state. What shipped instead is the dedicated
-  `RECOVER_*` chain: `ERR` → `RESET` (HMI, orange PB2, or robot `CMD:2`) →
-  `RECOVER_PUSH_RETR` → `SEP` → `GRIP` → `IDLE`, with its own error codes
-  12/13/14 so a failed recovery no longer looks identical to a failed arming.
-
-  Recovery still runs a **fresh bulb**; resuming the interrupted one was not
-  built and is still not possible — nothing durably records which step faulted
-  (`ePrevStep` is overwritten with `ERR` on the transition scan, and only
-  `iErrorCode` survives). To free a jam by hand, switch to **Manual**.
-
-- **Plate sensor L/R are swapped** between the field IO list and `PRG_IoMap`
-  (sheet: R on `dIn[21]`, L on `dIn[22]`; code: the reverse). Invisible while
-  `bPlateOk` is an OR, but the `L`/`R` lamps on `Main.TcVIS` are mislabelled.
-  Needs someone at the machine to say which physical side is which.
-
-- ~~`Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.~~
-  **Done** (`d123cac`) — verified ignored, with a `.gitignore` comment saying
-  why: the files are bound to one target's System ID, so they are useless on
-  any other machine.
-
-
 
 ## SHIPPED: robot integration architecture — TCP-only (2026-07-26)
 
