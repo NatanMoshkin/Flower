@@ -101,7 +101,12 @@ try {
     $r = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 3
     # Match on <title> — the em dash character between "Flower" and
     # "Documentation Index" varies by encoding, so allow any chars between.
-    if ($r.Content -match '<title>\s*Flower[^<]*Documentation Index[^<]*</title>') {
+    # Matches the eyebrow, not the <title>. The title used to be
+    # "Flower - Documentation Index" and became "Documentation - <Hebrew>" when the
+    # index was regenerated as a bilingual page on 2026-08-05, so this check had
+    # been printing a spurious "something else may be responding" warning on every
+    # single run. The eyebrow carries the project number and is far more stable.
+    if ($r.Content -match '167_01 Saad') {
         Write-Host "  Verified: Flower docs index is being served." -ForegroundColor Green
     } else {
         Write-Host "  WARNING: $Url did not return a page whose title looks like Flower's docs index." -ForegroundColor Yellow

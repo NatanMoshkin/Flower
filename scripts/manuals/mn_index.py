@@ -8,6 +8,18 @@ archived entry says what superseded it.
 from mn_render import H, Links, Note, P, ltr, page
 
 LIVE = [
+    ("http://127.0.0.1:8765/docs/viewer.html?doc=../CLAUDE.md",
+     "CLAUDE.md — decisions &amp; open work", "CLAUDE.md — החלטות ועבודה פתוחה",
+     "The live source of truth: the TODO list grouped by state, every "
+     "architectural decision with its reasoning, and the record of what has and "
+     "has not been verified. Rendered from the repository root. "
+     "NEEDS THE LOCAL SERVER — double-click serve-docs.bat in the repo root "
+     "first, or this link will not resolve.",
+     "מקור האמת החי: רשימת המשימות מקובצת לפי מצב, כל החלטה ארכיטקטונית "
+     "והנימוקים שלה, והתיעוד של מה אומת ומה לא. מוצג משורש המאגר. "
+     "דורש את השרת המקומי — הפעל תחילה serve-docs.bat בשורש המאגר, "
+     "אחרת הקישור לא יעבוד.",
+     "live", "source of truth", "מקור אמת"),
     ("operator-manual.html",
      "Operator's manual", "מדריך למפעיל",
      "Running the machine from the panel: the three buttons, the lamps, "
@@ -32,9 +44,9 @@ LIVE = [
      "live", "reference", "עיון"),
     ("pb-test-report.html",
      "Push-button test report", "דוח בדיקת לחצנים",
-     "Latest automated run against a live PLC — 57 checks over ADS covering "
+     "Latest automated run against a live PLC — 58 checks over ADS covering "
      "every button in every machine state.",
-     "ההרצה האוטומטית האחרונה מול PLC פעיל — 57 בדיקות דרך ADS המכסות כל לחצן "
+     "ההרצה האוטומטית האחרונה מול PLC פעיל — 58 בדיקות דרך ADS המכסות כל לחצן "
      "בכל מצב של המכונה.",
      "live", "test result", "תוצאת בדיקה"),
     ("bench-checklist-arming.html",

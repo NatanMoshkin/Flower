@@ -2,6 +2,7 @@
 
 ## TODO:
 
+
 ### Active — nothing is blocking these
 
 - **Commit the robot's real `src2.lua`.** **Verified 2026-08-07:** the copy in
@@ -18,6 +19,8 @@
   `RobotBridge/Client_working_example/dummy_server.py` implement the contract
   correctly and are the reference, but they are not what runs the cell.
 
+---
+
 - **Verify TcXaeShell 4024 on the panel can open 4026-saved files.** CLAUDE.md has
   said "confirm early, not at merge time" since 2026-08-04 and it is still
   unconfirmed, while the exposure has grown: **26 of 37 PLC source files now carry
@@ -30,6 +33,8 @@
   If 4024 refuses a 4026-saved file, it is discovered at panel-deployment time,
   which is the worst moment. One panel-side open-and-build settles it.
 
+---
+
 - **Merge this branch to `master`.** `feat/err-manual-jog-and-io-docs` is **27
   commits** ahead. The hazard is known and specific: the four bench-config files
   (`.sln`, `.tsproj`, `PLC1.plcproj`, `VisualizationManager.TcVMO`) are
@@ -38,11 +43,14 @@
   where new VISU pages must be registered, so it needs hunk-level care every time
   (done that way for `AutoConfig` in `e7859c7`).
 
+---
+
 - **Remove `stBridgeCfg` / `ST_LogBridgeCfg`** — ready to do, deferred by choice
   rather than blocked. It is inert, but it makes a shipped FlowerPyHmi page render
   a visibly blank "Log bridge config" block. Full recipe, ordering constraint and
   the reason `check_pyhmi_contract.py` will *not* notice it either way are under
   **Out of scope (Future)** at the bottom of this file.
+
 
 ### Blocked — waiting on the machine or on an operator decision
 
@@ -60,11 +68,15 @@
   diagnosed on 2026-08-05; do not read a red `pb_test` as a PLC fault before
   checking the persisted config.
 
+---
+
 - **Reassign LED1 / LED2 to functional statuses.** Partly done 2026-07-29 — LED3
   already blinks "press me to arm" in `NOT_HOMED`. LED1 and LED2 are still dumb
   press mirrors; the remaining candidates are LED2 = error latched and LED1 = TCP
   connected. Each is a one-line change in `MAIN`'s status-lamp section. Deferred
   until operator preference is known — this is a question, not a task.
+
+---
 
 - **An acknowledgement gate on the robot's `CMD:2`** — **not built**, and only
   worth building if operator-paced fault recovery is wanted in production. Today
@@ -73,10 +85,13 @@
   a fault open is switching to **Manual**, where `nStateOut` reports `MANUAL (30)`
   and the Manual re-park deliberately excludes `ERR`.
 
+---
+
 - **Plate sensor L/R are swapped** between the field IO list and `PRG_IoMap`
   (sheet: R on `dIn[21]`, L on `dIn[22]`; code: the reverse). Invisible while
   `bPlateOk` is an OR, but the `L`/`R` lamps on `Main.TcVIS` are mislabelled.
   Needs someone at the machine to say which physical side is which.
+
 
 ### Standing constraints — not tasks, but read before committing
 
@@ -96,6 +111,7 @@
 
   **Unverified risk:** that TcXaeShell 4024 on the panel will still open a
   project the 4026 IDE has saved. Confirm early, not at merge time.
+
 
 ### Done — kept for the reasoning, not for the status
 
@@ -145,6 +161,8 @@ the least useful part. Nothing here needs action.
   Registered in `PLC1.plcproj` with its `<DependentUpon>` -- without that the
   page renders in the IDE and does not exist to the build.
 
+---
+
 2. ~~ST_HmiMasterAutoCfg~~ **DONE 2026-08-06, NOT YET COMPILED.**
   - ~~Remove bContinuous~~ Gone from `ST_HmiMasterAutoCfg`, and with it **15 dead
     writes** in `FB_MasterAutoCycle` plus MAIN's force-clear. It was written 15
@@ -189,6 +207,8 @@ the least useful part. Nothing here needs action.
   unit to put on its own AutoConfig page for item 1.
 
 ______________________________________________________________________________
+
+---
 
 - ~~**FlowerPyHmi Manual page: move the per-piston Auto controls to their own
   page, and add a Bypass-plate-sensors checkbox.**~~ **BOTH DONE 2026-08-05**
@@ -253,6 +273,8 @@ ______________________________________________________________________________
 
   </details>
 
+---
+
 - ~~**Rename START → ENABLE AUTO on both HMIs, and add a real START that runs
   a bulb from `IDLE`.**~~ **IMPLEMENTED 2026-08-05, NOT YET COMPILED** — done
   together with the RECOVER sim flags below, so the panel needs **one** build
@@ -292,6 +314,8 @@ ______________________________________________________________________________
   The new VISU button reuses `TextID 1106`, orphaned when the Continuous
   checkbox was deleted on 2026-07-27 — verified unreferenced first; 1107 and
   1108 are live.
+
+---
 
 - **Sim-step flags for the `RECOVER_*` chain.** **IMPLEMENTED 2026-08-05, NOT
   YET COMPILED** — same build as the START split above.
@@ -348,6 +372,8 @@ ______________________________________________________________________________
 
 _(active TODOs land here; deferred items go under "Out of scope
 (Future)" at the bottom.)_
+
+---
 
 - ~~update FB_MasterAutoCycle (items -1- to -4-)~~ **IMPLEMENTED 2026-08-05, NOT
   YET COMPILED.** Everything below is written and statically verified; a
@@ -432,6 +458,8 @@ _(active TODOs land here; deferred items go under "Out of scope
   **superseded**. Read `docs/auto-state-machine-current.html` for the machine as
   it runs; the other three are the decision record.
 
+---
+
 - ~~The PB2+PB3 combo request can be silently lost~~ **FIXED 2026-08-05 by
   removing `START` in `IDLE`.** `bComboStartPulse` is still a one-scan pulse and
   `bExtStartPulse` is still consumed only by the `IDLE` branch — but nothing can
@@ -442,6 +470,8 @@ _(active TODOs land here; deferred items go under "Out of scope
   Worth keeping in mind if a future change ever adds a way to leave `IDLE`
   without a start: the pulse would become droppable again, and the latch would
   then be the right fix.
+
+---
 
 - ~~**`FB_MasterAutoCycle`'s header block is stale.**~~ **DONE 2026-08-05**
   (`2fdb429`) — eight fixes, not six: sweeping for the AND pattern after
@@ -481,6 +511,8 @@ _(active TODOs land here; deferred items go under "Out of scope
 
   </details>
 
+---
+
 - ~~**`scripts/validate_automain.py` is stale**~~ — **DONE 2026-08-05**
   (`6ab9718`). The `Continuous` expectation is gone (that checkbox was
   deliberately deleted on 2026-07-27) and the validator now passes: 23 elements,
@@ -489,6 +521,8 @@ _(active TODOs land here; deferred items go under "Out of scope
   expectation covering it — the same silent coverage hole that let the
   `Continuous` row rot. Negative-tested by pointing the new row at a wrong symbol
   and confirming it reports the mismatch instead of passing.
+
+---
 
 - ~~**`FB_MasterAutoCycle`'s defensive `CASE ELSE` fails unsafe.**~~ **FIXED
   2026-08-05**, verified in the source: the default branch is now
@@ -500,8 +534,12 @@ _(active TODOs land here; deferred items go under "Out of scope
   and `WAIT_POS2 (2)` is a declared enumerator with no branch today. Should be
   `NOT_HOMED`. Two lines, independent of everything else.
 
+---
+
 - ~~Create branch for the next task~~ **Done 2026-08-04** —
   `feat/err-manual-jog-and-io-docs`.
+
+---
 
 - ~~check the current Push Buttons actions~~ **Done 2026-08-04.** Behaviour
   was correct and matches the IO list; **four comments were not** and are
@@ -511,6 +549,8 @@ _(active TODOs land here; deferred items go under "Out of scope
   note, and `FB_MasterAutoCycle`'s Section 2 header. The **IO table in this
   file was wrong for all six Sep/Push pistons** since `fd49d4f` and is now
   rebuilt from `docs/167_01_SAAD_PinPush_IO_List.xlsx`.
+
+---
 
 - ~~Operator recovery from a mid-cycle grip fault~~ **Settled 2026-08-05.**
   The 2026-08-04 answer (PB jogs while latched in `ERR`) was **reversed** — no
@@ -524,10 +564,13 @@ _(active TODOs land here; deferred items go under "Out of scope
   (`ePrevStep` is overwritten with `ERR` on the transition scan, and only
   `iErrorCode` survives). To free a jam by hand, switch to **Manual**.
 
+---
+
 - ~~`Panel_PLC_HMI/License/` is untracked — commit or add to `.gitignore`.~~
   **Done** (`d123cac`) — verified ignored, with a `.gitignore` comment saying
   why: the files are bound to one target's System ID, so they are useless on
   any other machine.
+
 
 ### Records and superseded proposals
 
@@ -553,6 +596,8 @@ written in the same shape as the rest of the list — they are not.
   worth re-running after any Hebrew edit: scan the built HTML for cells that
   contain Hebrew *and* a `\d+[/,]\d+` run and are not isolated.
 
+---
+
 - **`docs/` is now split: current vs `docs/archive/`.** The archive holds the
   three superseded state-machine proposals plus four 2026-07-27 snapshots
   (`configuration`, `operation`, `open-issues`, the old markdown operator
@@ -560,6 +605,8 @@ written in the same shape as the rest of the list — they are not.
   model — they mention `WAIT_PLATE` and never mention `NOT_HOMED`. Nothing
   generates them and nothing should be read from them.
   `docs/index.html` links everything with a status badge per entry.
+
+---
 
 - **FlowerPyHmi is caught up — separate repo, branch
   `feat/check-plate-recover-and-pb-hold-timers` (2026-08-05).** Everything the
@@ -596,6 +643,8 @@ written in the same shape as the rest of the list — they are not.
   plate sensors must be TRUE (it is an OR — see the field-deviation note), and
   its `operation.html` asserted `bBypassPlateSensors` **does not exist** in
   `ST_HmiMasterAutoCfg`. It does.
+
+---
 
 - **Update the Auto state machine.** Three decision documents are built and are
   the input for this — read them before touching `FB_MasterAutoCycle`:
@@ -680,6 +729,8 @@ written in the same shape as the rest of the list — they are not.
   - **No pause flag or resume step may live in `GVL_HmiPersistent`.** Every
     piston retracts on power loss, so a persisted pause would resume a sequence
     whose assumptions are all void. `GVL_HMI` scrubs it for free.
+
+---
 
 - **Two more stale-doc items found 2026-08-04, both now corrected above:**
   `bContinuous` is written ten times and read zero times (the PERSISTENT section
