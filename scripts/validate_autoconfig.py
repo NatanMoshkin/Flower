@@ -19,6 +19,7 @@ Exit: 0 = sound, 1 = problem.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 import xml.etree.ElementTree as ET
 
@@ -72,10 +73,52 @@ def nav_of(elem):
     return None
 
 
+def interface_lines(text):
+    """The page's VAR_IN_OUT text lines, in order."""
+    return re.findall(
+        r'<v n="Id">\d+L</v>\s+<n n="Tag" />\s+<v n="Text">"(.*?)"</v>', text)
+
+
+def check_standalone(text):
+    """A navigated page must declare NO interface parameters.
+
+    THE failure this catches, found on the panel 2026-08-06: AutoConfig was cloned
+    from AutoMain, which is frame-embedded and declares
+    ``stMasterAutoCycle : ST_HmiMasterAuto`` and ``stCfg : ST_HmiMasterAutoCfg``
+    in its VAR_IN_OUT. Retargeting every binding to an absolute path was not
+    enough -- the declarations came along with the clone, which makes the page a
+    REFERENCE, and a reference cannot be navigated to because the caller has no
+    way to supply its parameters. The page built, validated and rendered, and was
+    simply unreachable.
+
+    Compare against Robot.TcVIS, which is a working standalone page: its interface
+    is exactly VAR_IN_OUT / <tab> / END_VAR.
+
+    Also checks the designer size, since a page cloned from a frame-embedded one
+    inherits the frame's size (700x400 here) rather than the panel's 800x480.
+    """
+    out = []
+    decls = [t for t in interface_lines(text)
+             if ":" in t and t.strip() not in ("VAR_IN_OUT", "END_VAR")]
+    if decls:
+        out.append(
+            "declares interface parameter(s) " + repr(decls) + " -- a navigated "
+            "page must declare none, or it cannot be reached at all")
+    for axis, want in (("X", 800), ("Y", 480)):
+        m = re.search(r'<v n="Size' + axis + r'">(\d+)</v>', text)
+        if not m:
+            out.append(f"no Size{axis} property found")
+        elif int(m.group(1)) != want:
+            out.append(f"Size{axis} is {m.group(1)}, expected {want} "
+                       f"(the panel's resolution is 800x480)")
+    return out
+
+
 def main() -> int:
     if not P.exists():
         print(f"FAIL: {P.name} does not exist -- run build_autoconfig_page.py")
         return 1
+    problems.extend(check_standalone(P.read_text(encoding='utf-8')))
     root = ET.parse(P).getroot()
 
     lists = [l for l in root.iter("l") if l.get("n") == "VisualElementList"]

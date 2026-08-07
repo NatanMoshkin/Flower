@@ -40,7 +40,14 @@ Then: python scripts/fix_visu_object_guids.py AutoConfig   # MANDATORY
 ...and open both pages in TcXaeShell and rebuild. A render check catches a
 dropped element; only a build catches a duplicated generated-object GUID.
 
-Idempotent: re-running after a successful run is a no-op.
+ONE-WAY MIGRATION, not an idempotent builder. It reads the stCfg controls OUT
+of AutoMain, and finish_autoconfig_page.py then deletes them from AutoMain --
+so once both have run, the source elements no longer exist and this script
+CANNOT rebuild the page. It bails out early if AutoConfig.TcVIS is present,
+which is the safe behaviour; do not "fix" that by deleting the page first.
+To rebuild from scratch, revert both pages to a commit before the split.
+(Learned the hard way 2026-08-06: deleting AutoConfig to re-test the build
+left nothing to rebuild from, since AutoMain was already stripped.)
 """
 
 from __future__ import annotations
@@ -168,6 +175,48 @@ def gtl_register(counter, label):
     print(f"    GlobalTextList: registered {counter} = {label!r}")
 
 
+def make_standalone(text):
+    """Strip the cloned interface and set the panel's resolution.
+
+    THIS IS NOT OPTIONAL, and retargeting the bindings is not a substitute. A
+    page that declares VAR_IN_OUT parameters is a REFERENCE -- meant to be
+    embedded in a frame, which is how a caller supplies them. It cannot be
+    navigated to at all, because a ChangeVisu has nothing to pass. Cloning
+    AutoMain brings its two declarations along, and the result builds,
+    validates and renders perfectly while being unreachable. Found on the
+    panel 2026-08-06, after a clean build and activate.
+
+    Target shape is Robot.TcVIS's, which is a working standalone page:
+    VAR_IN_OUT / <tab> / END_VAR.
+
+    Size too: a page cloned from a frame-embedded one inherits the FRAME's
+    designer size (700x400 here), not the panel's 800x480.
+    """
+    # One <o> block per interface line, matched whole so a removal cannot
+    # leave half an element behind.
+    block = (r'[ \t]*<o>\s*<v n="Id">\d+L</v>\s*<n n="Tag" />\s*'
+             r'<v n="Text">"\t[A-Za-z_]\w*[^"]*:[^"]*"</v>\s*</o>\r?\n')
+    decls = re.findall(block, text)
+    if not decls:
+        print("  interface: already standalone")
+    else:
+        # Keep the first block, blanked to a bare tab (Robot's shape); drop
+        # the rest, so the list is never left completely empty.
+        first = decls[0]
+        blank = re.sub(r'(<v n="Text">")\t[^"]*(")',
+                       lambda m: m.group(1) + "\t" + m.group(2), first)
+        text = text.replace(first, blank, 1)
+        for d in decls[1:]:
+            text = text.replace(d, "", 1)
+        print(f"  interface: removed {len(decls)} declaration(s) -> "
+              f"VAR_IN_OUT / <tab> / END_VAR")
+    for axis, want in (("X", 800), ("Y", 480)):
+        m = re.search(r'<v n="Size' + axis + r'">(\d+)</v>', text)
+        if m and int(m.group(1)) != want:
+            text = text.replace(m.group(0), f'<v n="Size{axis}">{want}</v>', 1)
+            print(f"  Size{axis}: {m.group(1)} -> {want}")
+    return text
+
 # --------------------------------------------------------------------------- #
 def classify(text):
     """Split AutoMain's elements into (config, keep).
@@ -217,6 +266,7 @@ def main() -> int:
     shutil.copyfile(src_path, new_path)
     text = new_path.read_text(encoding="utf-8")
     text = text.replace(f'<Visu Name="{SRC}"', f'<Visu Name="{NEW}"', 1)
+    text = make_standalone(text)
     if f'"{SRC}"' in text.split("<VisualElementList>")[0]:
         print(f"\n  note: '{SRC}' still appears in the clone's header region")
 
