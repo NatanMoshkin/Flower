@@ -23,6 +23,8 @@ import os
 import sys
 import time
 
+import pyads
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pb_io import BOOL, UDINT, COIL_DO, SENSOR_DI, Plc, SETTLE  # noqa: E402
@@ -46,23 +48,80 @@ EXPECT = {
 }
 ORDER = list(EXPECT)
 
+# Stretched for the duration of the run, then restored. ONE entry, deliberately.
+#
+# CHECK_PLATE is the one state this script cannot observe at the shipped value,
+# and the reason is structural rather than a matter of speed: the plate is
+# deliberately withheld so the state is reachable at all, and it is released only
+# once the state has been *sampled*, so a plate wait shorter than one sampling
+# pass faults with error 9 before the sample can happen. No amount of ADS
+# batching removes that ordering. It was invisible before 2026-08-10 only because
+# every previous run had bBypassPlateSensors set, which suppresses exactly error 9.
+#
+# Everything else runs at its configured value on purpose. The movement timeout
+# and the three dwells were stretched here for one afternoon while the emulator
+# still cost 2.2 s per pass; with it down to ~80-210 ms the shipped 500-1000 ms
+# states are comfortably observable, and stretching them would mean the check no
+# longer exercises the timings the machine actually runs.
+STRETCH = {
+    "tPlateWaitTimeoutMs": 15000,
+}
+
+
+def snapshot_coils(p):
+    """All eight coils from ONE array read.
+
+    Sampling used to be eight separate `p.coil()` calls. At ~90 ms per round trip
+    on the panel that is 720 ms spent *inside* the state being sampled, which on
+    its own overruns the 1000 ms step timeout -- GRIP_EXTENDING faulted with error
+    10 purely because the observer was too slow, having already been sampled
+    correctly. Reading the array once also makes the sample atomic, which is the
+    other thing eight separate reads could not promise (see the tear note below).
+    """
+    dout = p.c.read_by_name("GVL_IO.dOut", pyads.PLCTYPE_BOOL * 16)
+    return {n: bool(dout[COIL_DO[n] - 1]) for n in COIL_DO}
+
 
 def follow(p, lag):
     """One pass of the piston emulator: make each piston's sensors agree with
-    its coil after `lag` seconds of travel."""
+    its coil after `lag` seconds of travel.
+
+    ONE ROUND TRIP IN, ONE OUT. Measured 2026-08-10, an ADS round trip costs
+    ~0.02 ms to a local runtime but **~90 ms to the CP6606 over the LAN**. Done
+    naively -- eight coil reads plus sixteen sensor writes -- a pass costs 2.2 s
+    on the panel, which made this script's sampling period longer than a state's
+    duration and aliased seven of the ten states away. So:
+
+      * all eight coils arrive in a single array read of `GVL_IO.dOut`
+        (contiguous ARRAY[1..16] OF BOOL), 78 ms for the lot;
+      * every sensor changing this pass goes out as ONE sum-up write, 130 ms for
+        all sixteen channels against 1496 ms for sixteen separate calls;
+      * a sensor already holding the wanted value is not written at all.
+
+    Sum-up rather than a block write to `GVL_IO.dIn`: a by-name handle to
+    `dIn[1]` is one BOOL so a span write is rejected (ADS 1797), and writing the
+    whole array would clobber the PB, plate and free channels this does not own.
+    """
+    dout = p.c.read_by_name("GVL_IO.dOut", pyads.PLCTYPE_BOOL * 16)
+    batch = {}
     for name, (ret_di, ext_di) in SENSOR_DI.items():
-        energised = p.coil(name)
+        energised = bool(dout[COIL_DO[name] - 1])       # dOut is 1-based
         moving_to = "ext" if energised else "ret"
         prev = p._travel.get(name)
         if prev != moving_to:
             p._travel[name] = moving_to
             p._since[name] = time.time()
-            # leave the fixture: neither sensor made while in transit
-            p.w(f"GVL_IO.dIn[{ret_di}]", False)
-            p.w(f"GVL_IO.dIn[{ext_di}]", False)
+            want = (False, False)      # in transit: neither sensor made
         elif time.time() - p._since.get(name, 0) >= lag:
-            p.w(f"GVL_IO.dIn[{ext_di}]", energised)
-            p.w(f"GVL_IO.dIn[{ret_di}]", not energised)
+            want = (not energised, energised)
+        else:
+            continue                   # still travelling, nothing to say
+        if p._wrote.get(name) != want:
+            batch[f"GVL_IO.dIn[{ret_di}]"] = want[0]
+            batch[f"GVL_IO.dIn[{ext_di}]"] = want[1]
+            p._wrote[name] = want
+    if batch:
+        p.c.write_list_by_name(batch)
 
 
 def main():
@@ -74,20 +133,44 @@ def main():
 
     seen, bad = {}, []
     with Plc(a.net) as p:
-        p._travel, p._since = {}, {}
+        p._travel, p._since, p._wrote = {}, {}, {}
         # Volatile GVL_HMI since 2026-08-06, not the persistent cfg struct.
         AUTO = "GVL_HMI.bAutoMode"
         TCP = "GVL_Robot.bTcpEnable"
+        NOSENS = "GVL_HmiPersistent.stMasterAutoCfg.bNoSensors"
+        BYPASS = "GVL_HmiPersistent.stMasterAutoCfg.bBypassPlateSensors"
         p.save(AUTO, BOOL)
         p.save(TCP, BOOL)
-        p.save("GVL_HmiPersistent.stMasterAutoCfg.tPlateWaitTimeoutMs", UDINT)
+        p.save(NOSENS, BOOL)
+        p.save(BYPASS, BOOL)
+        for t in STRETCH:
+            p.save(f"GVL_HmiPersistent.stMasterAutoCfg.{t}", UDINT)
         for i in range(1, 25):
             p.save(f"GVL_IO.dIn[{i}]", BOOL)
+
+        # NORMALISE THE TWO BENCH FLAGS, and say what they were. Both are
+        # PERSISTENT and survive a power cycle, so a previous session leaves them
+        # set -- and pb_test's own teardown restores them to whatever it found.
+        # bNoSensors TRUE makes every movement state advance on tStepTimeoutMs
+        # INSTEAD of on sensors, which silently bypasses this script's whole
+        # reason for existing: the piston emulator below would be driving sensors
+        # that nothing consults, and --lag would have no effect whatsoever. That
+        # is a false pass, not a pass. pb_test learned this on 2026-08-05; this
+        # script did not get the same treatment until 2026-08-10.
+        was = {k: p.r(k, BOOL) for k in (NOSENS, BYPASS)}
+        if any(was.values()):
+            print("  normalised: bNoSensors=%s bBypassPlateSensors=%s -> both FALSE"
+                  % (was[NOSENS], was[BYPASS]))
+        p.w(NOSENS, False, BOOL)
+        p.w(BYPASS, False, BOOL)
+        for t, ms in STRETCH.items():
+            p.w(f"GVL_HmiPersistent.stMasterAutoCfg.{t}", ms, UDINT)
 
         p.w(TCP, False, BOOL)
         p.release_all_pbs()
         p.park_all_home()
         p.set_plate(True)
+        p._wrote.clear()   # park_all_home wrote sensors behind the cache's back
 
         # normalise: clear any latched fault, then arm
         if p.step() == 99:
@@ -115,9 +198,6 @@ def main():
         while time.time() < deadline:
             follow(p, a.lag)
             st = p.step_name()
-            if st == "CHECK_PLATE" and st in seen and not plate_given:
-                p.set_plate(True)          # release it once sampled
-                plate_given = True
             if st in EXPECT and st not in seen:
                 # SETTLE FIRST. The commands are written by MAIN, the piston FBs
                 # turn them into coils, and only then does the 5 ms IOmapTask
@@ -128,7 +208,13 @@ def main():
                 # not moved on before trusting the sample.
                 time.sleep(0.03)
                 if p.step_name() == st:
-                    seen[st] = {n: p.coil(n) for n in COIL_DO}
+                    seen[st] = snapshot_coils(p)
+                    # Release the plate in the SAME iteration it was sampled, not
+                    # the next one. A loop pass costs a few hundred ms over the
+                    # network, and CHECK_PLATE is on a timeout.
+                    if st == "CHECK_PLATE" and not plate_given:
+                        p.set_plate(True)
+                        plate_given = True
             if st == "ERR":
                 print(f"ABORT: faulted with error {p.err_code()} "
                       f"after seeing {len(seen)} states")

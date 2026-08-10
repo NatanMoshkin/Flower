@@ -1,18 +1,18 @@
 {
   "env": {
-    "started": "2026-08-07 11:36:00",
-    "net_id": "127.0.0.1.1.1",
+    "started": "2026-08-10 14:50:27",
+    "net_id": "5.79.93.36.1.1",
     "ams_port": 851,
     "host": "LP-NatanM",
     "python": "3.12.10",
-    "step_at_entry": "IDLE",
-    "auto_at_entry": true,
+    "step_at_entry": "NOT_HOMED",
+    "auto_at_entry": false,
     "nosensors_at_entry": true,
     "bypass_plate_at_entry": true,
     "tcp_disabled_for_run": true,
     "step_at_exit": "NOT_HOMED",
-    "auto_at_exit": true,
-    "finished": "2026-08-07 11:36:26"
+    "auto_at_exit": false,
+    "finished": "2026-08-10 14:51:43"
   },
   "results": [
     {
@@ -176,9 +176,9 @@
       "id": "C1",
       "what": "PB3 LED blinks 'press me to arm' (unpressed)",
       "expected": "both ON and OFF observed",
-      "actual": "ON x15, OFF x17 over 32 samples @50ms",
+      "actual": "ON x6, OFF x7 over 13 samples @50ms",
       "status": "PASS",
-      "evidence": "#.........########........######"
+      "evidence": "...###..###.."
     },
     {
       "group": "C",
@@ -266,7 +266,7 @@
       "expected": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "actual": "NOT_HOMED -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 11:36:06 START pressed | INFO 11:36:06 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 11:36:06 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 11:36:06 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 11:36:06 INIT_GRIP_RETRACTING -> IDLE"
+      "evidence": "INFO 14:51:48 START pressed | INFO 14:51:48 NOT_HOMED -> INIT_PUSH_RETRACTING | INFO 14:51:48 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 14:51:48 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 14:51:48 INIT_GRIP_RETRACTING -> IDLE"
     },
     {
       "group": "C",
@@ -398,7 +398,7 @@
       "expected": "IDLE throughout, press logged",
       "actual": "IDLE, transitions: none, logged: True",
       "status": "PASS",
-      "evidence": "INFO 11:36:08 START pressed"
+      "evidence": "INFO 14:51:54 START pressed"
     },
     {
       "group": "E",
@@ -409,7 +409,7 @@
       "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE + ERR entry",
       "status": "PASS",
-      "evidence": "INFO 11:36:09 Sim start pressed | INFO 11:36:09 IDLE -> INIT_PUSH_RETRACTING | INFO 11:36:09 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 11:36:09 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 11:36:09 INIT_GRIP_RETRACTING -> CHECK_PLATE | ERR 11:36:10 CHECK_PLATE timed out (plate never arrived)"
+      "evidence": "INFO 14:51:56 IDLE -> INIT_PUSH_RETRACTING | INFO 14:51:56 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 14:51:56 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 14:51:56 INIT_GRIP_RETRACTING -> CHECK_PLATE | ERR 14:51:57 CHECK_PLATE timed out (plate never arrived) | ERR 14:51:57 CHECK_PLATE timed out (plate never arrived)"
     },
     {
       "group": "E",
@@ -530,7 +530,7 @@
       "expected": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
       "actual": "ERR -> RECOVER_PUSH_RETR -> RECOVER_SEP_RETR -> RECOVER_GRIP_RETR -> IDLE",
       "status": "PASS",
-      "evidence": "INFO 11:36:11 RESET pressed | INFO 11:36:11 ERR -> RECOVER_PUSH_RETR | INFO 11:36:11 RECOVER_PUSH_RETR -> RECOVER_SEP_RETR | INFO 11:36:11 RECOVER_SEP_RETR -> RECOVER_GRIP_RETR | INFO 11:36:11 RECOVER_GRIP_RETR -> IDLE"
+      "evidence": "INFO 14:52:05 RESET pressed | INFO 14:52:05 ERR -> RECOVER_PUSH_RETR | INFO 14:52:05 RECOVER_PUSH_RETR -> RECOVER_SEP_RETR | INFO 14:52:05 RECOVER_SEP_RETR -> RECOVER_GRIP_RETR | INFO 14:52:05 RECOVER_GRIP_RETR -> IDLE"
     },
     {
       "group": "F",
@@ -618,7 +618,7 @@
       "expected": "iErrorCode 0",
       "actual": "iErrorCode 0",
       "status": "PASS",
-      "evidence": "INFO 11:36:14 STOP pressed | INFO 11:36:14 IDLE -> NOT_HOMED"
+      "evidence": "INFO 14:52:11 STOP pressed | INFO 14:52:11 IDLE -> NOT_HOMED"
     },
     {
       "group": "G",
@@ -640,7 +640,7 @@
       "expected": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE ...",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE -> GRIP_EXTENDING",
       "status": "PASS",
-      "evidence": "INFO 11:36:17 PB2+PB3 held: operator bulb start | INFO 11:36:17 External start pulse | INFO 11:36:17 IDLE -> INIT_PUSH_RETRACTING | INFO 11:36:17 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 11:36:17 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 11:36:17 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 11:36:17 CHECK_PLATE -> GRIP_EXTENDING"
+      "evidence": "INFO 14:52:17 PB2+PB3 held: operator bulb start | INFO 14:52:17 External start pulse | INFO 14:52:17 IDLE -> INIT_PUSH_RETRACTING | INFO 14:52:17 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 14:52:17 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 14:52:17 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 14:52:17 CHECK_PLATE -> GRIP_EXTENDING | ERR 14:52:18 GRIP_EXTENDING timed out"
     },
     {
       "group": "G",
@@ -651,108 +651,108 @@
       "expected": "reaches CHECK_PLATE with no spurious re-home first",
       "actual": "IDLE -> INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING -> CHECK_PLATE -> GRIP_EXTENDING",
       "status": "PASS",
-      "evidence": "INFO 11:36:19 START pressed | INFO 11:36:20 PB2+PB3 held: operator bulb start | INFO 11:36:20 External start pulse | INFO 11:36:20 IDLE -> INIT_PUSH_RETRACTING | INFO 11:36:20 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 11:36:20 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 11:36:20 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 11:36:20 CHECK_PLATE -> GRIP_EXTENDING"
+      "evidence": "INFO 14:52:24 START pressed | INFO 14:52:25 PB2+PB3 held: operator bulb start | INFO 14:52:25 External start pulse | INFO 14:52:25 IDLE -> INIT_PUSH_RETRACTING | INFO 14:52:25 INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING | INFO 14:52:25 INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING | INFO 14:52:25 INIT_GRIP_RETRACTING -> CHECK_PLATE | INFO 14:52:25 CHECK_PLATE -> GRIP_EXTENDING | ERR 14:52:26 GRIP_EXTENDING timed out"
     }
   ],
   "log_tail": [
     {
+      "sev": "ERR",
+      "time": "14:52:26",
+      "msg": "GRIP_EXTENDING timed out"
+    },
+    {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "CHECK_PLATE -> GRIP_EXTENDING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "INIT_GRIP_RETRACTING -> CHECK_PLATE"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "IDLE -> INIT_PUSH_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "External start pulse"
     },
     {
       "sev": "INFO",
-      "time": "11:36:20",
+      "time": "14:52:25",
       "msg": "PB2+PB3 held: operator bulb start"
     },
     {
       "sev": "INFO",
-      "time": "11:36:19",
+      "time": "14:52:24",
       "msg": "START pressed"
     },
     {
       "sev": "INFO",
-      "time": "11:36:19",
-      "msg": "INIT_GRIP_RETRACTING -> IDLE"
+      "time": "14:52:24",
+      "msg": "RECOVER_GRIP_RETR -> IDLE"
     },
     {
       "sev": "INFO",
-      "time": "11:36:19",
-      "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
+      "time": "14:52:24",
+      "msg": "RECOVER_SEP_RETR -> RECOVER_GRIP_RETR"
     },
     {
       "sev": "INFO",
-      "time": "11:36:19",
-      "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
+      "time": "14:52:24",
+      "msg": "RECOVER_PUSH_RETR -> RECOVER_SEP_RETR"
     },
     {
       "sev": "INFO",
-      "time": "11:36:19",
-      "msg": "NOT_HOMED -> INIT_PUSH_RETRACTING"
+      "time": "14:52:24",
+      "msg": "ERR -> RECOVER_PUSH_RETR"
     },
     {
       "sev": "INFO",
-      "time": "11:36:18",
-      "msg": "START pressed"
+      "time": "14:52:24",
+      "msg": "RESET pressed"
+    },
+    {
+      "sev": "ERR",
+      "time": "14:52:18",
+      "msg": "GRIP_EXTENDING timed out"
     },
     {
       "sev": "INFO",
-      "time": "11:36:18",
-      "msg": "GRIP_EXTENDING -> NOT_HOMED"
-    },
-    {
-      "sev": "INFO",
-      "time": "11:36:18",
-      "msg": "STOP pressed"
-    },
-    {
-      "sev": "INFO",
-      "time": "11:36:17",
+      "time": "14:52:17",
       "msg": "CHECK_PLATE -> GRIP_EXTENDING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:17",
+      "time": "14:52:17",
       "msg": "INIT_GRIP_RETRACTING -> CHECK_PLATE"
     },
     {
       "sev": "INFO",
-      "time": "11:36:17",
+      "time": "14:52:17",
       "msg": "INIT_SEP_RETRACTING -> INIT_GRIP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:17",
+      "time": "14:52:17",
       "msg": "INIT_PUSH_RETRACTING -> INIT_SEP_RETRACTING"
     },
     {
       "sev": "INFO",
-      "time": "11:36:17",
+      "time": "14:52:17",
       "msg": "IDLE -> INIT_PUSH_RETRACTING"
     }
   ],

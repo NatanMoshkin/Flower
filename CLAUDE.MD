@@ -5,6 +5,37 @@
 
 ### Active — nothing is blocking these
 
+- **A robot that is not there flushes the whole log ring every ~100 s.**
+  **Found on the panel 2026-08-10.** Pre-existing, not from this branch. One
+  guard, mirroring code already in the same file.
+
+  `FB_RobotTcpClient` line 205 calls `Fail(eSev := ERR, …'Connect failed'…)`
+  **unconditionally on every failed connect**, and the state machine re-dials
+  every 3 s while `bTcpEnable` is TRUE. Measured on the panel with no robot
+  attached: **all 20 slots of `GVL_Log.aRecent` were `Connect failed
+  192.168.1.11:6001 err 1861`**, at ~5 s spacing. So the panel Logs page shows
+  nothing else, and the ring is completely overwritten about every 100 seconds.
+
+  **That defeats a documented diagnostic rule of this project.** The PANEL
+  HARDWARE section says transition paths *must* come from `GVL_Log` rather than
+  from polling `eStep`, because the homing chain completes faster than ADS can
+  sample. Whenever the robot is absent — every bench session, and any production
+  fault that also drops the link — the ring cannot hold a transition path long
+  enough to read it.
+
+  **The fix already exists in the same FB, ten lines away.** `bStateUnanswered`
+  (lines 407-408 and 781-782) is edge-logged precisely so a repeating condition
+  cannot flush the ring: one WARN in, one INFO out. The ROBOT COMMS LOGGING
+  section argues for exactly that and says a level-logged WARN "would flush the
+  ring in 20 seconds and hide the cause". Connect-failure never got the same
+  treatment. Give it a `bConnectFailed` edge guard on the same pattern, and log
+  the recovery once when a connect finally succeeds.
+
+  Not done here because it needs a build + Activate, and it was found with the
+  branch green and ready to merge. Do it on `master` after the merge.
+
+---
+
 - **Durable CSV log on the PLC itself.** Planned 2026-08-07, **not started**.
   Full plan: **[`docs/plans/log-csv-file.md`](docs/plans/log-csv-file.md)** —
   also the first link on `docs/index.html`. Read it before touching `GVL_Log`.
@@ -131,6 +162,58 @@
 
 
 ### Standing constraints — not tasks, but read before committing
+
+- **An ADS round trip to the panel costs ~90 ms. To a local runtime it costs
+  ~0.02 ms.** Measured 2026-08-10 against the CP6606 over the LAN. That is a
+  **4500× difference**, and every test harness here was written against a local
+  runtime where the cost is invisible.
+
+  **Consequence: any harness that emulates the eight pistons by polling coils and
+  writing sensors cannot keep up with a 1000 ms `tStepTimeoutMs` unless it
+  batches.** Done naively — eight coil reads plus sixteen sensor writes — one
+  emulator pass costs **2.2 s**, so the emulated piston cannot answer before the
+  state faults. It does not look like a slow test; it looks like a PLC fault:
+  `live_api_check` failed 9 of 28 with **error 6 at `INIT_PUSH_RETRACTING`**, the
+  first movement state, and `cycle_trace` reported 3/10 states with a coil
+  pattern that was correct for every state it managed to catch.
+
+  **The three primitives that fix it, all verified on the panel:**
+
+  | Instead of | Do | Cost |
+  |---|---|---|
+  | 8 × `read_by_name("GVL_IO.dOut[n]")` | one array read of `GVL_IO.dOut` (contiguous `ARRAY[1..16] OF BOOL`) | 718 ms → **78 ms** |
+  | 16 × `write_by_name("GVL_IO.dIn[n]")` | one `write_list_by_name({...})` sum-up | 1496 ms → **130 ms** |
+  | re-writing a sensor that already holds the value | cache and write on change only | a steady pass → **one** round trip |
+
+  **Do not reach for a block write to `GVL_IO.dIn`.** A by-name handle to
+  `dIn[1]` is a single BOOL, so writing a span through it fails with **ADS 1797
+  (parameter size not correct)**; and writing the whole 24-channel array would
+  clobber the PB (13-15), plate (21-22) and free channels. Sum-up addresses each
+  symbol individually, so the channels it does not name are provably untouched —
+  confirmed by reading them back.
+
+  **Sampling counts against the same budget as driving.** `cycle_trace` sampled a
+  state's coils with eight separate reads *inside* the state it was observing:
+  720 ms of the 1000 ms timeout spent watching, which faulted
+  `GRIP_EXTENDING` with error 10 after having already sampled it correctly. An
+  observer slow enough to change the outcome is not an observer.
+
+  **A false pass is the worse failure here.** `cycle_trace` never normalised
+  `bNoSensors`, which is `PERSISTENT` and which `pb_test`'s teardown restores to
+  whatever it found. With it set, all twelve movement states advance on
+  `tStepTimeoutMs` **instead of** on sensors — so the piston emulator drives
+  sensors nothing consults and `--lag` has no effect whatsoever. The tell was
+  that `--lag 80ms` and `--lag 450ms` produced byte-identical output. Both
+  harnesses now normalise the two bench flags at entry and print what they
+  normalised from, the way `pb_test` has since 2026-08-05.
+
+  Run these against the panel with `--net 5.79.93.36.1.1` (`pb_test`,
+  `cycle_trace`) and `--net` **plus** `--base` (`live_api_check`, which opens its
+  own ADS connection alongside the app and otherwise silently targets
+  `127.0.0.1.1.1`).
+
+---
+
 
 - **Solution target is Local + TC 4026 for bench development** (no panel
   needed). Lives in the working tree across four files and **must never be

@@ -122,12 +122,12 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <h1>Push-button test report</h1>
 <p class="sub">Every documented behaviour of the three panel push buttons and their LEDs, exercised against a live PLC over ADS. Presses are simulated by writing the raw input channels <code>GVL_IO.dIn[13..15]</code>; every other value is read back from the PLC, including the solenoid coil outputs.</p>
 <div class="meta">
-<span><b>run</b> 2026-08-07 11:36:00 → 2026-08-07 11:36:26</span>
-<span><b>target</b> 127.0.0.1.1.1:851</span>
+<span><b>run</b> 2026-08-10 14:50:27 → 2026-08-10 14:51:43</span>
+<span><b>target</b> 5.79.93.36.1.1:851</span>
 <span><b>host</b> LP-NatanM</span>
 <span><b>python</b> 3.12.10</span>
-<span><b>state on entry</b> IDLE, bAutoMode=True</span>
-<span><b>state on exit</b> NOT_HOMED, bAutoMode=True</span>
+<span><b>state on entry</b> NOT_HOMED, bAutoMode=False</span>
+<span><b>state on exit</b> NOT_HOMED, bAutoMode=False</span>
 </div></header>
 <div class="verdict">
 <div class="tally">58<span class="of"> / 58</span></div>
@@ -166,7 +166,7 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <p class="gnote">The power-up state. Nothing may move; PB3&#x27;s LED prompts and PB1/PB2 are ignored.</p>
 <div class="tblwrap"><table><thead><tr><th>#</th><th>Check</th><th>Expected</th><th>Observed</th><th>Result</th></tr></thead><tbody>
 <tr><td class="cid">C0</td><td>Manual -&gt; Auto parks in NOT_HOMED</td><td class="val">NOT_HOMED</td><td class="val">NOT_HOMED</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">C1</td><td>PB3 LED blinks &#x27;press me to arm&#x27; (unpressed)<span class="ev trace">#.........########........######</span></td><td class="val">both ON and OFF observed</td><td class="val">ON x15, OFF x17 over 32 samples @50ms</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">C1</td><td>PB3 LED blinks &#x27;press me to arm&#x27; (unpressed)<span class="ev trace">...###..###..</span></td><td class="val">both ON and OFF observed</td><td class="val">ON x6, OFF x7 over 13 samples @50ms</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C2</td><td>status lamps: green OFF (not armed), red OFF (no fault)</td><td class="val">{&#x27;green&#x27;: False, &#x27;red&#x27;: False}</td><td class="val">{&#x27;green&#x27;: False, &#x27;red&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C3a</td><td>PB1 held in Auto/NOT_HOMED: GripL/GripR stay off<span class="ev">dOut {10, 11}</span></td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C3b</td><td>PB1 held in Auto/NOT_HOMED: the other six coils untouched</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False, &#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False, &#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
@@ -174,7 +174,7 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <tr><td class="cid">C4a</td><td>PB2 held in Auto/NOT_HOMED: Sep1/Sep2/Sep3 stay off<span class="ev">dOut {4, 5, 6}</span></td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False}</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C4b</td><td>PB2 held in Auto/NOT_HOMED: the other six coils untouched</td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False, &#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False, &#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C4c</td><td>PB2 released in Auto/NOT_HOMED: coils drop (momentary)</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False}</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">C5</td><td>PB3 press = operator START: homes, then arms<span class="ev">INFO 11:36:06 START pressed | INFO 11:36:06 NOT_HOMED -&gt; INIT_PUSH_RETRACTING | INFO 11:36:06 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 11:36:06 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 11:36:06 INIT_GRIP_RETRACTING -&gt; IDLE</span></td><td class="val">NOT_HOMED -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; IDLE</td><td class="val">NOT_HOMED -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; IDLE</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">C5</td><td>PB3 press = operator START: homes, then arms<span class="ev">INFO 14:51:48 START pressed | INFO 14:51:48 NOT_HOMED -&gt; INIT_PUSH_RETRACTING | INFO 14:51:48 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 14:51:48 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 14:51:48 INIT_GRIP_RETRACTING -&gt; IDLE</span></td><td class="val">NOT_HOMED -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; IDLE</td><td class="val">NOT_HOMED -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; IDLE</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C6</td><td>PB3 LED off once armed (prompt withdrawn)</td><td class="val">False</td><td class="val">False</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">C7</td><td>green lamp steady in IDLE</td><td class="val">{&#x27;green&#x27;: True, &#x27;red&#x27;: False}</td><td class="val">{&#x27;green&#x27;: True, &#x27;red&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 </tbody></table></div></section>
@@ -191,13 +191,13 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <tr><td class="cid">D3a</td><td>PB3 held in Auto/IDLE: Push1/Push2/Push3 stay off<span class="ev">dOut {1, 2, 3}</span></td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">D3b</td><td>PB3 held in Auto/IDLE: the other six coils untouched</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False, &#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td class="val">{&#x27;Sep1&#x27;: False, &#x27;Sep2&#x27;: False, &#x27;Sep3&#x27;: False, &#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">D3c</td><td>PB3 released in Auto/IDLE: coils drop (momentary)</td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td class="val">{&#x27;Push1&#x27;: False, &#x27;Push2&#x27;: False, &#x27;Push3&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">D4</td><td>PB3 in IDLE does NOTHING (no re-home, no bulb)<span class="ev">INFO 11:36:08 START pressed</span></td><td class="val">IDLE throughout, press logged</td><td class="val">IDLE, transitions: none, logged: True</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">D4</td><td>PB3 in IDLE does NOTHING (no re-home, no bulb)<span class="ev">INFO 14:51:54 START pressed</span></td><td class="val">IDLE throughout, press logged</td><td class="val">IDLE, transitions: none, logged: True</td><td><span class="pill PASS">PASS</span></td></tr>
 </tbody></table></div></section>
 <section class="grp">
 <h2><span class="gid">E</span>Automatic + ERR — manual moves must be REFUSED</h2>
 <p class="gnote">Fault raised for real: a bulb cycle is started with both plate sensors clear, so CHECK_PLATE times out with error 9. The jog window that briefly existed here is gone -- these guard that.</p>
 <div class="tblwrap"><table><thead><tr><th>#</th><th>Check</th><th>Expected</th><th>Observed</th><th>Result</th></tr></thead><tbody>
-<tr><td class="cid">E0</td><td>a bulb cycle with no plate faults at CHECK_PLATE<span class="ev">INFO 11:36:09 Sim start pressed | INFO 11:36:09 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 11:36:09 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 11:36:09 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 11:36:09 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | ERR 11:36:10 CHECK_PLATE timed out (plate never arrived)</span></td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE + ERR entry</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE + ERR entry</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">E0</td><td>a bulb cycle with no plate faults at CHECK_PLATE<span class="ev">INFO 14:51:56 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 14:51:56 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 14:51:56 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 14:51:56 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | ERR 14:51:57 CHECK_PLATE timed out (plate never arrived) | ERR 14:51:57 CHECK_PLATE timed out (plate never arrived)</span></td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE + ERR entry</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE + ERR entry</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">E1</td><td>error code 9 = plate never arrived</td><td class="val">9</td><td class="val">9</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">E2</td><td>status lamps: red ON, green OFF</td><td class="val">{&#x27;green&#x27;: False, &#x27;red&#x27;: True}</td><td class="val">{&#x27;green&#x27;: False, &#x27;red&#x27;: True}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">E3a</td><td>PB1 held in Auto/ERR: GripL/GripR stay off<span class="ev">dOut {10, 11}</span></td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
@@ -213,7 +213,7 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <h2><span class="gid">F</span>Recovery — RESET homes, it does not jump to IDLE</h2>
 <p class="gnote">A fault leaves the pistons anywhere, so IDLE would advertise &#x27;ready&#x27; while it is not.</p>
 <div class="tblwrap"><table><thead><tr><th>#</th><th>Check</th><th>Expected</th><th>Observed</th><th>Result</th></tr></thead><tbody>
-<tr><td class="cid">F0</td><td>PB2 in ERR = RESET, and recovery runs its own chain<span class="ev">INFO 11:36:11 RESET pressed | INFO 11:36:11 ERR -&gt; RECOVER_PUSH_RETR | INFO 11:36:11 RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR | INFO 11:36:11 RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR | INFO 11:36:11 RECOVER_GRIP_RETR -&gt; IDLE</span></td><td class="val">ERR -&gt; RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR -&gt; IDLE</td><td class="val">ERR -&gt; RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR -&gt; IDLE</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">F0</td><td>PB2 in ERR = RESET, and recovery runs its own chain<span class="ev">INFO 14:52:05 RESET pressed | INFO 14:52:05 ERR -&gt; RECOVER_PUSH_RETR | INFO 14:52:05 RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR | INFO 14:52:05 RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR | INFO 14:52:05 RECOVER_GRIP_RETR -&gt; IDLE</span></td><td class="val">ERR -&gt; RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR -&gt; IDLE</td><td class="val">ERR -&gt; RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR -&gt; IDLE</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">F1</td><td>error cleared</td><td class="val">0</td><td class="val">0</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">F2</td><td>lamps back to armed-idle</td><td class="val">{&#x27;green&#x27;: True, &#x27;red&#x27;: False}</td><td class="val">{&#x27;green&#x27;: True, &#x27;red&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">F3a</td><td>PB1 held back in Auto/IDLE: GripL/GripR stay off<span class="ev">dOut {10, 11}</span></td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td class="val">{&#x27;GripL&#x27;: False, &#x27;GripR&#x27;: False}</td><td><span class="pill PASS">PASS</span></td></tr>
@@ -226,35 +226,35 @@ footer { margin-top:3rem; padding-top:1.2rem; border-top:1px solid var(--rule);
 <div class="tblwrap"><table><thead><tr><th>#</th><th>Check</th><th>Expected</th><th>Observed</th><th>Result</th></tr></thead><tbody>
 <tr><td class="cid">G0</td><td>PB1 held 0.40s (under the 1.00s preset) does nothing</td><td class="val">IDLE</td><td class="val">IDLE</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">G1</td><td>PB1 held 1.00s disarms to NOT_HOMED</td><td class="val">NOT_HOMED</td><td class="val">NOT_HOMED</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">G2</td><td>and it DISARMS rather than faulting<span class="ev">INFO 11:36:14 STOP pressed | INFO 11:36:14 IDLE -&gt; NOT_HOMED</span></td><td class="val">iErrorCode 0</td><td class="val">iErrorCode 0</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">G2</td><td>and it DISARMS rather than faulting<span class="ev">INFO 14:52:11 STOP pressed | INFO 14:52:11 IDLE -&gt; NOT_HOMED</span></td><td class="val">iErrorCode 0</td><td class="val">iErrorCode 0</td><td><span class="pill PASS">PASS</span></td></tr>
 <tr><td class="cid">G3</td><td>PB3 alone from IDLE does nothing — no state change</td><td class="val">IDLE, no transitions</td><td class="val">IDLE, no transitions</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">G4</td><td>PB2+PB3 held starts a BULB from IDLE, not a re-home<span class="ev">INFO 11:36:17 PB2+PB3 held: operator bulb start | INFO 11:36:17 External start pulse | INFO 11:36:17 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 11:36:17 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 11:36:17 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 11:36:17 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | INFO 11:36:17 CHECK_PLATE -&gt; GRIP_EXTENDING</span></td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE ...</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE -&gt; GRIP_EXTENDING</td><td><span class="pill PASS">PASS</span></td></tr>
-<tr><td class="cid">G5</td><td>GREEN-before-ORANGE still starts the bulb (no lost request)<span class="ev">INFO 11:36:19 START pressed | INFO 11:36:20 PB2+PB3 held: operator bulb start | INFO 11:36:20 External start pulse | INFO 11:36:20 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 11:36:20 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 11:36:20 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 11:36:20 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | INFO 11:36:20 CHECK_PLATE -&gt; GRIP_EXTENDING</span></td><td class="val">reaches CHECK_PLATE with no spurious re-home first</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE -&gt; GRIP_EXTENDING</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">G4</td><td>PB2+PB3 held starts a BULB from IDLE, not a re-home<span class="ev">INFO 14:52:17 PB2+PB3 held: operator bulb start | INFO 14:52:17 External start pulse | INFO 14:52:17 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 14:52:17 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 14:52:17 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 14:52:17 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | INFO 14:52:17 CHECK_PLATE -&gt; GRIP_EXTENDING | ERR 14:52:18 GRIP_EXTENDING timed out</span></td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE ...</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE -&gt; GRIP_EXTENDING</td><td><span class="pill PASS">PASS</span></td></tr>
+<tr><td class="cid">G5</td><td>GREEN-before-ORANGE still starts the bulb (no lost request)<span class="ev">INFO 14:52:24 START pressed | INFO 14:52:25 PB2+PB3 held: operator bulb start | INFO 14:52:25 External start pulse | INFO 14:52:25 IDLE -&gt; INIT_PUSH_RETRACTING | INFO 14:52:25 INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING | INFO 14:52:25 INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING | INFO 14:52:25 INIT_GRIP_RETRACTING -&gt; CHECK_PLATE | INFO 14:52:25 CHECK_PLATE -&gt; GRIP_EXTENDING | ERR 14:52:26 GRIP_EXTENDING timed out</span></td><td class="val">reaches CHECK_PLATE with no spurious re-home first</td><td class="val">IDLE -&gt; INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING -&gt; CHECK_PLATE -&gt; GRIP_EXTENDING</td><td><span class="pill PASS">PASS</span></td></tr>
 </tbody></table></div></section>
 <section class="grp">
 <h2><span class="gid">LOG</span>PLC event ring at end of run</h2>
 <p class="gnote">Newest first, straight from <code>GVL_Log.aRecent[0..19]</code> — the same 20 entries the panel&rsquo;s Log page shows. Timestamps come from the panel RTC.</p>
 <div class="logbox"><table><thead><tr><th>Sev</th><th>Time</th><th>Message</th></tr></thead><tbody>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>CHECK_PLATE -&gt; GRIP_EXTENDING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>INIT_GRIP_RETRACTING -&gt; CHECK_PLATE</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>IDLE -&gt; INIT_PUSH_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>External start pulse</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:20</td><td>PB2+PB3 held: operator bulb start</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:19</td><td>START pressed</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:19</td><td>INIT_GRIP_RETRACTING -&gt; IDLE</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:19</td><td>INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:19</td><td>INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:19</td><td>NOT_HOMED -&gt; INIT_PUSH_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:18</td><td>START pressed</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:18</td><td>GRIP_EXTENDING -&gt; NOT_HOMED</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:18</td><td>STOP pressed</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:17</td><td>CHECK_PLATE -&gt; GRIP_EXTENDING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:17</td><td>INIT_GRIP_RETRACTING -&gt; CHECK_PLATE</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:17</td><td>INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:17</td><td>INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING</td></tr>
-<tr><td class="sev-INFO">INFO</td><td class="val">11:36:17</td><td>IDLE -&gt; INIT_PUSH_RETRACTING</td></tr>
+<tr><td class="sev-ERR">ERR</td><td class="val">14:52:26</td><td>GRIP_EXTENDING timed out</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>CHECK_PLATE -&gt; GRIP_EXTENDING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>INIT_GRIP_RETRACTING -&gt; CHECK_PLATE</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>IDLE -&gt; INIT_PUSH_RETRACTING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>External start pulse</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:25</td><td>PB2+PB3 held: operator bulb start</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>START pressed</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>RECOVER_GRIP_RETR -&gt; IDLE</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>RECOVER_SEP_RETR -&gt; RECOVER_GRIP_RETR</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>RECOVER_PUSH_RETR -&gt; RECOVER_SEP_RETR</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>ERR -&gt; RECOVER_PUSH_RETR</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:24</td><td>RESET pressed</td></tr>
+<tr><td class="sev-ERR">ERR</td><td class="val">14:52:18</td><td>GRIP_EXTENDING timed out</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:17</td><td>CHECK_PLATE -&gt; GRIP_EXTENDING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:17</td><td>INIT_GRIP_RETRACTING -&gt; CHECK_PLATE</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:17</td><td>INIT_SEP_RETRACTING -&gt; INIT_GRIP_RETRACTING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:17</td><td>INIT_PUSH_RETRACTING -&gt; INIT_SEP_RETRACTING</td></tr>
+<tr><td class="sev-INFO">INFO</td><td class="val">14:52:17</td><td>IDLE -&gt; INIT_PUSH_RETRACTING</td></tr>
 </tbody></table></div></section>
 <footer>Generated by <code>scripts/pb_test/pb_test_procedure.py</code>. Raw results in <code>scripts/pb_test/last_run.json</code>. Channel map authority: <code>docs/167_01_SAAD_PinPush_IO_List.xlsx</code> (sheet IO, column NEW).</footer>
 </div>
