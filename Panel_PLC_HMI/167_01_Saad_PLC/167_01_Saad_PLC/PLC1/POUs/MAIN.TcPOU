@@ -72,6 +72,12 @@ VAR
     // header. Called last so it sees this scan's final config values.
     fbPersistentSave : FB_PersistentAutoSave;
 
+    // THROWAWAY -- Phase 0 gate of docs/plans/log-csv-file.md. Idle until an
+    // operator sets GVL_Log.bLogFileProbeRun, so it costs one CASE test per
+    // scan and nothing else. DELETE with the FB once the probe has answered
+    // whether WinCE 7 ARM can do file I/O and which path is writable.
+    fbLogFileSpike : FB_LogFileSpike;
+
     // Status-lamp blink source. A self-resetting TON toggling a BOOL gives a
     // 50% duty cycle; the TON on its own only produces a one-scan pulse,
     // which would make the lamp flicker rather than blink.
@@ -535,6 +541,17 @@ fbRobotTcp(
    GVL_Log (visible on the Logs page) so a failing write is not silent.
    ========================================== *)
 fbPersistentSave();
+
+(* ==========================================
+   THROWAWAY -- Phase 0 file-I/O probe. See docs/plans/log-csv-file.md.
+   Sits here, after the persistent flush, because that is the slot the real
+   FB_LogCsvWriter will occupy in Phase 2 -- so whatever this proves about
+   timing and error behaviour is proved where the writer will actually live.
+   Does nothing until GVL_Log.bLogFileProbeRun goes TRUE.
+   DELETE this call, the instance, the FB, ST_LogFileProbe and the GVL block
+   once the gate has been answered.
+   ========================================== *)
+fbLogFileSpike();
 
 ]]></ST>
     </Implementation>

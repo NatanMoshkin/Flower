@@ -38,6 +38,37 @@ VAR_GLOBAL
     // an unset RTC shows that plainly instead of a plausible wrong time.
     sNow        : STRING(8) := '--:--:--';
 
+    // ---------------------------------------------------------------- //
+    // THROWAWAY -- Phase 0 gate of docs/plans/log-csv-file.md.
+    // DELETE this whole block together with FB_LogFileSpike and
+    // ST_LogFileProbe once the probe has answered. It is scaffolding for
+    // deciding whether the CSV logger can be built, not part of it.
+    //
+    // Deliberately VOLATILE (GVL_Log is plain VAR_GLOBAL): a probe result is
+    // evidence about one boot of one target, and persisting it would let a
+    // stale PASS from the bench PC be read later as if it came from the panel.
+    // The real logger's config goes in GVL_HmiPersistent in Phase 1 -- that
+    // one has to survive, for the same reason sRobotHost does.
+    // ---------------------------------------------------------------- //
+
+    // Set TRUE (ADS or VISU) to run one sweep. FB_LogFileSpike edge-detects it
+    // and self-clears, so it cannot re-run every scan and append six lines
+    // per scan to whichever candidates work.
+    bLogFileProbeRun   : BOOL;
+    bLogFileProbeBusy  : BOOL;
+    bLogFileProbeDone  : BOOL;
+
+    // How many of the six candidates fully worked, and the index of the first
+    // that did. -1 means none -- read that as "the file blocks or the target
+    // are the problem", not "try a different path".
+    nLogFileProbeOk    : INT;
+    iLogFileProbeFirst : INT := -1;
+
+    // One row per candidate. aLogFileProbe[i].sPathName is the value to carry
+    // into stLogFileCfg.sDir in Phase 1, so it records what was actually
+    // passed to FB_FileOpen rather than something reconstructed from it.
+    aLogFileProbe      : ARRAY[1..6] OF ST_LogFileProbe;
+
     // NOTE stBridgeCfg / ST_LogBridgeCfg used to live here and are GONE
     // (2026-08-07). The field existed solely so the retired
     // RobotBridge/log_pump.py could publish its own logger configuration for an

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_LogFileProbe" Id="{290d2665-f01a-504d-9902-7c7c6e60d187}">
+    <Declaration><![CDATA[(*
+   THROWAWAY. One row of FB_LogFileSpike's result table -- the outcome of trying
+   to open, write and close a file at one candidate location on the target.
+
+   Delete this DUT together with FB_LogFileSpike once Phase 0 of
+   docs/plans/log-csv-file.md has answered its two questions. It is not part of
+   the CSV logger; it is the thing that decides whether the CSV logger can be
+   built at all.
+
+   Every field is here to be read over ADS or off a VISU page, because the
+   panel has no way to show a file and the whole point is to find out what the
+   target will accept. The three error codes are kept SEPARATE on purpose: an
+   open that fails and a write that fails mean completely different things (no
+   such directory vs. read-only medium), and a single "it did not work" would
+   throw that away.
+*)
+TYPE ST_LogFileProbe :
+STRUCT
+    // Human-readable label for the candidate, e.g. 'PATH_BOOTPATH + bare name'.
+    sWhat       : STRING(60);
+
+    // The E_OpenPath enumerator used, as an INT so it is readable over ADS
+    // without the reader needing the enum. The classic VISU cannot stringify an
+    // enum either -- the settled constraint behind every s*Text mirror here.
+    nPath       : INT;
+
+    // What was handed to FB_FileOpen.sPathName, verbatim. Recorded rather than
+    // reconstructed: this is the value that has to be typed into stLogFileCfg.sDir
+    // later, so it must be exactly what worked.
+    sPathName   : STRING(120);
+
+    bOpened     : BOOL;
+    bWrote      : BOOL;
+    bClosed     : BOOL;
+
+    nOpenErr    : UDINT;
+    nWriteErr   : UDINT;
+    nCloseErr   : UDINT;
+
+    // Opened AND wrote AND closed with no error on any of the three. The one
+    // field worth looking at first.
+    bOk         : BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

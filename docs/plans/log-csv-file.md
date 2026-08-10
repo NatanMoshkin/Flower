@@ -89,11 +89,40 @@ Deliverable: `FB_LogFileSpike`, called from `MAIN` behind a manual BOOL in
 `nErrId` into a GVL for ADS/VISU inspection. Plus a path probe that tries a short
 candidate list and reports which one opens.
 
-**Confirm the exact FB names and signatures in the IDE library browser before
-writing this** — `FB_FileOpen` / `FB_FileWrite` / `FB_FileClose` /
-`FB_FileDelete` / `FB_FileFindFirst|Next|Close`, with
-`FOPEN_MODEAPPEND + FOPEN_MODETEXT` and `ePath := PATH_GENERIC`. Treat them as
-unverified until seen in the browser; do not take them from memory.
+### Library verification — DONE 2026-08-10, and it corrected this plan twice
+
+Read out of the installed `.compiled-library` files rather than from memory, which
+is what this section demanded and was right to demand — two of the names below
+were wrong.
+
+**`Tc2_System` 3.10.2 has** `FB_FileOpen`, `FB_FileClose`, `FB_FileWrite`,
+`FB_FileRead`, `FB_FileDelete`, `FB_FileSeek`, `FB_FileTell`, `FB_FilePuts`,
+`FB_FileGets`, `FB_FileRename`, `FB_CreateDir`. Constants `PATH_GENERIC`,
+`PATH_BOOTPATH`, `PATH_USERPATH1..9`, `FOPEN_MODEAPPEND`, `FOPEN_MODETEXT`,
+`FOPEN_MODEWRITE`, `SEEK_*` all present. Input names confirmed: `sNetId`,
+`sPathName`, `nMode`, `ePath`, `bExecute`, `tTimeout`, `hFile`, `sLine`,
+`pWriteBuff`, `cbWriteLen`; outputs `bBusy`, `bError`, `nErrId`.
+
+**CORRECTION 1 — the retention FBs do not exist under the names used below.**
+`FB_FileFindFirst` / `FB_FileFindNext` / `FB_FileFindClose` are in **neither**
+library. Phase 3 must use `Tc2_Utilities.FB_EnumFindFileList` and
+`Tc2_Utilities.FB_EnumFindFileEntry`; `ST_FindFileEntry` is what carries
+`nFileSize` / `sFileName` / `bDirectory` / `bReadOnly`. Also in `Tc2_Utilities`
+and worth a look before hand-rolling anything: `FB_FileProperties` (size of one
+named file, which may be all the retention sweep needs) and `FB_FileRingBuffer`.
+
+**CORRECTION 2 — every file reference must be namespace-qualified.** This project
+references `Tc2_System` **and** `Tc2_Utilities`, and **both declare**
+`FB_FileOpen`, `FB_FileClose`, `FB_FilePuts`, `FB_FileRead`, `FB_FileWrite` and
+`FB_FileSeek`. Unqualified those names are ambiguous and the build fails. Write
+`Tc2_System.FB_FileOpen`.
+
+**Candidate 1 is `PATH_BOOTPATH`, and that choice does real work.** It resolves to
+the directory TwinCAT already writes `Port_851.bootdata` into, so on this target
+with this runtime it is *provably* writable, which no hand-guessed CE path is.
+That splits the gate's two questions apart: if candidate 1 fails, the file blocks
+themselves are the problem, not the path. It is not necessarily where the logs
+should end up living — prove capability first, choose a home second.
 
 Deleted once it has answered. **Nothing in Phases 1–4 gets written until Phase 0
 passes on the real panel.**
@@ -180,7 +209,9 @@ and do not rotate by date. An unset panel clock is a real condition here, not a
 hypothetical.
 
 **Retention** runs only on rotation, never per write: enumerate the directory with
-`FB_FileFindFirst` / `Next` / `Close`, sum `nFileSize`, and delete oldest-by-name
+`Tc2_Utilities.FB_EnumFindFileList` / `FB_EnumFindFileEntry` (**not**
+`FB_FileFindFirst|Next|Close` — those do not exist, see the Phase 0 correction),
+sum `ST_FindFileEntry.nFileSize`, and delete oldest-by-name
 until under `uiMaxTotalMB`. Oldest-by-name is correct *because* the names sort
 chronologically — a further reason to prefer the dated scheme. Never delete the
 file currently open.

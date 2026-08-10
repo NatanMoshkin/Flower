@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_LogFileSpike" Id="{2dd4dbd4-4330-59a1-ac2d-787c4ddbbda6}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+   THROWAWAY PROBE -- Phase 0 gate of docs/plans/log-csv-file.md. DELETE once it
+   has answered. It is not the CSV logger and must not grow into it.
+
+   IT ANSWERS EXACTLY TWO QUESTIONS, neither of which the repository can answer:
+
+     1. Do Tc2_System's file blocks work on WinCE 7 ARM on the CP6606 at all?
+        Tc2_System is already referenced, but there is NO file I/O anywhere in
+        this PLC today -- verified by grep. The retired Python bridge died of
+        precisely this kind of unverified target assumption, so the plan makes
+        this a hard gate: nothing in Phases 1-4 gets written until this passes.
+
+     2. WHICH PATH IS WRITABLE? There is no prior art for a CE path in either
+        repo -- no '\Hard Disk\', nothing. Guessing one and building on the
+        guess is the expensive mistake.
+
+   HOW IT ANSWERS THEM. Six candidates, tried in order, each open -> write one
+   line -> close, with the outcome of all three steps recorded separately in
+   GVL_Log.aLogFileProbe. It does NOT stop at the first success: knowing that
+   three locations work and which three is worth more than knowing that one
+   does, because the choice then accounts for where an operator can actually
+   reach the file with a USB stick or a share.
+
+   PATH_BOOTPATH IS CANDIDATE 1 ON PURPOSE, and it is the one that makes this
+   probe likely to succeed at all. It resolves to the directory TwinCAT already
+   writes Port_851.bootdata into -- so on this exact target, with this exact
+   runtime, it is PROVABLY writable, which no hand-guessed CE path is. It
+   sidesteps question 2 entirely for the capability half of question 1: if
+   candidate 1 fails, the file blocks themselves are the problem, not the path.
+   (It is not necessarily where the logs should LIVE -- mixing them in with
+   TwinCAT's own boot files is untidy -- but proving capability first and
+   choosing a home second is the right order.)
+
+   EVERY REFERENCE IS NAMESPACE-QUALIFIED, and it has to be. This project
+   references Tc2_System AND Tc2_Utilities, and BOTH declare FB_FileOpen,
+   FB_FileClose, FB_FilePuts, FB_FileRead, FB_FileWrite and FB_FileSeek.
+   Unqualified, those names are ambiguous and the build fails.
+
+   NOTE FOR PHASE 3, found while verifying this: the plan names
+   FB_FileFindFirst / FB_FileFindNext / FB_FileFindClose for the retention
+   sweep. THOSE DO NOT EXIST in either library. The real ones are
+   Tc2_Utilities.FB_EnumFindFileList and FB_EnumFindFileEntry, and
+   ST_FindFileEntry is what carries nFileSize / sFileName / bDirectory.
+
+   ASYNC, LIKE EVERYTHING ELSE THAT TALKS OFF-CHIP HERE. One step per state,
+   advanced on bBusy falling, following the exact call shape
+   FB_RobotTcpClient uses for fbConnect: call with bExecute := TRUE, and once
+   bBusy is clear call again with bExecute := FALSE to disarm before reading
+   bError. A blocking or spinning file call would hurt the 10 ms PlcTask.
+*)
+FUNCTION_BLOCK FB_LogFileSpike
+VAR CONSTANT
+    N_CAND      : INT := 6;
+    FILE_TO     : TIME := T#5S;
+
+    // Local selector -> E_OpenPath, resolved in one CASE below. Deliberately
+    // NOT TO_INT() on the enum: this keeps the candidate table readable and
+    // makes no assumption about the enum's base type.
+    SEL_GENERIC : INT := 0;
+    SEL_BOOT    : INT := 1;
+    SEL_USER1   : INT := 2;
+END_VAR
+VAR
+    eStep       : INT;          // 0 idle, 10 setup, 20 open, 30 write, 40 close, 50 next, 99 done
+    iCand       : INT;          // 1..N_CAND
+    nSel        : INT;          // which E_OpenPath this candidate wants
+    ePathUse    : Tc2_System.E_OpenPath;
+    sName       : STRING(120);
+    sLine       : STRING(200);
+    hFile       : UINT;
+
+    fbOpen      : Tc2_System.FB_FileOpen;
+    fbPuts      : Tc2_System.FB_FilePuts;
+    fbClose     : Tc2_System.FB_FileClose;
+
+    fbTrigRun   : R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// ------------------------------------------------------------------ //
+// Section 0 -- arm on the operator's rising edge only.
+//
+// Edge, not level: a level would re-run the whole six-candidate sweep every
+// scan the flag stayed set, appending six lines a scan to whichever candidates
+// work. GVL_Log.bLogFileProbeRun is ADS-writable, so that is a real risk, not
+// a theoretical one.
+// ------------------------------------------------------------------ //
+fbTrigRun(CLK := GVL_Log.bLogFileProbeRun);
+
+IF fbTrigRun.Q AND (eStep = 0) THEN
+    // Wipe the previous sweep so a stale PASS cannot be mistaken for a fresh
+    // one -- the single most misleading thing this FB could do.
+    FOR iCand := 1 TO N_CAND DO
+        GVL_Log.aLogFileProbe[iCand].bOpened   := FALSE;
+        GVL_Log.aLogFileProbe[iCand].bWrote    := FALSE;
+        GVL_Log.aLogFileProbe[iCand].bClosed   := FALSE;
+        GVL_Log.aLogFileProbe[iCand].bOk       := FALSE;
+        GVL_Log.aLogFileProbe[iCand].nOpenErr  := 0;
+        GVL_Log.aLogFileProbe[iCand].nWriteErr := 0;
+        GVL_Log.aLogFileProbe[iCand].nCloseErr := 0;
+    END_FOR
+    GVL_Log.nLogFileProbeOk   := 0;
+    GVL_Log.iLogFileProbeFirst := -1;
+    GVL_Log.bLogFileProbeDone := FALSE;
+    GVL_Log.bLogFileProbeBusy := TRUE;
+    iCand  := 1;
+    eStep  := 10;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := 'FB_LogFileSpike',
+               sMsg  := 'File probe started');
+END_IF
+
+CASE eStep OF
+
+// ------------------------------------------------------------------ //
+// 10 -- build this candidate. The table lives here, in one place.
+// ------------------------------------------------------------------ //
+10:
+    CASE iCand OF
+        1:  nSel  := SEL_BOOT;
+            sName := 'flower-spike.csv';
+            GVL_Log.aLogFileProbe[1].sWhat := 'PATH_BOOTPATH + bare name (bootdata lives here)';
+        2:  nSel  := SEL_GENERIC;
+            sName := '\Hard Disk\flower-spike.csv';
+            GVL_Log.aLogFileProbe[2].sWhat := 'GENERIC \Hard Disk\ (usual CE flash mount)';
+        3:  nSel  := SEL_GENERIC;
+            sName := '\Hard Disk\Logs\flower-spike.csv';
+            GVL_Log.aLogFileProbe[3].sWhat := 'GENERIC \Hard Disk\Logs\ (dir must exist)';
+        4:  nSel  := SEL_GENERIC;
+            sName := '\Temp\flower-spike.csv';
+            GVL_Log.aLogFileProbe[4].sWhat := 'GENERIC \Temp\';
+        5:  nSel  := SEL_GENERIC;
+            sName := '\flower-spike.csv';
+            GVL_Log.aLogFileProbe[5].sWhat := 'GENERIC device root \';
+        6:  nSel  := SEL_USER1;
+            sName := 'flower-spike.csv';
+            GVL_Log.aLogFileProbe[6].sWhat := 'PATH_USERPATH1 (unset unless configured)';
+    END_CASE
+
+    CASE nSel OF
+        SEL_BOOT:  ePathUse := Tc2_System.PATH_BOOTPATH;
+        SEL_USER1: ePathUse := Tc2_System.PATH_USERPATH1;
+    ELSE
+        ePathUse := Tc2_System.PATH_GENERIC;
+    END_CASE
+
+    GVL_Log.aLogFileProbe[iCand].nPath     := nSel;
+    GVL_Log.aLogFileProbe[iCand].sPathName := sName;
+
+    // One CSV row, already RFC 4180 quoted, with a comma AND a doubled quote
+    // inside the message field. Free early evidence that text mode does not
+    // mangle either -- Phase 2 has to get this right and this costs nothing now.
+    sLine := CONCAT('"', CONCAT(GVL_Log.sNow,
+             '",INFO,FB_LogFileSpike,"probe ok, quoted ""value"" with comma"$N'));
+
+    eStep := 20;
+
+// ------------------------------------------------------------------ //
+// 20 -- open for append. Append, not write: a probe must never truncate
+//       something that turns out to matter, and append is the mode the real
+//       writer will use anyway.
+// ------------------------------------------------------------------ //
+20:
+    fbOpen(sPathName := sName,
+           nMode     := Tc2_System.FOPEN_MODEAPPEND OR Tc2_System.FOPEN_MODETEXT,
+           ePath     := ePathUse,
+           bExecute  := TRUE,
+           tTimeout  := FILE_TO);
+    IF NOT fbOpen.bBusy THEN
+        fbOpen(bExecute := FALSE);
+        IF fbOpen.bError THEN
+            GVL_Log.aLogFileProbe[iCand].nOpenErr := fbOpen.nErrId;
+            eStep := 50;                        // nothing to close
+        ELSE
+            hFile := fbOpen.hFile;
+            GVL_Log.aLogFileProbe[iCand].bOpened := TRUE;
+            eStep := 30;
+        END_IF
+    END_IF
+
+// ------------------------------------------------------------------ //
+// 30 -- write the line. FB_FilePuts rather than FB_FileWrite: it takes a
+//       STRING directly, so no byte buffer and no pointer arithmetic for what
+//       is a text file.
+// ------------------------------------------------------------------ //
+30:
+    fbPuts(hFile    := hFile,
+           sLine    := sLine,
+           bExecute := TRUE,
+           tTimeout := FILE_TO);
+    IF NOT fbPuts.bBusy THEN
+        fbPuts(bExecute := FALSE);
+        IF fbPuts.bError THEN
+            GVL_Log.aLogFileProbe[iCand].nWriteErr := fbPuts.nErrId;
+        ELSE
+            GVL_Log.aLogFileProbe[iCand].bWrote := TRUE;
+        END_IF
+        eStep := 40;                            // close either way -- see below
+    END_IF
+
+// ------------------------------------------------------------------ //
+// 40 -- close. Reached even when the write failed, ON PURPOSE: the handle is
+//       open and leaking it would exhaust the runtime's handle table after a
+//       few sweeps, which would then look like the file blocks not working.
+// ------------------------------------------------------------------ //
+40:
+    fbClose(hFile    := hFile,
+            bExecute := TRUE,
+            tTimeout := FILE_TO);
+    IF NOT fbClose.bBusy THEN
+        fbClose(bExecute := FALSE);
+        IF fbClose.bError THEN
+            GVL_Log.aLogFileProbe[iCand].nCloseErr := fbClose.nErrId;
+        ELSE
+            GVL_Log.aLogFileProbe[iCand].bClosed := TRUE;
+        END_IF
+        hFile := 0;
+        eStep := 50;
+    END_IF
+
+// ------------------------------------------------------------------ //
+// 50 -- score this candidate, then move on. Does NOT stop early.
+// ------------------------------------------------------------------ //
+50:
+    GVL_Log.aLogFileProbe[iCand].bOk :=
+            GVL_Log.aLogFileProbe[iCand].bOpened
+        AND GVL_Log.aLogFileProbe[iCand].bWrote
+        AND GVL_Log.aLogFileProbe[iCand].bClosed
+        AND (GVL_Log.aLogFileProbe[iCand].nOpenErr  = 0)
+        AND (GVL_Log.aLogFileProbe[iCand].nWriteErr = 0)
+        AND (GVL_Log.aLogFileProbe[iCand].nCloseErr = 0);
+
+    IF GVL_Log.aLogFileProbe[iCand].bOk THEN
+        GVL_Log.nLogFileProbeOk := GVL_Log.nLogFileProbeOk + 1;
+        IF GVL_Log.iLogFileProbeFirst < 0 THEN
+            GVL_Log.iLogFileProbeFirst := iCand;
+        END_IF
+        F_LogEvent(eSev := E_LogSev.INFO, sSource := 'FB_LogFileSpike',
+                   sMsg  := CONCAT('Probe OK: ', sName));
+    ELSE
+        // WARN, not ERR. A candidate that does not exist on this target is the
+        // expected outcome for most of the six -- that is what a probe is for.
+        // Logging six ERRs would be exactly the ring-flushing noise this
+        // project already has one open defect about.
+        F_LogEvent(eSev := E_LogSev.WARN, sSource := 'FB_LogFileSpike',
+                   sMsg  := CONCAT(CONCAT('Probe failed: ', sName),
+                            CONCAT(' openErr ', UDINT_TO_STRING(
+                                GVL_Log.aLogFileProbe[iCand].nOpenErr))));
+    END_IF
+
+    IF iCand >= N_CAND THEN
+        eStep := 99;
+    ELSE
+        iCand := iCand + 1;
+        eStep := 10;
+    END_IF
+
+// ------------------------------------------------------------------ //
+// 99 -- done. Latched until the operator clears the request flag, so the
+//       result table can be read at leisure over ADS.
+// ------------------------------------------------------------------ //
+99:
+    GVL_Log.bLogFileProbeBusy := FALSE;
+    GVL_Log.bLogFileProbeDone := TRUE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := 'FB_LogFileSpike',
+               sMsg  := CONCAT(CONCAT('File probe done: ',
+                        INT_TO_STRING(GVL_Log.nLogFileProbeOk)),
+                        CONCAT(' of 6 worked, first = ',
+                        INT_TO_STRING(GVL_Log.iLogFileProbeFirst))));
+    GVL_Log.bLogFileProbeRun := FALSE;      // self-disarm; the R_TRIG re-arms it
+    eStep := 0;
+
+END_CASE
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
