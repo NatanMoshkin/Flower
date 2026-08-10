@@ -204,14 +204,58 @@ locations on this panel where a file survives a restart at all.**
   field reports healthy. If `sDir` cannot be opened, the correct behaviour is
   `FAILED` with the error latched and visible.
 
-**Still open, deliberately, and it is a Phase 2 question rather than a gate one:**
-whether `FB_FilePuts` appends its own line ending on top of the `$N` the probe
-writes. It cannot be settled from the library metadata and the panel has no way to
-show a file, so the check is a byte count once a real CSV can be copied off: the
-probe's line is 72 characters, so 73 bytes means LF, **74 means CRLF (what RFC 4180
-wants)**, and 75 means the ending is doubled and rows are separated by blank lines.
-Worst case is cosmetic and visible the first time anyone opens the file, which is
-why it did not justify another build cycle. Verification step 3 covers it.
+### FTP IS THE RETRIEVAL PATH, and its root IS `\Hard Disk\` — established 2026-08-10
+
+The panel runs an anonymous FTP server, and **no reconfiguration is needed**:
+
+| PLC path | Over FTP | In Explorer |
+|---|---|---|
+| `\Hard Disk\Logs\flower-2026-08-10.csv` | `/Logs/flower-2026-08-10.csv` | `ftp://192.168.1.100/Logs/` |
+| `PATH_BOOTPATH` (`\Hard Disk\TwinCAT\3.1\Boot`) | `/TwinCAT/3.1/Boot` | — |
+| `\` and `\Temp\` (RAM object store) | **not visible** | — |
+
+Proven by experiment rather than inferred: the FTP root was listed, the PLC probe
+sweep was triggered, and `flower-spike.csv` appeared at the FTP root — then it was
+deleted and confirmed gone over FTP independently of the PLC's own report.
+
+Two things that experiment also ruled out. `CWD /Hard Disk` **fails** over FTP, so
+the FTP root is not the device root. And `\Hard Disk\` is not merely an alias for
+`\`: the sweep wrote to both, yet exactly one 73-byte (single-line) file appeared —
+had they been the same path it would have been two lines.
+
+**The dev target is a CX9020 running WEC7**, not the CP6606 itself — the root
+carries `NK.BIN` and `CX9020_CB3011_WEC7_HPS_v610c_TC31_B4024.65`. So the
+storage-card-at-FTP-root mapping is verified **on this device only**; re-check it on
+the CP6606 before relying on the same paths there, using the same
+write-then-look-over-FTP method.
+
+**Consequence for Phase 2 verification, and it is a large one:** the CSV can be
+retrieved and checked byte-for-byte from a developer laptop with no PLC read-back
+code at all. Verification steps 2-5 become directly executable instead of needing
+status symbols as a proxy.
+
+### Line endings: keep `$N`, and do NOT write `$R$N` — measured 2026-08-10
+
+The open question about `FB_FilePuts` is **answered**, by retrieving the probe's own
+file over FTP:
+
+```
+b'"16:40:32",INFO,FB_LogFileSpike,"probe ok, quoted ""value"" with comma"\r\n'
+```
+
+71 characters plus **CRLF** = 73 bytes. So with `FOPEN_MODEAPPEND OR
+FOPEN_MODETEXT`, a single `$N` in the ST string arrives on disk as **CRLF, exactly
+what RFC 4180 specifies**, and `FB_FilePuts` adds no ending of its own.
+
+**The trap this avoided:** the obvious "fix" for a suspected LF would have been to
+write `$R$N` explicitly — and text mode would then have translated the `$N` again,
+giving `\r\r\n` and a corrupt file. The failure mode of guessing here was worse
+than the failure mode it was meant to prevent.
+
+Also verified through that same retrieved file: Python's `csv` module parses it as
+**4 clean fields**, with the embedded comma preserved and the doubled `""`
+correctly unescaped to `"`, and **no phantom blank rows**. So the RFC 4180 quoting
+approach Phase 2 relies on is confirmed end-to-end on real hardware, not assumed.
 
 ## Phase 1 — config, status and the clock
 
@@ -278,7 +322,10 @@ one write per ~10 s, not one per entry.
 **CSV.** Header `time,severity,source,message`, written only when a file is
 created. Quote per RFC 4180 — wrap in `"`, double any embedded `"`. **Not
 theoretical:** robot frames reach messages as `SYNC:NAME=VALUE,...`, and message
-text already contains commas and parentheses.
+text already contains commas and parentheses. Verified working on the panel
+2026-08-10 — see the line-endings section above, and **end every row with a bare
+`$N`, never `$R$N`**: text mode already produces CRLF and doubling it gives
+`\r\r\n`.
 
 **Async state machine.** `IDLE → OPEN(append) → WRITE → CLOSE → IDLE`, one Beckhoff
 FB per step, advanced on `bBusy` falling. Never busy-wait; never hold the file open
