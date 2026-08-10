@@ -1,9 +1,12 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PLAN ONLY — NOT BUILT.** Written 2026-08-07. Nothing in here exists in
-> the PLC yet. This describes what is *intended*, not how the machine behaves — do
-> not read it as documentation. When the feature ships, strike this file through
-> and remove its entry from `docs/index.html`.
+> **STATUS: PHASE 0 PASSED ON THE PANEL, PHASE 1 WRITTEN, PHASES 2-4 NOT BUILT.**
+> Written 2026-08-07; Phase 0 run on the CP6606 2026-08-10 and the gate **passed**
+> — file I/O works on WinCE 7 ARM and `\Hard Disk\` is writable. Phase 1 (config,
+> status, `sToday`) is committed but **not yet compiled**. Everything from Phase 2
+> down is still intent, not behaviour — do not read those sections as
+> documentation. When the feature ships, strike this file through and remove its
+> entry from `docs/index.html`.
 >
 > Open work lives in the **Active** section of `CLAUDE.md`.
 
@@ -127,6 +130,44 @@ should end up living — prove capability first, choose a home second.
 Deleted once it has answered. **Nothing in Phases 1–4 gets written until Phase 0
 passes on the real panel.**
 
+### GATE RESULT — PASSED on the CP6606, 2026-08-10
+
+`python scripts/read_logfile_probe.py --net 5.79.93.36.1.1 --run`
+
+| # | `ePath` + path | Result |
+|---|---|---|
+| 1 | `PATH_BOOTPATH` + `flower-spike.csv` | **OK** |
+| 2 | `PATH_GENERIC` `\Hard Disk\flower-spike.csv` | **OK** |
+| 3 | `PATH_GENERIC` `\Hard Disk\Logs\flower-spike.csv` | `1804` on open — directory absent |
+| 4 | `PATH_GENERIC` `\Temp\flower-spike.csv` | **OK** |
+| 5 | `PATH_GENERIC` `\flower-spike.csv` | **OK** |
+| 6 | `PATH_USERPATH1` + `flower-spike.csv` | `1804` on open — not configured |
+
+**4 of 6 worked, so both gate questions are answered:** `Tc2_System`'s file blocks
+work on WinCE 7 ARM, and `\Hard Disk\` — the Compact Flash mount — is writable.
+Both failures were `1804` on *open* with write and close never attempted, which is
+a missing path rather than a missing capability; keeping the three error codes
+separate is what made that distinction readable.
+
+**The production path is `\Hard Disk\Logs\`, and candidate 3's failure is not an
+objection to it** — `Logs` simply does not exist yet, and Phase 2 creates it with
+`Tc2_System.FB_CreateDir` (confirmed present). The reasoning for a *dedicated
+subdirectory* rather than any of the three that passed unchanged is a safety one,
+recorded in full next to `sDir` in `ST_HmiLogFileCfg`: **Phase 3 deletes
+oldest-first in this directory**, so pointing it at the device root or at
+`PATH_BOOTPATH` — the directory holding `Port_851.bootdata` — would have the
+retention sweep deleting TwinCAT's own files. A directory containing nothing but
+our CSVs is what makes "delete the oldest" safe.
+
+**Still open, deliberately, and it is a Phase 2 question rather than a gate one:**
+whether `FB_FilePuts` appends its own line ending on top of the `$N` the probe
+writes. It cannot be settled from the library metadata and the panel has no way to
+show a file, so the check is a byte count once a real CSV can be copied off: the
+probe's line is 72 characters, so 73 bytes means LF, **74 means CRLF (what RFC 4180
+wants)**, and 75 means the ending is doubled and rows are separated by blank lines.
+Worst case is cosmetic and visible the first time anyone opens the file, which is
+why it did not justify another build cycle. Verification step 3 covers it.
+
 ## Phase 1 — config, status and the clock
 
 **New `ST_HmiLogFileCfg`** (`PLC1/DUTs/`), instanced as
@@ -152,8 +193,14 @@ settled constraint behind every other `s*Text` mirror in this project.
 **Three integration points that are easy to miss:**
 
 1. `FB_PersistentAutoSave` must watch the new struct or edits never reach disk —
-   three edits: `shSavedLogFile` / `shSeenLogFile` declarations, the init copy
-   beside `shSavedMaster := …`, and the two `MEMCMP` comparisons.
+   **FOUR edits, not three.** The declarations, the baseline copy beside
+   `shSavedMaster := …`, the two `MEMCMP` comparisons — **and the refresh of
+   `shSavedLogFile` in the post-write success branch**, which this plan originally
+   omitted. Without that last one `stLogFileCfg` stays permanently different from
+   its saved shadow, so `bDirty` never clears and the FB rewrites the entire
+   persistent image every quiet period, forever. On a Compact Flash panel that is
+   a wear bug, not merely a wasted cycle — and it would be invisible except as an
+   endless stream of `persistent data saved` entries in the log.
 2. `MAIN` section 0a gains `GVL_Log.sToday : STRING(10)` (`YYYY-MM-DD`), rebuilt on
    **day** rollover from the `fbLocalTime` instance already there. Needed for
    filenames; `sNow` is `HH:MM:SS` only.

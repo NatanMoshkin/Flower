@@ -38,6 +38,25 @@ VAR_GLOBAL
     // an unset RTC shows that plainly instead of a plausible wrong time.
     sNow        : STRING(8) := '--:--:--';
 
+    // Wall-clock date YYYY-MM-DD, refreshed by MAIN section 0a alongside sNow
+    // but only when the DAY rolls over. Exists because filenames need a date
+    // and sNow is HH:MM:SS only.
+    //
+    // Reads '0000-00-00' until the time source reports valid, and the writer
+    // treats that as "no date" and falls back to flower-nodate-NNN.csv rather
+    // than building a filename out of it. An unset panel RTC is a real
+    // condition here, not a hypothetical -- sNow already has the same guard.
+    // The sortable YYYY-MM-DD order is load-bearing for Phase 3: retention
+    // deletes oldest-by-NAME, which is only correct because these sort
+    // chronologically.
+    sToday      : STRING(10) := '0000-00-00';
+
+    // Durable CSV log status -- Phase 1 of docs/plans/log-csv-file.md.
+    // VOLATILE on purpose (GVL_Log is plain VAR_GLOBAL): the config persists,
+    // the status must not. A restored byte count or a stale FAILED with a
+    // plausible error string would describe a file this runtime never opened.
+    stLogFile   : ST_HmiLogFile;
+
     // ---------------------------------------------------------------- //
     // THROWAWAY -- Phase 0 gate of docs/plans/log-csv-file.md.
     // DELETE this whole block together with FB_LogFileSpike and

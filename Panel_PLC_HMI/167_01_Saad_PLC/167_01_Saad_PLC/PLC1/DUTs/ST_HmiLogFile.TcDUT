@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiLogFile" Id="{63451a8a-a044-5278-af38-8e42ac21b4d4}">
+    <Declaration><![CDATA[(*
+   Runtime status of the durable CSV log. Phase 1 of
+   docs/plans/log-csv-file.md.
+
+   Instanced as GVL_Log.stLogFile, i.e. VOLATILE -- GVL_Log is plain VAR_GLOBAL.
+   That split is the point: the CONFIG persists (stLogFileCfg) and the STATUS
+   does not. A persisted byte count or error text would be restored on the next
+   boot describing a file the runtime has not opened, and a stale FAILED with a
+   plausible error string is worse than no status at all.
+
+   WHY THERE IS A STATUS STRUCT AT ALL. The CP6606 has no file viewer and no
+   supported CPython, so nobody can look at the directory to see whether logging
+   is working. Every question you would answer by looking at the filesystem has
+   to be answerable from these fields instead: is it writing, to what, how big,
+   how many files, has it lost anything, and if it stopped, why.
+*)
+TYPE ST_HmiLogFile :
+STRUCT
+    // Filename only, no directory -- sDir is already visible in the config and
+    // repeating it here would just risk the two disagreeing.
+    sCurrentFile      : STRING(40);
+
+    // Bytes written to the current file. Compared against
+    // uiMaxFileKB * 1024 to decide an in-day roll.
+    uiBytesInFile     : UDINT;
+
+    // CSV files currently in sDir, refreshed by the retention sweep.
+    uiFilesOnDisk     : UDINT;
+
+    // Entries the writer never got to see, because nWriteIdx advanced more than
+    // the 256-slot ring holds while a flush was stalled.
+    //
+    // THIS FIELD IS THE WHOLE REASON THE DRAIN LOGIC IS ALLOWED TO SKIP. Losing
+    // entries under a stall is unavoidable -- the ring is finite. Losing them
+    // SILENTLY is not acceptable, so the count is published here and Phase 2
+    // also emits one synthetic CSV row recording the gap, so the loss is visible
+    // in the file itself and not only in a symbol nobody thought to read.
+    udiEntriesDropped : UDINT;
+
+    // Last file error. 0 = none. Latched until the next successful flush, so a
+    // failure that has since cleared is still visible afterwards.
+    iErrorCode        : UDINT;
+    sErrorText        : STRING(80);
+
+    eState            : E_LogFileState;
+
+    // STRING mirror of eState. Required, not convenience: the classic VISU
+    // cannot stringify an enum, so a text output bound to eState renders the
+    // raw number. Every enum in this project carries such a mirror for exactly
+    // this reason -- sStepText, sErrorText, sConnStateText, sSevText.
+    sStateText        : STRING(12);
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

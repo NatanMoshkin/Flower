@@ -59,6 +59,12 @@ VAR
     shSeenPiston  : ARRAY[1..8] OF ST_HmiPistonAutoCfg;
     shSavedMaster : ST_HmiMasterAutoCfg;
     shSeenMaster  : ST_HmiMasterAutoCfg;
+    // Durable CSV log config (Phase 1 of docs/plans/log-csv-file.md). Without
+    // these three edits -- declaration, baseline, compare -- stLogFileCfg is
+    // PERSISTENT in storage class but never actually flushed, which is precisely
+    // the defect this FB was written to fix.
+    shSavedLogFile : ST_HmiLogFileCfg;
+    shSeenLogFile  : ST_HmiLogFileCfg;
 
     // GVL_Robot's persistent commissioning endpoint. Lives in its own GVL
     // rather than GVL_HmiPersistent so its symbol paths stay stable, so it
@@ -107,6 +113,9 @@ IF NOT bInit THEN
     shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
     shSeenMaster  := GVL_HmiPersistent.stMasterAutoCfg;
 
+    shSavedLogFile := GVL_HmiPersistent.stLogFileCfg;
+    shSeenLogFile  := GVL_HmiPersistent.stLogFileCfg;
+
     shSavedHost := GVL_Robot.sRobotHost;
     shSeenHost  := GVL_Robot.sRobotHost;
     shSavedPort := GVL_Robot.nRobotPort;
@@ -142,6 +151,16 @@ IF MEMCMP(ADR(GVL_HmiPersistent.stMasterAutoCfg), ADR(shSeenMaster),
           SIZEOF(ST_HmiMasterAutoCfg)) <> 0 THEN
     bChanging := TRUE;
     shSeenMaster := GVL_HmiPersistent.stMasterAutoCfg;
+END_IF
+
+IF MEMCMP(ADR(GVL_HmiPersistent.stLogFileCfg), ADR(shSavedLogFile),
+          SIZEOF(ST_HmiLogFileCfg)) <> 0 THEN
+    bDirty := TRUE;
+END_IF
+IF MEMCMP(ADR(GVL_HmiPersistent.stLogFileCfg), ADR(shSeenLogFile),
+          SIZEOF(ST_HmiLogFileCfg)) <> 0 THEN
+    bChanging := TRUE;
+    shSeenLogFile := GVL_HmiPersistent.stLogFileCfg;
 END_IF
 
 IF (GVL_Robot.sRobotHost <> shSavedHost)
@@ -201,7 +220,13 @@ IF fbTrigDone.Q THEN
         FOR i := 1 TO 8 DO
             shSavedPiston[i] := apPiston[i]^;
         END_FOR
-        shSavedMaster := GVL_HmiPersistent.stMasterAutoCfg;
+        shSavedMaster  := GVL_HmiPersistent.stMasterAutoCfg;
+        // Refreshed ONLY here, on a successful write -- same as the others. If
+        // this line were missing, stLogFileCfg would stay permanently different
+        // from its saved shadow, bDirty would never clear, and the FB would
+        // rewrite the whole persistent image every quiet period forever. On a
+        // Compact Flash panel that is a wear bug, not just a wasted cycle.
+        shSavedLogFile := GVL_HmiPersistent.stLogFileCfg;
         shSavedHost   := GVL_Robot.sRobotHost;
         shSavedPort   := GVL_Robot.nRobotPort;
         nSaveCount    := nSaveCount + 1;

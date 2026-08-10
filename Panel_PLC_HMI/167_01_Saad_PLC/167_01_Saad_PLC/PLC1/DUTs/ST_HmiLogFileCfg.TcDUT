@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="ST_HmiLogFileCfg" Id="{1bef92bc-d60e-5b9e-951b-0860e559b6d4}">
+    <Declaration><![CDATA[(*
+   Operator-tunable config for the durable CSV log. Phase 1 of
+   docs/plans/log-csv-file.md.
+
+   Instanced as GVL_HmiPersistent.stLogFileCfg, i.e. VAR_GLOBAL PERSISTENT.
+   Read the PERSISTENT DATA section of CLAUDE.md before adding a field here:
+   PERSISTENT declares a durable storage CLASS, not an automatic save, and it is
+   FB_PersistentAutoSave that actually flushes it ~2 s after edits stop. A new
+   field is invisible to that FB until it is added to the shadow compare.
+
+   COLD-BOOT DECISION, which CLAUDE.md requires for every new persistent field:
+   NOTHING HERE IS CLEARED in MAIN's cold-boot block. Every field is operator or
+   commissioning config, so surviving a power cycle is the entire point. Contrast
+   the machine-state fields, where a persisted value can move pistons on power-up
+   and which is why that block exists at all. Nothing here can start a motion.
+*)
+TYPE ST_HmiLogFileCfg :
+STRUCT
+    // DEFAULT OFF, deliberately. The panel boots from Compact Flash and CF has
+    // a finite erase budget -- the reason FB_PersistentAutoSave debounces its
+    // own writes rather than saving on every keystroke. A machine that never
+    // needs the file log should never spend flash on it, so writing to the card
+    // is an explicit opt-in rather than something inherited from a download.
+    bEnabled      : BOOL := FALSE;
+
+    // Directory, WITH a trailing backslash; the writer appends the filename.
+    // Used with ePath := PATH_GENERIC, which the Phase 0 probe confirmed works
+    // against an absolute CE path on this target (2026-08-10).
+    //
+    // WHY '\Hard Disk\Logs\' AND NOT ONE OF THE OTHER THREE THAT PASSED. The
+    // probe found PATH_BOOTPATH, '\Hard Disk\', '\Temp\' and the device root '\'
+    // all writable. This is the one to use, for two separate reasons:
+    //
+    //   * '\Hard Disk\' is the Compact Flash mount -- it persists and it is
+    //     where an operator can actually get at the file. '\Temp\' is not
+    //     somewhere to keep records.
+    //   * THE SUBDIRECTORY IS A SAFETY REQUIREMENT, NOT TIDINESS. Phase 3's
+    //     retention sweep enumerates this directory and deletes oldest-first
+    //     until it is under the MB cap. Pointed at the device root or at
+    //     PATH_BOOTPATH -- which is the directory holding Port_851.bootdata --
+    //     that sweep would delete TwinCAT's own files. A directory that
+    //     contains nothing but our CSVs is what makes "delete the oldest" a
+    //     safe thing to do at all.
+    //
+    // The probe reported e1804 for this path because 'Logs' does not exist yet;
+    // Phase 2 creates it with Tc2_System.FB_CreateDir before first use.
+    //
+    // PERSISTENT because the correct value differs between installations -- the
+    // dev PC and the panel -- which is the test CLAUDE.md sets for
+    // configuration, and the same one that made sRobotHost persistent. As a
+    // plain literal it would be re-applied on every Activate and download and
+    // silently discard whatever was typed on the panel, with nothing reporting
+    // an error because the write really did succeed and really was reverted.
+    sDir          : STRING(80) := '\Hard Disk\Logs\';
+
+    // Roll to a new file part within the day if one file passes this. A guard
+    // against a fault storm producing a single unwieldy file, not the primary
+    // rotation trigger -- that is the date.
+    uiMaxFileKB   : UDINT := 512;
+
+    // Total ceiling for the directory. Phase 3 deletes oldest-first until the
+    // sum is under this. 16 MB of INFO-level CSV is months of normal running.
+    uiMaxTotalMB  : UDINT := 16;
+
+    // Buffer flush interval. THE FLASH-WEAR CONTROL: entries accumulate in RAM
+    // and reach the card once per interval, so a busy second costs one write
+    // rather than dozens. Do not "improve" this into a write-per-entry -- that
+    // is the change this comment exists to prevent.
+    uiFlushSec    : UDINT := 10;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

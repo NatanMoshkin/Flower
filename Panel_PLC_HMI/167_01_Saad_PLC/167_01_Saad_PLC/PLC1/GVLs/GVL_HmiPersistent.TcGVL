@@ -19,6 +19,19 @@ VAR_GLOBAL PERSISTENT
     // Config for the master (multi-piston + robot-coordinated) auto sequence.
     // See ST_HmiMasterAutoCfg for the tunable list; defaults land on cold-boot.
     stMasterAutoCfg   : ST_HmiMasterAutoCfg;
+
+    // Durable CSV log config -- Phase 1 of docs/plans/log-csv-file.md.
+    // Default bEnabled = FALSE, so adding this changes no behaviour until an
+    // operator turns it on. FB_PersistentAutoSave watches it explicitly; a
+    // field added here is NOT flushed until it is in that FB's shadow compare.
+    //
+    // ADDING A FIELD TO THIS GVL CHANGES THE PERSISTENT LAYOUT, which can
+    // invalidate the existing Port_851.bootdata. After the first download,
+    // check that the operator's timers still hold their values -- if they have
+    // fallen back to declared defaults, re-enter them once. Verified before this
+    // change that the values WERE surviving (tStepTimeoutMs read 1000, not its
+    // declared 10000), so a reset afterwards is attributable to this edit.
+    stLogFileCfg      : ST_HmiLogFileCfg;
 END_VAR
 ]]></Declaration>
   </GVL>

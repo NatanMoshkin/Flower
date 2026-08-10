@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <DUT Name="E_LogFileState" Id="{1e140429-b699-508d-adb3-89122fa82d6b}">
+    <Declaration><![CDATA[(*
+   State of FB_LogCsvWriter (Phase 2 of docs/plans/log-csv-file.md).
+
+   Declared in Phase 1, ahead of the FB that uses it, for the same reason the
+   RECOVER_* wire values were reserved in one commit: the enum is the shared
+   vocabulary between the PLC, the VISU page and FlowerPyHmi, so pinning the
+   values once means the contract changes once.
+
+   'to_string' is here for ST only. It does NOT make the classic VISU resolve an
+   enumerator to its name -- that is settled in this project and is why
+   ST_HmiLogFile carries an sStateText mirror. Binding eState to a VISU text
+   output renders 0/1/2/3/4, which shipped wrong twice on the Logs page before
+   being fixed on 2026-07-27.
+*)
+{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_LogFileState :
+(
+    // Logging disabled, or nothing pending. The resting state.
+    OFF      := 0,
+
+    // Entries buffered, waiting for the flush interval or a full buffer.
+    BUFFER   := 10,
+
+    // A flush is in flight. These three mirror the async chain rather than
+    // being collapsed into one BUSY: if a write wedges, which of the three
+    // it wedged in is the whole diagnostic, and there is no other way to see
+    // it on a panel with no file viewer.
+    OPENING  := 20,
+    WRITING  := 21,
+    CLOSING  := 22,
+
+    // Rotation or retention work in progress (new day, size cap, or the
+    // oldest-first delete sweep).
+    ROTATING := 30,
+
+    // A file operation failed. iErrorCode / sErrorText hold the detail and the
+    // FB backs off on a timer rather than retrying every scan.
+    FAILED   := 99
+) ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

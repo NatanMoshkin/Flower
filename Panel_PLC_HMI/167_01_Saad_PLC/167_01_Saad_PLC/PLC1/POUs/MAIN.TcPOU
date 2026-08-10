@@ -89,6 +89,12 @@ VAR
     fbLocalTime : Tc2_Utilities.FB_LocalSystemTime;
     nLastSec    : WORD := 16#FFFF;   // impossible value, forces a first build
     sHH, sMM, sSS : STRING(2);
+
+    // Date parts for GVL_Log.sToday, rebuilt only on a day rollover.
+    // nLastDay starts at an impossible day so the first valid scan builds it.
+    nLastDay      : WORD := 16#FFFF;
+    sYYYY         : STRING(4);
+    sMon, sDay    : STRING(2);
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -141,7 +147,11 @@ END_VAR
 fbLocalTime(bEnable := TRUE, dwCycle := 1);
 
 IF NOT fbLocalTime.bValid THEN
-    GVL_Log.sNow := '--:--:--';
+    GVL_Log.sNow   := '--:--:--';
+    // Same discipline as sNow: an unset RTC must look unset. The CSV writer
+    // reads this sentinel and falls back to flower-nodate-NNN.csv rather than
+    // naming a file after garbage.
+    GVL_Log.sToday := '0000-00-00';
 ELSIF fbLocalTime.systemTime.wSecond <> nLastSec THEN
     nLastSec := fbLocalTime.systemTime.wSecond;
     // RIGHT(CONCAT('0', n), 2) is the zero-pad: '7' -> '07', '17' -> '17'.
@@ -149,6 +159,18 @@ ELSIF fbLocalTime.systemTime.wSecond <> nLastSec THEN
     sMM := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wMinute)), 2);
     sSS := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wSecond)), 2);
     GVL_Log.sNow := CONCAT(CONCAT(CONCAT(CONCAT(sHH, ':'), sMM), ':'), sSS);
+
+    // Date only on a DAY rollover, nested inside the second check so it costs
+    // one WORD compare a second rather than string work. YYYY-MM-DD because
+    // Phase 3 deletes oldest-by-name and that is only correct while the names
+    // sort chronologically.
+    IF fbLocalTime.systemTime.wDay <> nLastDay THEN
+        nLastDay := fbLocalTime.systemTime.wDay;
+        sYYYY := RIGHT(CONCAT('000', WORD_TO_STRING(fbLocalTime.systemTime.wYear)), 4);
+        sMon  := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wMonth)), 2);
+        sDay  := RIGHT(CONCAT('0', WORD_TO_STRING(fbLocalTime.systemTime.wDay)), 2);
+        GVL_Log.sToday := CONCAT(CONCAT(CONCAT(CONCAT(sYYYY, '-'), sMon), '-'), sDay);
+    END_IF
 END_IF
 
 (* ==========================================
