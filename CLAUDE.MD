@@ -1633,7 +1633,30 @@ inside it — hold that invariant when cloning a page.
 function. The Logs page was first called `Log` and failed to compile with
 `Identifier expected instead of "Log"` — `LOG` is an IEC 61131-3 standard
 function (with `LN`, `EXP`, `ABS`, `SQRT`, `SEL`, `MUX`, `LEN`, `LEFT`,
-`MID`, `FIND`). The *displayed* label is unconstrained: the page is named
+`MID`, `FIND`).
+
+**The same trap applies to ORDINARY VARIABLES, and the trig family is the one
+that gets forgotten.** IEC identifiers are **case-insensitive**, so a parameter
+named `sIn` *is* `SIN`. `FB_LogCsvWriter.Csv()` took one on 2026-08-10 and cost a
+build cycle — and the diagnosis is actively misleading, because the compiler
+blames every **call site** rather than the declaration:
+
+```
+'SIN' needs exactly '1' Operands
+'(' expected instead of ':='
+Unexpected Token 'sIn' found
+```
+
+Add `SIN COS TAN ASIN ACOS ATAN EXPT MIN MAX LIMIT TRUNC ROUND ADR SIZEOF
+CONCAT INSERT DELETE REPLACE` to the list above and treat it as non-exhaustive.
+
+**`python scripts/check_iec_names.py` is the guard** — it inspects only the
+left-hand side of declarations plus POU/DUT/GVL/method names, so legitimate
+*calls* to `LEN()` or `MID()` are ignored while a variable *named* `LEN` is
+reported. Currently 513 declarations across 32 files, clean. Negative-tested by
+reintroducing `sIn` and confirming it reports. Run it before a build rather than
+after one — a grep cannot do this job, because these names appear all over the
+code as calls. The *displayed* label is unconstrained: the page is named
 `Logs` and its title and nav button both read "Log".
 
 **Cloning a page copies a second identity layer — fixed 2026-07-27.**

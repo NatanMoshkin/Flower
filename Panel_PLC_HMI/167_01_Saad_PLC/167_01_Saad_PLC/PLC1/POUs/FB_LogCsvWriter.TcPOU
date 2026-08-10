@@ -312,7 +312,7 @@ CASE eStep OF
         eStep := 31;
     ELSE
         GVL_Log.stLogFile.eState := E_LogFileState.WRITING;
-        sRow := CONCAT(CONCAT(Csv(sIn := GVL_Log.sNow), ',"WARN","LogCsv","'),
+        sRow := CONCAT(CONCAT(Csv(sField := GVL_Log.sNow), ',"WARN","LogCsv","'),
                 CONCAT(UDINT_TO_STRING(udiLostNow),
                        ' entries lost - CSV writer fell behind the ring"$N'));
         fbPuts(hFile := hFile, sLine := sRow,
@@ -466,10 +466,17 @@ END_CASE
    Every field is quoted, including the fixed ones. Uniform rows are easier to
    reason about than rows where quoting depends on content, and the cost is two
    bytes.
+
+   THE PARAMETER IS *NOT* CALLED sIn. IEC identifiers are case-insensitive, so
+   `sIn` IS `SIN`, the standard trigonometric function -- and the whole POU then
+   fails to parse with "'SIN' needs exactly '1' Operands" at every call site. Same
+   class of trap as the Logs page that could not be named `Log`. The reserved set
+   includes the trig family (SIN COS TAN ASIN ACOS ATAN) alongside the arithmetic
+   and string functions CLAUDE.md already lists.
 *)
 METHOD Csv : STRING(200)
 VAR_INPUT
-    sIn : STRING(80);
+    sField : STRING(80);
 END_VAR
 VAR
     j    : INT;
@@ -480,10 +487,10 @@ END_VAR
 ]]></Declaration>
       <Implementation>
         <ST><![CDATA[sOut := '"';
-n := LEN(sIn);
+n := LEN(sField);
 
 FOR j := 1 TO n DO
-    c := MID(sIn, 1, j);            // MID(str, len, pos) -- one char at j
+    c := MID(sField, 1, j);            // MID(str, len, pos) -- one char at j
     IF c = '"' THEN
         sOut := CONCAT(sOut, '""');
     ELSE
@@ -513,10 +520,10 @@ VAR_INPUT
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[RowFor := CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sTime), ',');
-RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sSevText), ','));
-RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sSource), ','));
-RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sMsg), '$N'));
+        <ST><![CDATA[RowFor := CONCAT(Csv(sField := GVL_Log.aLog[nSlot].sTime), ',');
+RowFor := CONCAT(RowFor, CONCAT(Csv(sField := GVL_Log.aLog[nSlot].sSevText), ','));
+RowFor := CONCAT(RowFor, CONCAT(Csv(sField := GVL_Log.aLog[nSlot].sSource), ','));
+RowFor := CONCAT(RowFor, CONCAT(Csv(sField := GVL_Log.aLog[nSlot].sMsg), '$N'));
 ]]></ST>
       </Implementation>
     </Method>
