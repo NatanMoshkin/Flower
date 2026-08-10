@@ -31,8 +31,18 @@
   treatment. Give it a `bConnectFailed` edge guard on the same pattern, and log
   the recovery once when a connect finally succeeds.
 
-  Not done here because it needs a build + Activate, and it was found with the
-  branch green and ready to merge. Do it on `master` after the merge.
+  **PROMOTED 2026-08-10 — it now fills a disk, not just a ring.** Verifying the
+  Phase 2 CSV writer on the panel produced a file that was **95% this one line**
+  (20 of 21 rows), i.e. **~50 KB/hour, ~1.2 MB/day** of pure noise onto the
+  Compact Flash. It was already defeating the 20-entry `aRecent` ring — a
+  documented diagnostic rule of this project — and it now also makes durable
+  logging impractical. With rotation and retention still unbuilt (Phase 3),
+  `stLogFileCfg.bEnabled` was deliberately left **FALSE**.
+
+  So this is no longer a tidiness fix. It is one of two independent prerequisites
+  for turning file logging on, the other being Phase 3.
+
+  Needs a build + Activate.
 
 ---
 

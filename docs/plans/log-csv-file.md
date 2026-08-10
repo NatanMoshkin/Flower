@@ -1,11 +1,12 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PHASE 0 PASSED, PHASES 1-2 WRITTEN, PHASES 3-4 NOT BUILT.**
+> **STATUS: PHASES 0-2 DONE AND VERIFIED ON THE PANEL. PHASES 3-4 NOT BUILT.**
 > Written 2026-08-07. Phase 0 ran on the panel 2026-08-10 and the gate **passed**
 > — file I/O works on WinCE 7 ARM, `\Hard Disk\` is writable, and the throwaway
 > spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
-> verified on the panel. Phase 2 (`FB_LogCsvWriter`) is committed but **not yet
-> compiled**. Phases 3-4 are still intent, not behaviour — do not read those
+> verified on the panel. Phase 2 (`FB_LogCsvWriter`) is **built, activated and
+> verified on hardware** — 44 rows pulled off the card over FTP, byte-exact
+> against `uiBytesInFile`, CRLF throughout, valid RFC 4180, no DBG rows. Phases 3-4 are still intent, not behaviour — do not read those
 > sections as documentation. When the feature ships, strike this file through and remove its
 > entry from `docs/index.html`.
 >
@@ -358,6 +359,24 @@ a full disk cannot flush the 20-entry ring in seconds.
 abandoning the file.
 
 ## Phase 3 — rotation and retention
+
+> **DO THIS BEFORE LEAVING FILE LOGGING ENABLED.** Verifying Phase 2 on the panel
+> made the reason concrete rather than theoretical:
+>
+> - **95% of the log was one repeated line** — `Connect failed 192.168.1.11:6001
+>   err 1861`, 20 of 21 rows, because no robot is attached to this bench and
+>   `FB_RobotTcpClient` re-dials every ~5 s and logs unconditionally.
+> - At 71 bytes a row that is **~50 KB/hour, ~1.2 MB/day** of pure noise.
+> - **Neither cap is enforced yet.** `uiMaxFileKB` (512) and `uiMaxTotalMB` (16)
+>   are config this writer reads but nothing acts on until this phase, so a single
+>   file grows without limit.
+>
+> So `bEnabled` was deliberately set back to **FALSE** after verification, and it is
+> `PERSISTENT`, so that is what the panel boots with. Two independent things gate
+> turning it on: this phase, and the connect-failure edge guard in the **Active**
+> section of `CLAUDE.md` — which that measurement promotes from a tidiness fix to a
+> prerequisite, since it now fills a disk and not just a 20-entry ring.
+
 
 **Filename** `flower-YYYY-MM-DD.csv` from `sToday`, rolling to `-002`, `-003` if
 `uiMaxFileKB` is hit within a day. **If the RTC is invalid** (`sNow` reads
