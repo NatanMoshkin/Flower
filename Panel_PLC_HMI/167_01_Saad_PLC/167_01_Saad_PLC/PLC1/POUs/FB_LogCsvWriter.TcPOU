@@ -46,6 +46,23 @@
    file settled it. Do not change it without re-measuring.
 
    ---------------------------------------------------------------------------
+   ROTATION IS IMPLEMENTED HERE. RETENTION IS NOT.
+   ---------------------------------------------------------------------------
+   Files roll on a new day (back to part 1) and on uiMaxFileKB within a day
+   (part 2, 3, ...). So no single file grows without bound.
+
+   uiMaxTotalMB IS NOT ENFORCED YET, and the directory therefore still grows
+   without limit over time. Deleting oldest-first needs to know what is in the
+   directory, and the enumeration API could not be verified for this target:
+   FB_EnumFindFileList / FB_EnumFindFileEntry exist in Tc2_Utilities by name, but
+   their parameter lists are not recoverable from the repo, the installed
+   .compiled-library, or its metadata -- and this project's rule is not to build
+   on an unverified target API. The plan's original names for these
+   (FB_FileFindFirst / Next / Close) turned out not to exist at all, which is why
+   the rule is there. Until retention lands, keep bEnabled FALSE for unattended
+   running, or expect to clear \Hard Disk\Logs\ by hand over FTP.
+
+   ---------------------------------------------------------------------------
    NEVER FALL BACK TO \Temp\ OR THE DEVICE ROOT \.
    ---------------------------------------------------------------------------
    Both are writable on this panel and BOTH LOSE THEIR CONTENTS ON RESTART -- the
@@ -63,6 +80,9 @@ VAR CONSTANT
     FILE_TO     : TIME  := T#5S;
     RETRY_TO    : TIME  := T#30S;       // backoff after a failure
     MAX_SKIP    : INT   := 32;          // DBG entries discarded per scan, bounded
+    // Parts per day. Zero-padded to 3 digits, so 999 is the naming limit; a day
+    // that produced 999 files is a fault, not a case to keep absorbing.
+    MAX_PARTS   : UDINT := 999;
     HDR         : STRING(40) := 'time,severity,source,message';
     E_NOTFOUND  : UDINT := 1804;        // ADS "file not found", verified on the panel
 END_VAR
@@ -91,6 +111,25 @@ VAR
     sRow        : STRING(255);
     nSlot       : INT;
     nSkipped    : INT;
+
+    // Part number within the day. 1 is written WITHOUT a suffix
+    // (flower-2026-08-10.csv); 2 upwards carry an UNDERSCORE and three padded
+    // digits (flower-2026-08-10_002.csv) -- see FileNameFor for why the separator
+    // must be '_' and not '-'.
+    //
+    // Volatile on purpose. After a restart it starts at 1, state 10's date check
+    // sets the day, and state 12 then skips forward past every part that already
+    // exists -- so a restart never appends to a file whose size we do not know.
+    // That is what keeps the uiMaxFileKB check exact rather than off by whatever
+    // the file already held.
+    nPart        : UDINT := 1;
+
+    // The day we last wrote to, so a date change is detected against what
+    // actually happened rather than against a timer.
+    sLastDay     : STRING(10);
+
+    // Set by state 31 when the open file passed uiMaxFileKB; consumed by state 10.
+    bRollPending : BOOL;
 
     bNeedHeader : BOOL;
     bLossRow    : BOOL;         // a synthetic "entries lost" row is owed
@@ -208,17 +247,23 @@ CASE eStep OF
 
 // ---------------- 10: filename, and does it already exist? ---------------- //
 10:
-    IF GVL_Log.sToday = '0000-00-00' THEN
-        // The panel RTC is unset. Naming a file from that would produce
-        // something like flower-0000-00-00.csv, which sorts before every real
-        // file and would be deleted first by the Phase 3 retention sweep -- so
-        // the one file written while the clock was broken would be the first to
-        // go. A distinct name keeps it identifiable and out of the date order.
-        sFileName := 'flower-nodate.csv';
-    ELSE
-        sFileName := CONCAT(CONCAT('flower-', GVL_Log.sToday), '.csv');
+    // -- DATE ROLL. A new day always restarts at part 1. Compared against the
+    //    day we last WROTE, not against a timer, so a panel that was off over
+    //    midnight still starts a fresh file on the first flush of the new day.
+    IF GVL_Log.sToday <> sLastDay THEN
+        sLastDay     := GVL_Log.sToday;
+        nPart        := 1;
+        bRollPending := FALSE;      // superseded by the date roll
     END_IF
-    sPath := CONCAT(GVL_HmiPersistent.stLogFileCfg.sDir, sFileName);
+
+    // -- SIZE ROLL, requested by state 31 when the open file passed the cap.
+    IF bRollPending THEN
+        bRollPending := FALSE;
+        nPart        := nPart + 1;
+    END_IF
+
+    sFileName := FileNameFor(nPartNo := nPart);
+    sPath     := CONCAT(GVL_HmiPersistent.stLogFileCfg.sDir, sFileName);
 
     IF sFileName = sLastFile THEN
         bNeedHeader := FALSE;       // same file we appended to last time
@@ -241,24 +286,44 @@ CASE eStep OF
     IF NOT fbProbe.bBusy THEN
         fbProbe(bExecute := FALSE);
         IF fbProbe.bError THEN
-            // Absent -> new file, needs a header. Any OTHER error is left for
-            // the append open in state 20 to report, so there is one place that
-            // decides the directory is unusable.
+            // Absent -> we will create it, so it needs a header and its byte
+            // count starts from a known zero. Any OTHER error is left for the
+            // append open in state 20 to report, so exactly one place decides
+            // the directory is unusable.
             bNeedHeader := (fbProbe.nErrId = E_NOTFOUND);
             eStep := 20;
         ELSE
-            bNeedHeader := FALSE;
             hFile := fbProbe.hFile;
-            eStep := 12;            // must close the probe handle
+            eStep := 12;            // exists -- close the probe, then skip past it
         END_IF
     END_IF
 
+// -- 12: the candidate already exists, so ADVANCE TO THE NEXT PART.
+//
+// This is what keeps the size cap honest across a restart. uiBytesInFile is
+// volatile, so after a reboot it reads 0 for a file that may already be near the
+// cap -- append to it and the file could reach twice uiMaxFileKB before rolling.
+// Getting its real size would need FB_FileProperties or seek/tell, and NEITHER
+// signature could be verified for this target, so instead we never append to a
+// file we did not create this session: skip forward to the first part that does
+// not exist yet. The byte count is then always exact by construction.
+//
+// Costs one extra file per PLC restart, which is nothing. Within a session the
+// normal append path short-circuits this probe entirely (sFileName = sLastFile).
 12:
     fbClose(hFile := hFile, bExecute := TRUE, tTimeout := FILE_TO);
     IF NOT fbClose.bBusy THEN
         fbClose(bExecute := FALSE);
         hFile := 0;
-        eStep := 20;
+        IF nPart >= MAX_PARTS THEN
+            // Refusing is right: silently appending to part 999 would resume the
+            // very unknown-size behaviour this state exists to avoid, and a day
+            // that has produced 999 parts is a fault worth reporting anyway.
+            Fail(nErr := 0, sWhy := 'too many parts today');
+        ELSE
+            nPart := nPart + 1;
+            eStep := 10;
+        END_IF
     END_IF
 
 // ---------------- 20: open for append ---------------- //
@@ -371,6 +436,23 @@ CASE eStep OF
                     udiLastRead := udiLastRead + 1;
                     GVL_Log.stLogFile.uiBytesInFile :=
                         GVL_Log.stLogFile.uiBytesInFile + INT_TO_UDINT(LEN(sRow)) + 1;
+
+                    // -- SIZE CAP. Checked after each row rather than once per
+                    //    flush, so the overshoot is bounded by ONE row (~71
+                    //    bytes) instead of by however much a flush happened to
+                    //    write. Close now and let state 40 decide whether to
+                    //    carry straight on into the next part.
+                    //
+                    //    uiMaxFileKB = 0 means NO size cap -- guarded, because
+                    //    without it a zero would roll on every single row and
+                    //    produce one file per entry, which on Compact Flash is
+                    //    the worst thing this FB could do.
+                    IF (GVL_HmiPersistent.stLogFileCfg.uiMaxFileKB > 0)
+                       AND (GVL_Log.stLogFile.uiBytesInFile >=
+                            GVL_HmiPersistent.stLogFileCfg.uiMaxFileKB * 1024) THEN
+                        bRollPending := TRUE;
+                        eStep := 40;
+                    END_IF
                 END_IF
             END_IF
         END_IF
@@ -397,9 +479,18 @@ CASE eStep OF
                            sMsg  := CONCAT('CSV log recovered, writing ',
                                            sFileName));
             END_IF
-            tonFlush(IN := FALSE);      // restart the quiet interval
-            bClosing := FALSE;
-            eStep := 0;
+            // -- CARRY ON INTO THE NEXT PART, but only if there is something
+            //    left to write. Rolling unconditionally would create a new file
+            //    holding nothing but a header every time the cap is hit on the
+            //    last pending row. The roll request survives in bRollPending
+            //    until a flush actually needs it.
+            IF bRollPending AND (udiLastRead < GVL_Log.nWriteIdx) THEN
+                eStep := 10;
+            ELSE
+                tonFlush(IN := FALSE);  // restart the quiet interval
+                bClosing := FALSE;
+                eStep := 0;
+            END_IF
         END_IF
     END_IF
 
@@ -452,6 +543,73 @@ ELSE
 END_CASE
 ]]></ST>
     </Implementation>
+    <Method Name="FileNameFor" Id="{9f2c6b04-71ea-5c38-b3d6-0e84a5f17c62}">
+      <Declaration><![CDATA[(*
+   Build the filename for a part number.
+
+     part 1   flower-2026-08-10.csv
+     part 2   flower-2026-08-10_002.csv
+     part 3   flower-2026-08-10_003.csv
+
+   THE NAMES MUST SORT CHRONOLOGICALLY, and everything about this scheme serves
+   that: retention deletes oldest-by-name, which is only correct while a plain
+   string sort puts the oldest first. Hence YYYY-MM-DD rather than any local date
+   order, and a ZERO-PADDED three-digit part so that _002 sorts before _010.
+
+   THE SEPARATOR IS AN UNDERSCORE, AND THAT IS NOT COSMETIC. Part 1 carries no
+   suffix, which reads better and is what is already on the card -- but that only
+   sorts correctly if the separator is greater than '.'. With a hyphen it is NOT:
+   '-' is 0x2D and '.' is 0x2E, so 'flower-2026-08-10-002.csv' sorts BEFORE
+   'flower-2026-08-10.csv' and oldest-by-name would delete part 2 ahead of part 1.
+   '_' is 0x5F, comfortably above '.', so the order comes out right:
+
+     flower-2026-08-10.csv  <  flower-2026-08-10_002.csv  <  ..._010.csv
+
+   Checked by generating the names for several days and part numbers and asserting
+   the list equals its own sort. The hyphen version failed that check, which is
+   how the byte-ordering trap was found rather than shipped.
+
+   AN UNSET RTC GETS ITS OWN NAME, not a date. GVL_Log.sToday reads '0000-00-00'
+   until FB_LocalSystemTime reports valid, and 'flower-0000-00-00.csv' would sort
+   before every real file -- so retention would delete the log written while the
+   clock was broken FIRST, which is exactly the one you would be trying to read.
+   'flower-nodate.csv' keeps it identifiable and sorts clear of every date.
+
+   AN UNSET RTC GETS ITS OWN NAME, not a date. GVL_Log.sToday reads '0000-00-00'
+   until FB_LocalSystemTime reports valid, and 'flower-0000-00-00.csv' would sort
+   before every real file -- so retention would delete the log written while the
+   clock was broken FIRST, which is exactly the one you would be trying to read.
+   'flower-nodate.csv' keeps it identifiable and outside the date ordering.
+*)
+METHOD FileNameFor : STRING(40)
+VAR_INPUT
+    nPartNo : UDINT;
+END_VAR
+VAR
+    sStem : STRING(30);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF GVL_Log.sToday = '0000-00-00' THEN
+    sStem := 'flower-nodate';
+ELSE
+    sStem := CONCAT('flower-', GVL_Log.sToday);
+END_IF
+
+IF nPartNo <= 1 THEN
+    FileNameFor := CONCAT(sStem, '.csv');
+ELSE
+    // RIGHT(CONCAT('00', n), 3) zero-pads to three digits: 2 -> '002',
+    // 12 -> '012', 120 -> '120'. Padding is what keeps -002 sorting before -010.
+    // '_' and NOT '-' -- see the header. A hyphen sorts below '.' and would put
+    // part 2 before part 1, breaking the oldest-by-name rule retention needs.
+    FileNameFor := CONCAT(CONCAT(sStem, '_'),
+                   CONCAT(RIGHT(CONCAT('00', UDINT_TO_STRING(nPartNo)), 3),
+                          '.csv'));
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
     <Method Name="Csv" Id="{1b4287c1-9ff1-538d-8e24-2268967534d3}">
       <Declaration><![CDATA[(*
    RFC 4180 quote one field: wrap in double quotes, and double any quote inside.

@@ -1,6 +1,7 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PHASES 0-2 DONE AND VERIFIED ON THE PANEL. PHASES 3-4 NOT BUILT.**
+> **STATUS: PHASES 0-2 DONE AND VERIFIED. PHASE 3 SPLIT — ROTATION WRITTEN,
+> RETENTION BLOCKED. PHASE 4 NOT BUILT.**
 > Written 2026-08-07. Phase 0 ran on the panel 2026-08-10 and the gate **passed**
 > — file I/O works on WinCE 7 ARM, `\Hard Disk\` is writable, and the throwaway
 > spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
@@ -360,8 +361,45 @@ abandoning the file.
 
 ## Phase 3 — rotation and retention
 
-> **DO THIS BEFORE LEAVING FILE LOGGING ENABLED.** Verifying Phase 2 on the panel
-> made the reason concrete rather than theoretical:
+> **SPLIT IN TWO 2026-08-10. Rotation is written; retention is blocked on an
+> unverifiable API.**
+>
+> **Rotation — WRITTEN, not yet compiled.** Files roll on a new day (back to part
+> 1) and on `uiMaxFileKB` within a day. Naming is
+> `flower-2026-08-10.csv`, `flower-2026-08-10_002.csv`, … — **underscore, not
+> hyphen**, and that is load-bearing rather than cosmetic: `-` is `0x2D` and `.`
+> is `0x2E`, so with a hyphen `…-002.csv` sorts *before* `….csv` and oldest-by-name
+> would delete part 2 ahead of part 1. `_` is `0x5F`, above `.`, so plain string
+> sort is exactly chronological. Found by generating the names and asserting the
+> list equals its own sort — the hyphen version failed that check.
+>
+> Also fixed while here: `uiBytesInFile` is volatile, so after a restart it reads
+> 0 for a file that may already be near the cap, and appending would let that file
+> reach twice `uiMaxFileKB`. Reading its real size needs `FB_FileProperties` or
+> seek/tell, **neither of which could be verified for this target** — so instead
+> the writer never appends to a file it did not create this session: state 12
+> skips forward to the first part that does not exist. The byte count is then
+> exact by construction, at a cost of one extra file per restart.
+>
+> **Retention — BLOCKED, and deliberately not guessed at.**
+> `FB_EnumFindFileList` / `FB_EnumFindFileEntry` exist in `Tc2_Utilities` by name,
+> but their parameter lists are **not recoverable** from the repo, the installed
+> `.compiled-library`, or its metadata (only pooled names and GUIDs are stored).
+> The rule in Phase 0 above is not to build on an unverified target API, and it
+> was already vindicated once here when this plan's own
+> `FB_FileFindFirst`/`Next`/`Close` turned out not to exist at all.
+>
+> **To unblock:** open the library browser in TcXaeShell, look at
+> `Tc2_Utilities → FB_EnumFindFileList` and `FB_EnumFindFileEntry`, and record
+> their VAR_INPUT/VAR_OUTPUT names here. One look settles it. The alternative —
+> a count-based cap (`uiMaxTotalMB * 1024 / uiMaxFileKB` files, delete oldest by
+> name) — needs only the *verified* primitives `FB_FileOpen(MODEREAD)` for
+> existence and `FB_FileDelete`, and is the fallback if the signatures cannot be
+> obtained.
+>
+> **Until retention lands, `uiMaxTotalMB` is NOT enforced** and the directory grows
+> without limit. `bEnabled` is therefore still FALSE. The reason that matters was
+> measured on the panel:
 >
 > - **95% of the log was one repeated line** — `Connect failed 192.168.1.11:6001
 >   err 1861`, 20 of 21 rows, because no robot is attached to this bench and
