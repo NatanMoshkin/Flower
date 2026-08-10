@@ -114,6 +114,26 @@ VAR
     // transition in and the recovery out, never the steady state.
     bStateUnanswered : BOOL;
 
+    // The same discipline, for connect failures. TRUE once an outage has been
+    // reported, so the re-dial every ~3 s does not report it again.
+    //
+    // WHY THIS WAS NOT ALREADY HERE, and what it cost: bStateUnanswered got the
+    // edge treatment in 2026-07-28 and the connect path never did, so with the
+    // robot absent -- every bench session -- ALL 20 slots of GVL_Log.aRecent were
+    // the same 'Connect failed' line at ~5 s spacing. The ring was fully
+    // overwritten about every 100 seconds, which defeats this project's own rule
+    // that transition paths must be read from GVL_Log rather than by polling
+    // eStep. Phase 2 then made it worse by putting the same repeat on the Compact
+    // Flash: the first CSV was 95% this one message, ~1.2 MB/day.
+    bConnectFailed  : BOOL;
+
+    // The error number that was reported. Guarding on the NUMBER as well as on the
+    // boolean is the load-bearing part: a bare boolean would swallow a genuinely
+    // NEW fault -- a wrong IP gives 1861 (timeout), a lost route gives something
+    // else -- because the flag was already set by the first one. Silence about a
+    // changed cause would be worse than the noise this removes.
+    nLastConnectErr : UDINT;
+
     // Whether the in-flight TX should be traced at DBG. StartSend defaults it
     // TRUE for every frame; SendState overrides it to FALSE for a keep-alive
     // repeat, AFTER calling StartSend. Both halves are load-bearing: the
@@ -200,11 +220,32 @@ E_RobotConnState.Connecting:
     IF NOT fbConnect.bBusy THEN
         fbConnect(bExecute := FALSE);
         IF fbConnect.bError THEN
-            // nErrId is the whole diagnostic value here: 'Connect failed' on
-            // its own cannot distinguish a wrong IP from a robot that is off.
-            Fail(eSev := E_LogSev.ERR,
-                 sWhy := CONCAT(CONCAT('Connect failed ', Endpoint()),
-                                CONCAT(' err ', UDINT_TO_STRING(fbConnect.nErrId))));
+            // The count is kept whatever we log, so a suppressed repeat is still
+            // counted and visible on the Robot page.
+            stRobot.nConnectFails := stRobot.nConnectFails + 1;
+
+            // EDGE-GUARDED, exactly like bStateUnanswered. Report the first
+            // failure of an outage at ERR, and report again whenever the error
+            // NUMBER changes -- a new cause is new information and must get
+            // through. A plain repeat of the same error is demoted to DBG, which
+            // F_LogEvent drops unless GVL_Log.bDebugMode is set.
+            //
+            // DEMOTED RATHER THAN SUPPRESSED on purpose: ticking Debug still gives
+            // the full retry trace when you actually want it, and the CSV writer
+            // drops DBG unconditionally so the file never carries the repeat
+            // either. nErrId is the whole diagnostic value here -- 'Connect
+            // failed' alone cannot distinguish a wrong IP from a robot that is off.
+            IF (NOT bConnectFailed) OR (fbConnect.nErrId <> nLastConnectErr) THEN
+                bConnectFailed  := TRUE;
+                nLastConnectErr := fbConnect.nErrId;
+                Fail(eSev := E_LogSev.ERR,
+                     sWhy := CONCAT(CONCAT('Connect failed ', Endpoint()),
+                                    CONCAT(' err ', UDINT_TO_STRING(fbConnect.nErrId))));
+            ELSE
+                Fail(eSev := E_LogSev.DBG,
+                     sWhy := CONCAT(CONCAT('Connect retry ', Endpoint()),
+                                    CONCAT(' err ', UDINT_TO_STRING(fbConnect.nErrId))));
+            END_IF
         ELSE
             hSocket         := fbConnect.hSocket;
             iIo             := IO_IDLE;
@@ -222,8 +263,27 @@ E_RobotConnState.Connecting:
             nLastCmdLogged   := 0;
 
             eState := E_RobotConnState.Connected;
-            F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
-                       sMsg := CONCAT('Connected ', Endpoint()));
+
+            // ONE INFO OUT, matching the one ERR in -- and it carries the count,
+            // which is the point. 'Connected after 312 failed attempts' tells you
+            // how long the outage lasted; 312 identical ERR lines do not, because
+            // the ring only holds 20 of them and the oldest is what you needed.
+            IF stRobot.nConnectFails > 0 THEN
+                F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                           sMsg := CONCAT(CONCAT('Connected after ',
+                                   CONCAT(UDINT_TO_STRING(stRobot.nConnectFails),
+                                          ' failed attempts ')), Endpoint()));
+            ELSE
+                F_LogEvent(eSev := E_LogSev.INFO, sSource := stRobot.Name,
+                           sMsg := CONCAT('Connected ', Endpoint()));
+            END_IF
+
+            // Re-arm the guard with the rest of the session state, so a LATER
+            // outage reports again instead of staying quiet because an earlier
+            // one had already set the flag.
+            bConnectFailed        := FALSE;
+            nLastConnectErr       := 0;
+            stRobot.nConnectFails := 0;
         END_IF
     END_IF
 

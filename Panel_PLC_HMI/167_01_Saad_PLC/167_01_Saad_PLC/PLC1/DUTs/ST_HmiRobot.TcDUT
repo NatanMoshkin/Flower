@@ -24,6 +24,20 @@ STRUCT
     sLastMessage   : STRING(80);
     sLastTxMessage : STRING(80);
 
+    // Consecutive failed connect attempts in the CURRENT outage; reset to 0 the
+    // moment a connect succeeds. Added 2026-08-10 together with the edge guard on
+    // the connect-failure log.
+    //
+    // THIS FIELD IS WHY THE SUPPRESSION IS SAFE. FB_RobotTcpClient re-dials every
+    // ~3 s while bTcpEnable is TRUE, and it used to log an ERR every single time:
+    // measured on the panel, all 20 slots of GVL_Log.aRecent were the same
+    // 'Connect failed' line, and the Phase 2 CSV came out 95% that one message at
+    // ~1.2 MB/day. Now only the first failure of an outage is logged (plus any
+    // change of error NUMBER), so the information is not lost -- it moves here,
+    // where the Robot page can show "312 failed attempts" in one field instead of
+    // 312 log lines.
+    nConnectFails  : UDINT;
+
     // The deprecated POS/AUTO_STARTED fields (bAtPos1/2/3, bTxAutoStarted,
     // bTxPushDone, bTxPistonsError, bRxResetError) were deleted 2026-07-26.
     // They existed only for legacy Flower_HMI page bindings on the retired

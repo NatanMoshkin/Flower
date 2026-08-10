@@ -5,9 +5,9 @@
 
 ### Active — nothing is blocking these
 
-- **A robot that is not there flushes the whole log ring every ~100 s.**
-  **Found on the panel 2026-08-10.** Pre-existing, not from this branch. One
-  guard, mirroring code already in the same file.
+- ~~**A robot that is not there flushes the whole log ring every ~100 s.**~~
+  **IMPLEMENTED 2026-08-10, NOT YET COMPILED.** Found on the panel the same
+  day; pre-existing, not introduced by the CSV work.
 
   `FB_RobotTcpClient` line 205 calls `Fail(eSev := ERR, …'Connect failed'…)`
   **unconditionally on every failed connect**, and the state machine re-dials
@@ -39,10 +39,29 @@
   logging impractical. With rotation and retention still unbuilt (Phase 3),
   `stLogFileCfg.bEnabled` was deliberately left **FALSE**.
 
-  So this is no longer a tidiness fix. It is one of two independent prerequisites
+  So this was no longer a tidiness fix. It is one of two independent prerequisites
   for turning file logging on, the other being Phase 3.
 
-  Needs a build + Activate.
+  **What shipped:** `bConnectFailed` + `nLastConnectErr` guard the log at the
+  *call site* (not inside `Fail()`, which has six callers and two that are
+  deliberately not faults). The first failure of an outage logs at **ERR**, and so
+  does any **change of error number** — guarding on the number as well as the
+  boolean is the load-bearing part, because a bare boolean would swallow a
+  genuinely new cause (1861 timeout vs. a lost route) on the strength of a flag the
+  first failure had already set.
+
+  A plain repeat is **demoted to DBG rather than suppressed**, so ticking Debug
+  still gives the whole retry trace, and the CSV writer drops DBG unconditionally
+  so the file never carries it either. Recovery logs **one INFO carrying the
+  count** — `Connected after 312 failed attempts` tells you the outage length,
+  which 312 identical ERRs in a 20-slot ring cannot.
+
+  The count is not lost: new `ST_HmiRobot.nConnectFails` (consecutive failures in
+  the current outage, cleared on connect), polled and rendered by FlowerPyHmi as
+  **Failed connects** on the Robot page. Contract 253 → **254**.
+
+  Still to do: surface it on the panel's own `Robot.TcVIS` too — clone a proven
+  readout block, per the standing VISU rule.
 
 ---
 
