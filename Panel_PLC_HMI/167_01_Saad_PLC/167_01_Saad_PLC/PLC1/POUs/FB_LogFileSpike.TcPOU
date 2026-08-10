@@ -71,12 +71,15 @@ VAR
     sName       : STRING(120);
     sLine       : STRING(200);
     hFile       : UINT;
+    nDoneCount  : INT;
 
     fbOpen      : Tc2_System.FB_FileOpen;
     fbPuts      : Tc2_System.FB_FilePuts;
     fbClose     : Tc2_System.FB_FileClose;
+    fbDelete    : Tc2_System.FB_FileDelete;
 
     fbTrigRun   : R_TRIG;
+    fbTrigClean : R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -89,8 +92,24 @@ END_VAR
 // a theoretical one.
 // ------------------------------------------------------------------ //
 fbTrigRun(CLK := GVL_Log.bLogFileProbeRun);
+fbTrigClean(CLK := GVL_Log.bLogFileProbeCleanup);
 
-IF fbTrigRun.Q AND (eStep = 0) THEN
+// CLEANUP FIRST in the IF chain, so that if both flags somehow arrive on the
+// same scan the sweep does not create files that the cleanup has already passed
+// over. Deleting and then re-creating is the one ordering that leaves litter.
+IF fbTrigClean.Q AND (eStep = 0) THEN
+    FOR iCand := 1 TO N_CAND DO
+        GVL_Log.aLogFileProbe[iCand].bDeleted := FALSE;
+        GVL_Log.aLogFileProbe[iCand].nDelErr  := 0;
+    END_FOR
+    GVL_Log.bLogFileProbeBusy := TRUE;
+    GVL_Log.bLogFileProbeDone := FALSE;
+    iCand := 1;
+    eStep := 60;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := 'FB_LogFileSpike',
+               sMsg  := 'Cleanup started -- removing probe files');
+
+ELSIF fbTrigRun.Q AND (eStep = 0) THEN
     // Wipe the previous sweep so a stale PASS cannot be mistaken for a fresh
     // one -- the single most misleading thing this FB could do.
     FOR iCand := 1 TO N_CAND DO
@@ -118,36 +137,7 @@ CASE eStep OF
 // 10 -- build this candidate. The table lives here, in one place.
 // ------------------------------------------------------------------ //
 10:
-    CASE iCand OF
-        1:  nSel  := SEL_BOOT;
-            sName := 'flower-spike.csv';
-            GVL_Log.aLogFileProbe[1].sWhat := 'PATH_BOOTPATH + bare name (bootdata lives here)';
-        2:  nSel  := SEL_GENERIC;
-            sName := '\Hard Disk\flower-spike.csv';
-            GVL_Log.aLogFileProbe[2].sWhat := 'GENERIC \Hard Disk\ (usual CE flash mount)';
-        3:  nSel  := SEL_GENERIC;
-            sName := '\Hard Disk\Logs\flower-spike.csv';
-            GVL_Log.aLogFileProbe[3].sWhat := 'GENERIC \Hard Disk\Logs\ (dir must exist)';
-        4:  nSel  := SEL_GENERIC;
-            sName := '\Temp\flower-spike.csv';
-            GVL_Log.aLogFileProbe[4].sWhat := 'GENERIC \Temp\';
-        5:  nSel  := SEL_GENERIC;
-            sName := '\flower-spike.csv';
-            GVL_Log.aLogFileProbe[5].sWhat := 'GENERIC device root \';
-        6:  nSel  := SEL_USER1;
-            sName := 'flower-spike.csv';
-            GVL_Log.aLogFileProbe[6].sWhat := 'PATH_USERPATH1 (unset unless configured)';
-    END_CASE
-
-    CASE nSel OF
-        SEL_BOOT:  ePathUse := Tc2_System.PATH_BOOTPATH;
-        SEL_USER1: ePathUse := Tc2_System.PATH_USERPATH1;
-    ELSE
-        ePathUse := Tc2_System.PATH_GENERIC;
-    END_CASE
-
-    GVL_Log.aLogFileProbe[iCand].nPath     := nSel;
-    GVL_Log.aLogFileProbe[iCand].sPathName := sName;
+    SetCandidate(iIdx := iCand);
 
     // One CSV row, already RFC 4180 quoted, with a comma AND a doubled quote
     // inside the message field. Free early evidence that text mode does not
@@ -258,6 +248,64 @@ CASE eStep OF
     END_IF
 
 // ------------------------------------------------------------------ //
+// 60 -- cleanup: pick the candidate, using THE SAME METHOD the sweep uses.
+//
+//       That shared method is the point. Cleanup has to delete exactly what the
+//       probe created, and a second hand-maintained copy of the path table is
+//       precisely how one location gets missed and litter is left behind on a
+//       filesystem nobody can browse.
+// ------------------------------------------------------------------ //
+60:
+    SetCandidate(iIdx := iCand);
+    eStep := 70;
+
+// ------------------------------------------------------------------ //
+// 70 -- delete it.
+// ------------------------------------------------------------------ //
+70:
+    fbDelete(sPathName := sName,
+             ePath     := ePathUse,
+             bExecute  := TRUE,
+             tTimeout  := FILE_TO);
+    IF NOT fbDelete.bBusy THEN
+        fbDelete(bExecute := FALSE);
+        IF fbDelete.bError THEN
+            GVL_Log.aLogFileProbe[iCand].nDelErr := fbDelete.nErrId;
+            // 1804 is "not found", which for a cleanup IS success: the goal is
+            // an absent file, and the candidates that never opened never made
+            // one. Only a different error means something is actually stuck.
+            GVL_Log.aLogFileProbe[iCand].bDeleted := (fbDelete.nErrId = 1804);
+        ELSE
+            GVL_Log.aLogFileProbe[iCand].bDeleted := TRUE;
+        END_IF
+        IF iCand >= N_CAND THEN
+            eStep := 80;
+        ELSE
+            iCand := iCand + 1;
+            eStep := 60;
+        END_IF
+    END_IF
+
+// ------------------------------------------------------------------ //
+// 80 -- cleanup done.
+// ------------------------------------------------------------------ //
+80:
+    nDoneCount := 0;
+    FOR iCand := 1 TO N_CAND DO
+        IF GVL_Log.aLogFileProbe[iCand].bDeleted THEN
+            nDoneCount := nDoneCount + 1;
+        END_IF
+    END_FOR
+    GVL_Log.bLogFileProbeBusy := FALSE;
+    GVL_Log.bLogFileProbeDone := TRUE;
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := 'FB_LogFileSpike',
+               sMsg  := CONCAT(CONCAT('Cleanup done: ',
+                        INT_TO_STRING(nDoneCount)),
+                        ' of 6 locations now clear'));
+    GVL_Log.bLogFileProbeCleanup := FALSE;
+    eStep := 0;
+
+// ------------------------------------------------------------------ //
 // 99 -- done. Latched until the operator clears the request flag, so the
 //       result table can be read at leisure over ADS.
 // ------------------------------------------------------------------ //
@@ -275,5 +323,57 @@ CASE eStep OF
 END_CASE
 ]]></ST>
     </Implementation>
+    <Method Name="SetCandidate" Id="{4a90e7c1-2b63-5f4e-8d17-3c5b9e60a742}">
+      <Declaration><![CDATA[(*
+   THE ONE PLACE the candidate table lives. Sets sName / nSel / ePathUse, and
+   records the label and resolved path into the result row.
+
+   It is a method rather than inline code because BOTH the write sweep and the
+   cleanup sweep need it, and cleanup has to delete exactly what the sweep
+   created. A second hand-maintained copy of these six paths is precisely how one
+   location gets missed and litter is left behind on a filesystem nobody can
+   browse -- which is the mistake this method exists to make impossible.
+*)
+METHOD SetCandidate : BOOL
+VAR_INPUT
+    iIdx : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[CASE iIdx OF
+    1:  nSel  := SEL_BOOT;
+        sName := 'flower-spike.csv';
+        GVL_Log.aLogFileProbe[1].sWhat := 'PATH_BOOTPATH + bare name (bootdata lives here)';
+    2:  nSel  := SEL_GENERIC;
+        sName := '\Hard Disk\flower-spike.csv';
+        GVL_Log.aLogFileProbe[2].sWhat := 'GENERIC \Hard Disk\ (usual CE flash mount)';
+    3:  nSel  := SEL_GENERIC;
+        sName := '\Hard Disk\Logs\flower-spike.csv';
+        GVL_Log.aLogFileProbe[3].sWhat := 'GENERIC \Hard Disk\Logs\ (dir must exist)';
+    4:  nSel  := SEL_GENERIC;
+        sName := '\Temp\flower-spike.csv';
+        GVL_Log.aLogFileProbe[4].sWhat := 'GENERIC \Temp\';
+    5:  nSel  := SEL_GENERIC;
+        sName := '\flower-spike.csv';
+        GVL_Log.aLogFileProbe[5].sWhat := 'GENERIC device root \';
+    6:  nSel  := SEL_USER1;
+        sName := 'flower-spike.csv';
+        GVL_Log.aLogFileProbe[6].sWhat := 'PATH_USERPATH1 (unset unless configured)';
+END_CASE
+
+CASE nSel OF
+    SEL_BOOT:  ePathUse := Tc2_System.PATH_BOOTPATH;
+    SEL_USER1: ePathUse := Tc2_System.PATH_USERPATH1;
+ELSE
+    ePathUse := Tc2_System.PATH_GENERIC;
+END_CASE
+
+GVL_Log.aLogFileProbe[iIdx].nPath     := nSel;
+GVL_Log.aLogFileProbe[iIdx].sPathName := sName;
+
+SetCandidate := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
   </POU>
 </TcPlcObject>

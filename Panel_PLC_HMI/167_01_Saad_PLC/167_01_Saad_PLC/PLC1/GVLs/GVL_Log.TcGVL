@@ -77,6 +77,14 @@ VAR_GLOBAL
     bLogFileProbeBusy  : BOOL;
     bLogFileProbeDone  : BOOL;
 
+    // Set TRUE to DELETE the probe files from all six candidate locations.
+    // Added 2026-08-10 because the first sweep left flower-spike.csv in four
+    // places on the panel -- including, via PATH_BOOTPATH, next to
+    // Port_851.bootdata -- and the probe had no way to remove them. A tool that
+    // writes to a filesystem nobody can browse must be able to clean up after
+    // itself. Same edge-trigger and self-clear as the run flag.
+    bLogFileProbeCleanup : BOOL;
+
     // How many of the six candidates fully worked, and the index of the first
     // that did. -1 means none -- read that as "the file blocks or the target
     // are the problem", not "try a different path".

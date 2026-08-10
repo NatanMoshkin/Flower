@@ -48,6 +48,8 @@ def main() -> int:
     ap.add_argument("--port", type=int, default=851)
     ap.add_argument("--run", action="store_true",
                     help="trigger a fresh sweep instead of reading the last one")
+    ap.add_argument("--cleanup", action="store_true",
+                    help="DELETE the probe files from all six locations and stop")
     ap.add_argument("--timeout", type=float, default=60.0)
     a = ap.parse_args()
 
@@ -69,6 +71,48 @@ def main() -> int:
                   "The probe is committed but this runtime has not been built and\n"
                   "activated with it yet -- do that first.")
             return 2
+
+        if a.cleanup:
+            # The probe writes to a filesystem nobody can browse, so leaving its
+            # files behind is not a cosmetic issue -- one of them sits next to
+            # Port_851.bootdata. This is how they come back off.
+            try:
+                plc.write_by_name(f"{ROOT}.bLogFileProbeCleanup", True,
+                                  pyads.PLCTYPE_BOOL)
+            except Exception:  # noqa: BLE001
+                print("GVL_Log.bLogFileProbeCleanup does not resolve -- this\n"
+                      "runtime predates the cleanup support. Build and activate,\n"
+                      "then re-run with --cleanup.")
+                return 2
+            print("deleting probe files from all six locations ...")
+            end = time.time() + a.timeout
+            while time.time() < end:
+                if rd(plc, "bLogFileProbeDone", pyads.PLCTYPE_BOOL):
+                    break
+                time.sleep(0.1)
+            left = 0
+            print(f"\n{'#':>2}  {'clear':<7}{'err':<8}path")
+            print("-" * 70)
+            for i in range(1, N_CAND + 1):
+                ok = plc.read_by_name(
+                    f"{ROOT}.aLogFileProbe[{i}].bDeleted", pyads.PLCTYPE_BOOL)
+                er = plc.read_by_name(
+                    f"{ROOT}.aLogFileProbe[{i}].nDelErr", pyads.PLCTYPE_UDINT)
+                pa = plc.read_by_name(
+                    f"{ROOT}.aLogFileProbe[{i}].sPathName", pyads.PLCTYPE_STRING)
+                if not ok:
+                    left += 1
+                # 1804 = not found, which for a delete is the desired end state.
+                note = "(1804 = was not there)" if er == 1804 else (
+                    f"e{er}" if er else "")
+                print(f"{i:>2}  {'yes' if ok else 'NO':<7}{note:<8}{pa}")
+            print()
+            if left:
+                print(f"{left} location(s) NOT clear -- see the error codes above.")
+                return 1
+            print("All six locations clear. The panel filesystem is tidy again.")
+            print("The spike, its DUT and the GVL block can now be deleted.")
+            return 0
 
         if a.run:
             print("triggering a sweep ...")

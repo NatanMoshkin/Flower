@@ -43,6 +43,14 @@ STRUCT
     // Opened AND wrote AND closed with no error on any of the three. The one
     // field worth looking at first.
     bOk         : BOOL;
+
+    // Cleanup outcome. A probe that creates files and cannot remove them leaves
+    // litter on the target -- including, via PATH_BOOTPATH, a stray file sitting
+    // next to Port_851.bootdata, which is the sort of thing that wastes
+    // somebody's afternoon later. nDelErr 1804 (file not found) is a PASS for
+    // cleanup purposes: it means there is nothing there, which is the goal.
+    bDeleted    : BOOL;
+    nDelErr     : UDINT;
 END_STRUCT
 END_TYPE
 ]]></Declaration>
