@@ -1,11 +1,12 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PHASE 0 PASSED ON THE PANEL, PHASE 1 WRITTEN, PHASES 2-4 NOT BUILT.**
-> Written 2026-08-07; Phase 0 run on the CP6606 2026-08-10 and the gate **passed**
-> — file I/O works on WinCE 7 ARM and `\Hard Disk\` is writable. Phase 1 (config,
-> status, `sToday`) is committed but **not yet compiled**. Everything from Phase 2
-> down is still intent, not behaviour — do not read those sections as
-> documentation. When the feature ships, strike this file through and remove its
+> **STATUS: PHASE 0 PASSED, PHASES 1-2 WRITTEN, PHASES 3-4 NOT BUILT.**
+> Written 2026-08-07. Phase 0 ran on the panel 2026-08-10 and the gate **passed**
+> — file I/O works on WinCE 7 ARM, `\Hard Disk\` is writable, and the throwaway
+> spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
+> verified on the panel. Phase 2 (`FB_LogCsvWriter`) is committed but **not yet
+> compiled**. Phases 3-4 are still intent, not behaviour — do not read those
+> sections as documentation. When the feature ships, strike this file through and remove its
 > entry from `docs/index.html`.
 >
 > Open work lives in the **Active** section of `CLAUDE.md`.
@@ -303,6 +304,23 @@ that the operator's existing timers still hold their values; if they reset to
 defaults, re-enter them once and note it.
 
 ## Phase 2 — `FB_LogCsvWriter`
+
+> **WRITTEN 2026-08-10, NOT YET COMPILED.** Two departures from what this section
+> originally specified, both consequences of what Phase 0 measured:
+>
+> - **No byte buffer.** The plan called for `ARRAY[0..2047] OF BYTE` flushed with
+>   one `FB_FileWrite`. The writer uses `FB_FilePuts` per row inside a single
+>   open/close instead, because the flash cost unit is the **open→close cycle**
+>   rather than the individual write, `FB_FilePuts + FOPEN_MODETEXT` is the only
+>   form *verified* to produce correct CRLF on this target, and the 256-entry ring
+>   is already the buffer — a second one would just add a second place to lose
+>   entries.
+> - **A state 90.** `Fail()` originally closed the handle itself with one
+>   TRUE/FALSE pair in a single scan, which starts the close and disarms it before
+>   it finishes, leaking a handle **per retry** — one every 30 s for as long as the
+>   machine runs, eventually presenting as the file blocks having failed. A
+>   still-open handle now routes through a proper async close first.
+
 
 Called from `MAIN` immediately after `fbPersistentSave();` (line ~537), the same
 "last in MAIN" slot and for the same reason.

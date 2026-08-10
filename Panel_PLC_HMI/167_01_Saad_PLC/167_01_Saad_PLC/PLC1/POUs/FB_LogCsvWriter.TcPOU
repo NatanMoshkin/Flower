@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+  <POU Name="FB_LogCsvWriter" Id="{b85008c5-84dc-5f29-a8ef-2a5df33db034}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+   Drains GVL_Log's 256-entry ring to a CSV file on the panel's Compact Flash.
+   Phase 2 of docs/plans/log-csv-file.md. Called last in MAIN, after
+   fbPersistentSave().
+
+   WHY: the panel log is RAM only. Every entry is lost on power cycle, reset or
+   download, so a fault overnight with nobody attached leaves nothing to read --
+   which is exactly when the log matters most. This is the consumer the ring was
+   designed for; its own comment has documented the drain contract
+   (slot = nWriteIdx MOD 256) since long before anything drained it.
+
+   Off by default. Nothing here touches the card until an operator sets
+   GVL_HmiPersistent.stLogFileCfg.bEnabled.
+
+   ---------------------------------------------------------------------------
+   DELIBERATE DEVIATION FROM THE PLAN: no byte buffer.
+   ---------------------------------------------------------------------------
+   The plan says to accumulate rows into an ARRAY[0..2047] OF BYTE and flush it
+   with one FB_FileWrite. This writes rows individually with FB_FilePuts inside a
+   single open/close instead, for three reasons that only became clear once the
+   Phase 0 probe had run on the real device:
+
+     1. THE FLASH COST UNIT IS THE OPEN->CLOSE CYCLE, not the individual write.
+        Data written between an open and a close reaches the OS cache and is
+        committed once. So N Puts inside one open/close costs the card the same
+        as one Write of N rows -- the flash economy the byte buffer existed for is
+        preserved without the buffer.
+     2. FB_FilePuts + FOPEN_MODETEXT IS THE ONLY FORM VERIFIED ON THIS TARGET.
+        Measured 2026-08-10 by retrieving the probe's file over FTP: a single $N
+        arrives as CRLF, exactly RFC 4180, and FilePuts adds no ending of its
+        own. Whether text-mode translation also applies to FB_FileWrite's raw
+        buffer is unverified -- and if it does, cbWriteLen no longer equals the
+        bytes on disk and the size accounting silently drifts.
+     3. THE RING IS ALREADY THE BUFFER. 256 entries of it. A second buffer would
+        duplicate it and add a second place for entries to be lost.
+
+   ---------------------------------------------------------------------------
+   LINE ENDINGS: EVERY ROW ENDS WITH A BARE $N. NEVER $R$N.
+   ---------------------------------------------------------------------------
+   FOPEN_MODETEXT already turns LF into CRLF. Writing $R$N would have it
+   translate the $N again, giving \r\r\n and a corrupt file. This was very nearly
+   "fixed" the wrong way on the strength of a miscounted byte total; the measured
+   file settled it. Do not change it without re-measuring.
+
+   ---------------------------------------------------------------------------
+   NEVER FALL BACK TO \Temp\ OR THE DEVICE ROOT \.
+   ---------------------------------------------------------------------------
+   Both are writable on this panel and BOTH LOSE THEIR CONTENTS ON RESTART -- the
+   WinCE RAM object store. Proven 2026-08-10: files written there by the Phase 0
+   probe were gone after an Activate, while the two on Compact Flash survived.
+   A fallback to either would silently convert durable logging into RAM logging,
+   reintroducing the exact defect this FB exists to fix, while every status field
+   still reported healthy. A directory that cannot be opened must produce
+   eState := FAILED with the error latched and visible. That is the whole point.
+*)
+FUNCTION_BLOCK FB_LogCsvWriter
+VAR CONSTANT
+    RING        : UDINT := 256;         // GVL_Log.aLog size -- the drain window
+    HIGH_WATER  : UDINT := 200;         // flush early rather than risk overflow
+    FILE_TO     : TIME  := T#5S;
+    RETRY_TO    : TIME  := T#30S;       // backoff after a failure
+    MAX_SKIP    : INT   := 32;          // DBG entries discarded per scan, bounded
+    HDR         : STRING(40) := 'time,severity,source,message';
+    E_NOTFOUND  : UDINT := 1804;        // ADS "file not found", verified on the panel
+END_VAR
+VAR
+    eStep       : INT;
+
+    fbMkDir     : Tc2_System.FB_CreateDir;
+    fbProbe     : Tc2_System.FB_FileOpen;   // existence test, separate instance
+    fbOpen      : Tc2_System.FB_FileOpen;
+    fbPuts      : Tc2_System.FB_FilePuts;
+    fbClose     : Tc2_System.FB_FileClose;
+    hFile       : UINT;
+
+    // Our own read cursor into the ring. The ONLY state that must not be lost
+    // mid-session, and deliberately not persistent: after a reboot the ring is
+    // empty and nWriteIdx restarts at 0, so a restored cursor would be ahead of
+    // the writer and would skip everything until it caught up.
+    udiLastRead : UDINT;
+    bCursorSet  : BOOL;
+
+    udiPending  : UDINT;
+    sFileName   : STRING(40);
+    sLastFile   : STRING(40);
+    sPath       : STRING(160);
+    sDirNoSlash : STRING(80);
+    sRow        : STRING(255);
+    nSlot       : INT;
+    nSkipped    : INT;
+
+    bNeedHeader : BOOL;
+    bLossRow    : BOOL;         // a synthetic "entries lost" row is owed
+    udiLostNow  : UDINT;
+    bDirTried   : BOOL;
+    bClosing    : BOOL;         // draining because bEnabled went FALSE
+    bErrLogged  : BOOL;         // edge guard -- one ERR in, one INFO out
+
+    tonFlush    : TON;
+    tonRetry    : TON;
+    fbTrigOff   : F_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// ------------------------------------------------------------------ //
+// Section 0 -- cursor baseline, and the enable/disable edges.
+// ------------------------------------------------------------------ //
+
+// First time we ever run, adopt whatever the ring can still supply rather than
+// starting at nWriteIdx. Someone who enables logging after noticing trouble
+// wants the entries that are still there, not only the ones from now on. Bounded
+// by RING because older slots have already been overwritten.
+IF NOT bCursorSet THEN
+    bCursorSet := TRUE;
+    IF GVL_Log.nWriteIdx > RING THEN
+        udiLastRead := GVL_Log.nWriteIdx - RING;
+    ELSE
+        udiLastRead := 0;
+    END_IF
+END_IF
+
+// Turning logging OFF must not abandon a part-written flush or a full buffer:
+// drain what is pending and close cleanly, THEN go idle.
+fbTrigOff(CLK := NOT GVL_HmiPersistent.stLogFileCfg.bEnabled);
+IF fbTrigOff.Q AND (GVL_Log.nWriteIdx > udiLastRead) THEN
+    bClosing := TRUE;
+END_IF
+
+udiPending := GVL_Log.nWriteIdx - udiLastRead;
+
+// ------------------------------------------------------------------ //
+// Section 1 -- flush trigger.
+//
+// The quiet timer is the flash-wear control: entries collect in the ring and
+// reach the card once per uiFlushSec, so a busy second costs one open/close
+// rather than dozens. HIGH_WATER is the safety valve -- at 200 of 256 pending
+// we stop waiting for the timer, because passing 256 loses entries.
+// ------------------------------------------------------------------ //
+tonFlush(IN  := (udiPending > 0) AND GVL_HmiPersistent.stLogFileCfg.bEnabled,
+         PT  := UDINT_TO_TIME(GVL_HmiPersistent.stLogFileCfg.uiFlushSec * 1000));
+
+// ------------------------------------------------------------------ //
+// Section 2 -- the state machine.
+// ------------------------------------------------------------------ //
+CASE eStep OF
+
+// ---------------- 0: idle ---------------- //
+0:
+    // OFF means "not logging". BUFFER means "logging, entries accumulating in the
+    // ring, waiting for the flush interval". Reporting OFF while enabled would
+    // read as a fault on the Logs page when nothing is wrong.
+    IF GVL_HmiPersistent.stLogFileCfg.bEnabled THEN
+        GVL_Log.stLogFile.eState := E_LogFileState.BUFFER;
+    ELSE
+        GVL_Log.stLogFile.eState := E_LogFileState.OFF;
+    END_IF
+
+    IF (GVL_HmiPersistent.stLogFileCfg.bEnabled OR bClosing)
+       AND (udiPending > 0)
+       AND (tonFlush.Q OR (udiPending >= HIGH_WATER) OR bClosing) THEN
+
+        // OVERFLOW CHECK, before anything else touches the cursor. If more than
+        // RING entries arrived since we last read, the oldest are already
+        // overwritten and are gone -- unavoidable, the ring is finite. What is
+        // NOT acceptable is losing them silently, so the count is published AND
+        // a synthetic row goes into the file itself. A reader of the CSV must be
+        // able to see the gap without also having to read a PLC symbol.
+        IF udiPending > RING THEN
+            udiLostNow := udiPending - RING;
+            GVL_Log.stLogFile.udiEntriesDropped :=
+                GVL_Log.stLogFile.udiEntriesDropped + udiLostNow;
+            udiLastRead := GVL_Log.nWriteIdx - RING;
+            bLossRow    := TRUE;
+        END_IF
+
+        GVL_Log.stLogFile.eState := E_LogFileState.BUFFER;
+        eStep := 5;
+    END_IF
+
+// ---------------- 5: make sure the directory exists ---------------- //
+// Once per session. Errors are IGNORED on purpose: "already exists" is an error
+// from this FB and is also the normal case, and distinguishing it from a real
+// failure by error number would be guessing. If the directory genuinely cannot
+// be made, the open in state 20 fails and THAT is reported -- one authoritative
+// error rather than two competing ones.
+5:
+    IF bDirTried THEN
+        eStep := 10;
+    ELSE
+        sDirNoSlash := GVL_HmiPersistent.stLogFileCfg.sDir;
+        IF (LEN(sDirNoSlash) > 1)
+           AND (RIGHT(sDirNoSlash, 1) = '\') THEN
+            sDirNoSlash := LEFT(sDirNoSlash, LEN(sDirNoSlash) - 1);
+        END_IF
+        fbMkDir(sPathName := sDirNoSlash,
+                ePath     := Tc2_System.PATH_GENERIC,
+                bExecute  := TRUE,
+                tTimeout  := FILE_TO);
+        IF NOT fbMkDir.bBusy THEN
+            fbMkDir(bExecute := FALSE);
+            bDirTried := TRUE;
+            eStep := 10;
+        END_IF
+    END_IF
+
+// ---------------- 10: filename, and does it already exist? ---------------- //
+10:
+    IF GVL_Log.sToday = '0000-00-00' THEN
+        // The panel RTC is unset. Naming a file from that would produce
+        // something like flower-0000-00-00.csv, which sorts before every real
+        // file and would be deleted first by the Phase 3 retention sweep -- so
+        // the one file written while the clock was broken would be the first to
+        // go. A distinct name keeps it identifiable and out of the date order.
+        sFileName := 'flower-nodate.csv';
+    ELSE
+        sFileName := CONCAT(CONCAT('flower-', GVL_Log.sToday), '.csv');
+    END_IF
+    sPath := CONCAT(GVL_HmiPersistent.stLogFileCfg.sDir, sFileName);
+
+    IF sFileName = sLastFile THEN
+        bNeedHeader := FALSE;       // same file we appended to last time
+        eStep := 20;
+    ELSE
+        eStep := 11;                // new name -- has to be tested
+    END_IF
+
+// ---------------- 11/12: existence probe ---------------- //
+// A header belongs at the top of a file, once. Opening in append mode cannot
+// tell us whether we created it, so we test first with a READ open: 1804 means
+// absent, which is the one error code this project has verified on the panel.
+// Costs one extra call per new file, i.e. once a day.
+11:
+    fbProbe(sPathName := sPath,
+            nMode     := Tc2_System.FOPEN_MODEREAD,
+            ePath     := Tc2_System.PATH_GENERIC,
+            bExecute  := TRUE,
+            tTimeout  := FILE_TO);
+    IF NOT fbProbe.bBusy THEN
+        fbProbe(bExecute := FALSE);
+        IF fbProbe.bError THEN
+            // Absent -> new file, needs a header. Any OTHER error is left for
+            // the append open in state 20 to report, so there is one place that
+            // decides the directory is unusable.
+            bNeedHeader := (fbProbe.nErrId = E_NOTFOUND);
+            eStep := 20;
+        ELSE
+            bNeedHeader := FALSE;
+            hFile := fbProbe.hFile;
+            eStep := 12;            // must close the probe handle
+        END_IF
+    END_IF
+
+12:
+    fbClose(hFile := hFile, bExecute := TRUE, tTimeout := FILE_TO);
+    IF NOT fbClose.bBusy THEN
+        fbClose(bExecute := FALSE);
+        hFile := 0;
+        eStep := 20;
+    END_IF
+
+// ---------------- 20: open for append ---------------- //
+20:
+    GVL_Log.stLogFile.eState := E_LogFileState.OPENING;
+    fbOpen(sPathName := sPath,
+           nMode     := Tc2_System.FOPEN_MODEAPPEND OR Tc2_System.FOPEN_MODETEXT,
+           ePath     := Tc2_System.PATH_GENERIC,
+           bExecute  := TRUE,
+           tTimeout  := FILE_TO);
+    IF NOT fbOpen.bBusy THEN
+        fbOpen(bExecute := FALSE);
+        IF fbOpen.bError THEN
+            Fail(nErr := fbOpen.nErrId, sWhy := 'open failed');
+        ELSE
+            hFile := fbOpen.hFile;
+            IF bNeedHeader THEN
+                sLastFile := sFileName;
+                GVL_Log.stLogFile.sCurrentFile := sFileName;
+                GVL_Log.stLogFile.uiBytesInFile := 0;
+                eStep := 25;
+            ELSE
+                sLastFile := sFileName;
+                GVL_Log.stLogFile.sCurrentFile := sFileName;
+                eStep := 30;
+            END_IF
+        END_IF
+    END_IF
+
+// ---------------- 25: header row, new files only ---------------- //
+25:
+    GVL_Log.stLogFile.eState := E_LogFileState.WRITING;
+    fbPuts(hFile := hFile, sLine := CONCAT(HDR, '$N'),
+           bExecute := TRUE, tTimeout := FILE_TO);
+    IF NOT fbPuts.bBusy THEN
+        fbPuts(bExecute := FALSE);
+        IF fbPuts.bError THEN
+            Fail(nErr := fbPuts.nErrId, sWhy := 'header write failed');
+        ELSE
+            // +1 because text mode expands the single $N to CRLF on disk.
+            GVL_Log.stLogFile.uiBytesInFile :=
+                GVL_Log.stLogFile.uiBytesInFile + INT_TO_UDINT(LEN(HDR)) + 2;
+            bNeedHeader := FALSE;
+            eStep := 30;
+        END_IF
+    END_IF
+
+// ---------------- 30: the synthetic loss row, if one is owed ---------------- //
+30:
+    IF NOT bLossRow THEN
+        eStep := 31;
+    ELSE
+        GVL_Log.stLogFile.eState := E_LogFileState.WRITING;
+        sRow := CONCAT(CONCAT(Csv(sIn := GVL_Log.sNow), ',"WARN","LogCsv","'),
+                CONCAT(UDINT_TO_STRING(udiLostNow),
+                       ' entries lost - CSV writer fell behind the ring"$N'));
+        fbPuts(hFile := hFile, sLine := sRow,
+               bExecute := TRUE, tTimeout := FILE_TO);
+        IF NOT fbPuts.bBusy THEN
+            fbPuts(bExecute := FALSE);
+            IF fbPuts.bError THEN
+                Fail(nErr := fbPuts.nErrId, sWhy := 'loss row write failed');
+            ELSE
+                GVL_Log.stLogFile.uiBytesInFile :=
+                    GVL_Log.stLogFile.uiBytesInFile + INT_TO_UDINT(LEN(sRow)) + 1;
+                bLossRow := FALSE;
+                eStep := 31;
+            END_IF
+        END_IF
+    END_IF
+
+// ---------------- 31: one row per pass until caught up ---------------- //
+31:
+    IF udiLastRead >= GVL_Log.nWriteIdx THEN
+        eStep := 40;
+    ELSE
+        // Discard DBG without a file call. Unconditional -- independent of
+        // GVL_Log.bDebugMode, which still governs the on-screen ring. DBG is the
+        // 1 Hz robot keep-alive trace; it would bury the file and burn the card.
+        // Bounded per scan so a long DBG run cannot stretch the PlcTask.
+        nSkipped := 0;
+        WHILE (udiLastRead < GVL_Log.nWriteIdx)
+              AND (nSkipped < MAX_SKIP) DO
+            nSlot := UDINT_TO_INT(udiLastRead MOD RING);
+            IF GVL_Log.aLog[nSlot].eSev = E_LogSev.DBG THEN
+                udiLastRead := udiLastRead + 1;
+                nSkipped := nSkipped + 1;
+            ELSE
+                EXIT;
+            END_IF
+        END_WHILE
+
+        IF udiLastRead >= GVL_Log.nWriteIdx THEN
+            eStep := 40;
+        ELSE
+            GVL_Log.stLogFile.eState := E_LogFileState.WRITING;
+            nSlot := UDINT_TO_INT(udiLastRead MOD RING);
+            sRow  := RowFor(nSlot := nSlot);
+            fbPuts(hFile := hFile, sLine := sRow,
+                   bExecute := TRUE, tTimeout := FILE_TO);
+            IF NOT fbPuts.bBusy THEN
+                fbPuts(bExecute := FALSE);
+                IF fbPuts.bError THEN
+                    Fail(nErr := fbPuts.nErrId, sWhy := 'row write failed');
+                ELSE
+                    // Cursor advances ONLY after the write is confirmed. If it
+                    // advanced first, a failure here would drop the entry
+                    // permanently and invisibly -- the one outcome this whole FB
+                    // is arranged to prevent.
+                    udiLastRead := udiLastRead + 1;
+                    GVL_Log.stLogFile.uiBytesInFile :=
+                        GVL_Log.stLogFile.uiBytesInFile + INT_TO_UDINT(LEN(sRow)) + 1;
+                END_IF
+            END_IF
+        END_IF
+    END_IF
+
+// ---------------- 40: close ---------------- //
+40:
+    GVL_Log.stLogFile.eState := E_LogFileState.CLOSING;
+    fbClose(hFile := hFile, bExecute := TRUE, tTimeout := FILE_TO);
+    IF NOT fbClose.bBusy THEN
+        fbClose(bExecute := FALSE);
+        IF fbClose.bError THEN
+            Fail(nErr := fbClose.nErrId, sWhy := 'close failed');
+        ELSE
+            hFile := 0;
+            // One INFO out, matching the one ERR in. Same discipline as
+            // FB_RobotTcpClient's bStateUnanswered: a repeating condition must
+            // not be level-logged into a 20-entry ring.
+            IF bErrLogged THEN
+                bErrLogged := FALSE;
+                GVL_Log.stLogFile.iErrorCode := 0;
+                GVL_Log.stLogFile.sErrorText := '';
+                F_LogEvent(eSev := E_LogSev.INFO, sSource := 'LogCsv',
+                           sMsg  := CONCAT('CSV log recovered, writing ',
+                                           sFileName));
+            END_IF
+            tonFlush(IN := FALSE);      // restart the quiet interval
+            bClosing := FALSE;
+            eStep := 0;
+        END_IF
+    END_IF
+
+// ---------------- 90: release the handle on the way to FAILED ---------------- //
+// Reached only from Fail() and only when a handle is still open. The close result
+// is IGNORED: we are already reporting the original error, and replacing it with
+// a close error would lose the diagnosis that matters. What we need from here is
+// the handle back, not a second opinion.
+90:
+    GVL_Log.stLogFile.eState := E_LogFileState.CLOSING;
+    fbClose(hFile := hFile, bExecute := TRUE, tTimeout := FILE_TO);
+    IF NOT fbClose.bBusy THEN
+        fbClose(bExecute := FALSE);
+        hFile := 0;
+        eStep := 99;
+    END_IF
+
+// ---------------- 99: failed -- back off, then retry ---------------- //
+// Retry on a TIMER, never every scan. A bad sDir or a full card would otherwise
+// produce a file call per scan for as long as the machine runs.
+99:
+    GVL_Log.stLogFile.eState := E_LogFileState.FAILED;
+    tonRetry(IN := TRUE, PT := RETRY_TO);
+    IF tonRetry.Q THEN
+        tonRetry(IN := FALSE);
+        bDirTried := FALSE;             // maybe the card came back
+        sLastFile := '';                // re-test existence
+        eStep := 0;
+    END_IF
+
+END_CASE
+
+// ------------------------------------------------------------------ //
+// Section 3 -- the STRING mirror of eState.
+//
+// Required, not decoration: the classic VISU cannot stringify an enum, so a text
+// output bound to eState renders the raw number. Every enum in this project
+// carries such a mirror for that reason.
+// ------------------------------------------------------------------ //
+CASE GVL_Log.stLogFile.eState OF
+    E_LogFileState.OFF:      GVL_Log.stLogFile.sStateText := 'OFF';
+    E_LogFileState.BUFFER:   GVL_Log.stLogFile.sStateText := 'BUFFER';
+    E_LogFileState.OPENING:  GVL_Log.stLogFile.sStateText := 'OPENING';
+    E_LogFileState.WRITING:  GVL_Log.stLogFile.sStateText := 'WRITING';
+    E_LogFileState.CLOSING:  GVL_Log.stLogFile.sStateText := 'CLOSING';
+    E_LogFileState.ROTATING: GVL_Log.stLogFile.sStateText := 'ROTATING';
+    E_LogFileState.FAILED:   GVL_Log.stLogFile.sStateText := 'FAILED';
+ELSE
+    GVL_Log.stLogFile.sStateText := '?';
+END_CASE
+]]></ST>
+    </Implementation>
+    <Method Name="Csv" Id="{1b4287c1-9ff1-538d-8e24-2268967534d3}">
+      <Declaration><![CDATA[(*
+   RFC 4180 quote one field: wrap in double quotes, and double any quote inside.
+
+   NOT theoretical. Robot frames reach log messages as 'SYNC:NAME=VALUE,...' and
+   message text already carries commas and parentheses, so an unquoted field
+   would split a row into the wrong number of columns and silently corrupt every
+   downstream reader. Verified end-to-end on the panel 2026-08-10: a message
+   containing both a comma and a doubled quote came back off the card via FTP and
+   parsed as one intact field.
+
+   Every field is quoted, including the fixed ones. Uniform rows are easier to
+   reason about than rows where quoting depends on content, and the cost is two
+   bytes.
+*)
+METHOD Csv : STRING(200)
+VAR_INPUT
+    sIn : STRING(80);
+END_VAR
+VAR
+    j    : INT;
+    n    : INT;
+    sOut : STRING(200);
+    c    : STRING(1);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sOut := '"';
+n := LEN(sIn);
+
+FOR j := 1 TO n DO
+    c := MID(sIn, 1, j);            // MID(str, len, pos) -- one char at j
+    IF c = '"' THEN
+        sOut := CONCAT(sOut, '""');
+    ELSE
+        sOut := CONCAT(sOut, c);
+    END_IF
+END_FOR
+
+Csv := CONCAT(sOut, '"');
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="RowFor" Id="{ae6940c9-79c5-559c-a634-3cc17c6a8310}">
+      <Declaration><![CDATA[(*
+   Build one CSV row from a ring slot, ending in a bare $N.
+
+   Column order matches the HDR constant. Worst case fits: the four source
+   fields are STRING(8), STRING(8), STRING(20) and STRING(80), so fully
+   quote-doubled they come to 18 + 18 + 42 + 162, plus three commas and the
+   newline = 244 of the 255 available.
+
+   $N and NOT $R$N -- FOPEN_MODETEXT already produces CRLF, and doubling it
+   gives \r\r\n. See the FB header.
+*)
+METHOD RowFor : STRING(255)
+VAR_INPUT
+    nSlot : INT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RowFor := CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sTime), ',');
+RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sSevText), ','));
+RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sSource), ','));
+RowFor := CONCAT(RowFor, CONCAT(Csv(sIn := GVL_Log.aLog[nSlot].sMsg), '$N'));
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Fail" Id="{e43e6ecc-ad8d-5b9f-81d5-9c5aa2afc35b}">
+      <Declaration><![CDATA[(*
+   One place that gives up on a flush: latch the error, release the handle, log
+   once, and drop into the backoff state.
+
+   THE LOG IS EDGE-GUARDED, and that is the point of centralising this. A full
+   card or a bad sDir repeats every retry interval, and level-logging it would
+   flush the 20-entry aRecent ring and hide whatever caused the trouble --
+   exactly the defect this project already has open against
+   FB_RobotTcpClient's connect-failure path. One ERR in, one INFO out on
+   recovery (state 40).
+
+   IT DOES NOT CLOSE THE HANDLE ITSELF. An earlier version did, with one
+   bExecute TRUE/FALSE pair in the same scan, which starts the close and disarms
+   it before it can finish -- so the handle leaks. Harmless once; but a failure
+   that repeats every RETRY_TO leaks one every 30 s for as long as the machine
+   runs, and exhausting the runtime's handle table would then present as the file
+   blocks having stopped working. So a still-open handle routes through state 90,
+   which closes it asynchronously and properly before the backoff.
+*)
+METHOD Fail : BOOL
+VAR_INPUT
+    nErr : UDINT;
+    sWhy : STRING(40);
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[GVL_Log.stLogFile.iErrorCode := nErr;
+GVL_Log.stLogFile.sErrorText :=
+    CONCAT(CONCAT(sWhy, ' err '), UDINT_TO_STRING(nErr));
+
+IF NOT bErrLogged THEN
+    bErrLogged := TRUE;
+    F_LogEvent(eSev := E_LogSev.ERR, sSource := 'LogCsv',
+               sMsg  := CONCAT(CONCAT(GVL_Log.stLogFile.sErrorText, ' ('),
+                               CONCAT(sPath, ')')));
+END_IF
+
+bClosing := FALSE;
+
+// A handle we opened is still open -- close it properly first (state 90) rather
+// than abandoning it. See the header: abandoning leaks one handle per retry.
+IF hFile <> 0 THEN
+    eStep := 90;
+ELSE
+    eStep := 99;
+END_IF
+
+Fail := TRUE;
+]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

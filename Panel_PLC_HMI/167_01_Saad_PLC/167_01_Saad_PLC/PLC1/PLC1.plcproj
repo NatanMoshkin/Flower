@@ -68,9 +68,6 @@
     <Compile Include="DUTs\ST_HmiLogFileCfg.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="DUTs\ST_LogFileProbe.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="GlobalTextList.TcGTLO">
       <SubType>Code</SubType>
     </Compile>
@@ -107,10 +104,10 @@
     <Compile Include="POUs\F_LogEvent.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\FB_LogFileSpike.TcPOU">
+    <Compile Include="POUs\FB_PersistentAutoSave.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\FB_PersistentAutoSave.TcPOU">
+    <Compile Include="POUs\FB_LogCsvWriter.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\FB_MasterAutoCycle.TcPOU">
