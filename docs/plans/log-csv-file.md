@@ -159,6 +159,51 @@ oldest-first in this directory**, so pointing it at the device root or at
 retention sweep deleting TwinCAT's own files. A directory containing nothing but
 our CSVs is what makes "delete the oldest" safe.
 
+### `\Temp\` AND THE DEVICE ROOT `\` ARE NOT PERSISTENT STORAGE — found by the cleanup, 2026-08-10
+
+The single most valuable result of Phase 0, and it was an accident: it came out of
+adding a cleanup sweep, not out of the probe it was written for.
+
+The write sweep passed on **four** locations. The cleanup ran afterwards, with at
+least one Activate Configuration and one Download in between — and found only
+**two** of those four files still present:
+
+| Location | Wrote OK | Still there afterwards |
+|---|---|---|
+| `PATH_BOOTPATH` (boot dir, on Compact Flash) | yes | **yes** |
+| `\Hard Disk\` (Compact Flash mount) | yes | **yes** |
+| `\Temp\` | yes | **GONE** |
+| `\` device root | yes | **GONE** |
+
+A file that was opened, written and closed successfully cannot simply be absent
+later unless the storage did not persist. Both survivors are on Compact Flash;
+both casualties are the WinCE **RAM object store**, which is what the CE root
+filesystem actually is. Restarting the device empties them.
+
+**This is precisely the failure this whole feature exists to prevent.** The
+opening argument of this plan is that a fault overnight with no laptop attached
+must leave something to read. Had `\Temp\` or `\` been chosen — and *both passed
+the write test cleanly* — the logger would have worked perfectly in every bench
+test, on every ADS read, in every demo, and lost the entire log on the one event
+that matters. It would have been discovered by someone going to read the record of
+an overnight fault and finding nothing there.
+
+`\Hard Disk\Logs\` was chosen on reasoning: operator-reachable, and a dedicated
+directory makes the Phase 3 retention delete safe. It now has a third and stronger
+justification, backed by measurement rather than argument: **it is one of only two
+locations on this panel where a file survives a restart at all.**
+
+**Two rules that follow, for anyone extending this:**
+
+- **A write test is not a persistence test.** Any future path change must be
+  re-verified by writing, restarting the device, and reading back — not by
+  checking that the open succeeded.
+- **Never fall back to `\Temp\` or `\` when the configured directory fails.** That
+  is the obvious-looking defensive move and it would silently convert durable
+  logging into RAM logging, reintroducing the original defect while every status
+  field reports healthy. If `sDir` cannot be opened, the correct behaviour is
+  `FAILED` with the error latched and visible.
+
 **Still open, deliberately, and it is a Phase 2 question rather than a gate one:**
 whether `FB_FilePuts` appends its own line ending on top of the `$N` the probe
 writes. It cannot be settled from the library metadata and the panel has no way to

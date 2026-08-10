@@ -48,6 +48,27 @@ STRUCT
     // The probe reported e1804 for this path because 'Logs' does not exist yet;
     // Phase 2 creates it with Tc2_System.FB_CreateDir before first use.
     //
+    // AND THE THIRD REASON, which is the strongest and was MEASURED rather than
+    // reasoned (2026-08-10): '\Hard Disk\' is one of only TWO locations on this
+    // panel where a file survives a restart at all. The Phase 0 probe wrote
+    // successfully to four places; after an Activate and a Download, the files in
+    // '\Temp\' and in the device root '\' WERE GONE, while the two on Compact
+    // Flash remained. The CE root filesystem is the RAM object store.
+    //
+    // That is exactly the failure this feature exists to prevent -- a fault
+    // overnight leaving nothing to read -- and both of those paths passed the
+    // write test cleanly, so the mistake would have survived every bench test and
+    // surfaced only when someone went looking for a real fault record.
+    //
+    // TWO RULES THAT FOLLOW:
+    //   * A WRITE TEST IS NOT A PERSISTENCE TEST. Re-point this field only after
+    //     writing, restarting the device, and reading back.
+    //   * NEVER FALL BACK TO '\Temp\' OR '\' when this directory cannot be
+    //     opened. That is the obvious defensive move and it would silently turn
+    //     durable logging into RAM logging while every status field still read
+    //     healthy. The correct behaviour on a bad path is eState := FAILED with
+    //     the error latched and visible.
+    //
     // PERSISTENT because the correct value differs between installations -- the
     // dev PC and the panel -- which is the test CLAUDE.md sets for
     // configuration, and the same one that made sRobotHost persistent. As a
