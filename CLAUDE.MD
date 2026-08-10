@@ -6,8 +6,8 @@
 ### Active — nothing is blocking these
 
 - ~~**A robot that is not there flushes the whole log ring every ~100 s.**~~
-  **IMPLEMENTED 2026-08-10, NOT YET COMPILED.** Found on the panel the same
-  day; pre-existing, not introduced by the CSV work.
+  **DONE 2026-08-10 — built, downloaded and VERIFIED ON THE PANEL.** Found the
+  same day; pre-existing, not introduced by the CSV work.
 
   `FB_RobotTcpClient` line 205 calls `Fail(eSev := ERR, …'Connect failed'…)`
   **unconditionally on every failed connect**, and the state machine re-dials
@@ -60,8 +60,21 @@
   the current outage, cleared on connect), polled and rendered by FlowerPyHmi as
   **Failed connects** on the Robot page. Contract 253 → **254**.
 
-  Still to do: surface it on the panel's own `Robot.TcVIS` too — clone a proven
-  readout block, per the standing VISU rule.
+  **Verified on the panel, all four behaviours, with the robot absent:**
+
+  | Check | Result |
+  |---|---|
+  | Repeats suppressed | 7 attempts in 35 s → **0** new log entries; ring holds **1** `Connect failed` line, was 20/20 |
+  | Demoted, not discarded | Debug ON → 5 `Connect retry` **DBG** lines appear; Debug OFF → 0 again |
+  | Recovery carries the count | pointed at a mock robot on a laptop: **`Connected after 57 failed attempts`**, and 57 was exactly the pending count |
+  | Guard re-arms | restoring the absent host produced a **fresh ERR**, then quiet again (0 entries in 15 s) |
+
+  `nConnectFails` reset to 0 on the successful connect, as intended. The endpoint
+  retarget path got exercised as a side effect and logged
+  `Endpoint changed, redialling` — that still works too.
+
+  Still to do: surface `nConnectFails` on the panel's own `Robot.TcVIS` — clone a
+  proven readout block, per the standing VISU rule. FlowerPyHmi already shows it.
 
 ---
 
