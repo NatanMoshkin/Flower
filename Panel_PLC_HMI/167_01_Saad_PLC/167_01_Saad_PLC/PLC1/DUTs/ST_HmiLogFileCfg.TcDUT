@@ -16,6 +16,23 @@
    commissioning config, so surviving a power cycle is the entire point. Contrast
    the machine-state fields, where a persisted value can move pistons on power-up
    and which is why that block exists at all. Nothing here can start a motion.
+
+   PER-FIELD COMMENTS IN THIS STRUCT MUST STAY SHORT -- put the prose in
+   docs/plans/log-csv-file.md instead. This block, being the TYPE's comment, is
+   free; a MEMBER's comment is not. TwinCAT ships a symbol's declaration comment
+   inside its ADS symbol-info reply, and pyads' receive buffer is 798 bytes.
+   sDir's original ~2.8 kB comment produced a 2967-byte reply, which fails
+   symbol-info resolution -- and because read_list_by_name resolves every name
+   in a sum-up up front, that took the field out of FlowerPyHmi's batched poll
+   and onto an individual round trip: +88 ms on a 100 ms cycle, /events 3.3 Hz
+   -> 2.62 Hz, measured against this panel 2026-08-12. FlowerPyHmi caps how many
+   such symbols it will carry (5), and three others in this project are already
+   spending that budget: GVL_HMI.bAutoMode (1400 B),
+   GVL_Robot.stParams.nStateOut (991 B) and GVL_Robot.stRobot.nConnectFails
+   (817 B).
+
+   So the rule is not "write less"; it is "write it where an ADS client will not
+   have to download it 10 times a second."
 *)
 TYPE ST_HmiLogFileCfg :
 STRUCT
@@ -27,54 +44,11 @@ STRUCT
     bEnabled      : BOOL := FALSE;
 
     // Directory, WITH a trailing backslash; the writer appends the filename.
-    // Used with ePath := PATH_GENERIC, which the Phase 0 probe confirmed works
-    // against an absolute CE path on this target (2026-08-10).
-    //
-    // WHY '\Hard Disk\Logs\' AND NOT ONE OF THE OTHER THREE THAT PASSED. The
-    // probe found PATH_BOOTPATH, '\Hard Disk\', '\Temp\' and the device root '\'
-    // all writable. This is the one to use, for two separate reasons:
-    //
-    //   * '\Hard Disk\' is the Compact Flash mount -- it persists and it is
-    //     where an operator can actually get at the file. '\Temp\' is not
-    //     somewhere to keep records.
-    //   * THE SUBDIRECTORY IS A SAFETY REQUIREMENT, NOT TIDINESS. Phase 3's
-    //     retention sweep enumerates this directory and deletes oldest-first
-    //     until it is under the MB cap. Pointed at the device root or at
-    //     PATH_BOOTPATH -- which is the directory holding Port_851.bootdata --
-    //     that sweep would delete TwinCAT's own files. A directory that
-    //     contains nothing but our CSVs is what makes "delete the oldest" a
-    //     safe thing to do at all.
-    //
-    // The probe reported e1804 for this path because 'Logs' does not exist yet;
-    // Phase 2 creates it with Tc2_System.FB_CreateDir before first use.
-    //
-    // AND THE THIRD REASON, which is the strongest and was MEASURED rather than
-    // reasoned (2026-08-10): '\Hard Disk\' is one of only TWO locations on this
-    // panel where a file survives a restart at all. The Phase 0 probe wrote
-    // successfully to four places; after an Activate and a Download, the files in
-    // '\Temp\' and in the device root '\' WERE GONE, while the two on Compact
-    // Flash remained. The CE root filesystem is the RAM object store.
-    //
-    // That is exactly the failure this feature exists to prevent -- a fault
-    // overnight leaving nothing to read -- and both of those paths passed the
-    // write test cleanly, so the mistake would have survived every bench test and
-    // surfaced only when someone went looking for a real fault record.
-    //
-    // TWO RULES THAT FOLLOW:
-    //   * A WRITE TEST IS NOT A PERSISTENCE TEST. Re-point this field only after
-    //     writing, restarting the device, and reading back.
-    //   * NEVER FALL BACK TO '\Temp\' OR '\' when this directory cannot be
-    //     opened. That is the obvious defensive move and it would silently turn
-    //     durable logging into RAM logging while every status field still read
-    //     healthy. The correct behaviour on a bad path is eState := FAILED with
-    //     the error latched and visible.
-    //
-    // PERSISTENT because the correct value differs between installations -- the
-    // dev PC and the panel -- which is the test CLAUDE.md sets for
-    // configuration, and the same one that made sRobotHost persistent. As a
-    // plain literal it would be re-applied on every Activate and download and
-    // silently discard whatever was typed on the panel, with nothing reporting
-    // an error because the write really did succeed and really was reverted.
+    // MUST stay under '\Hard Disk\': '\Temp\' and the device root are the WinCE
+    // RAM object store and do not survive a restart. Never fall back to them.
+    // Reasoning, measurements and the two rules: docs/plans/log-csv-file.md.
+    // KEEP SHORT -- this comment ships in the ADS symbol-info reply (798 B cap);
+    // oversized, it drops sDir out of FlowerPyHmi's batched poll. See below.
     sDir          : STRING(80) := '\Hard Disk\Logs\';
 
     // Roll to a new file part within the day if one file passes this. A guard

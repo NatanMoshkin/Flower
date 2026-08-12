@@ -496,6 +496,58 @@ file currently open.
   plan at the top of the doc index is exactly the failure this project keeps
   hitting.
 
+### A LONG DECLARATION COMMENT HAS A RUNTIME COST — measured 2026-08-12
+
+Found when the FlowerPyHmi half shipped, and it is not obvious from either side.
+
+**TwinCAT ships a symbol's declaration comment inside its ADS symbol-info
+reply, and pyads' receive buffer is 798 bytes.** `sDir`'s original comment — the
+~2.8 kB `\Hard Disk\` argument, most of which is restated above in this file —
+produced a **2967-byte** reply. That fails symbol-info resolution outright:
+
+```
+Insufficient data (expected 2967 bytes, 798 were read).
+```
+
+The damage is not confined to that one field. `read_list_by_name` resolves
+**every** name in a sum-up before reading any of them, so one oversized comment
+can abort a whole batch. FlowerPyHmi survives it — `PyadsClient.read_many`
+probes, buckets the offender into `_unbatchable` and reads it individually
+afterwards — but an individual read to this panel costs **~88 ms**, against a
+100 ms poll cycle. Measured against the panel:
+
+| | before | after adding `sDir` |
+|---|---|---|
+| batched sum-up | ~30 ms | ~30 ms (237 symbols) |
+| full `_poll_once()` | ~320 ms | **410 ms** |
+| what a browser sees on `/events` | ~3.3 Hz | **2.62 Hz** |
+
+That fallback is also **capped at 5 symbols**, and three others in this project
+are already spending the budget for the same reason:
+
+| Symbol | symbol-info reply |
+|---|---|
+| `GVL_HmiPersistent.stLogFileCfg.sDir` | 2967 B — **fixed 2026-08-12** |
+| `GVL_HMI.bAutoMode` | 1400 B |
+| `GVL_Robot.stParams.nStateOut` | 991 B |
+| `GVL_Robot.stRobot.nConnectFails` | 817 B |
+
+Past the cap a symbol is not read at all — it goes dark rather than degrading.
+
+**The rule this establishes:** a comment on a symbol an external client polls is
+not free, and the fix is not to write less but to write it somewhere an ADS
+client does not download ten times a second. Keep the *member* comment to a few
+lines and a pointer; put the prose here, or in the **type's** comment block,
+which no polled symbol carries. `ST_HmiLogFileCfg`'s header block now says so.
+
+Trimming the other three is untested and would want the same before/after
+measurement — on paper it recovers ~260 ms and empties `_unbatchable`.
+
+**Verify after any such trim:** the running panel keeps the *old* comment in its
+symbol table until a rebuild and a full **Activate Configuration** — an Online
+Change is not enough. Re-run `tools/ads_diagnose.py` from FlowerPyHmi and check
+the symbol has left the "cannot be batched" list.
+
 ## Verification
 
 1. **Phase 0 gate, on the panel:** the spike opens, writes and closes, and reports
