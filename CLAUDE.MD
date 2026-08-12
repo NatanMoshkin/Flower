@@ -91,10 +91,14 @@
     **[`docs/plans/pyhmi-csv-log-handoff.md`](docs/plans/pyhmi-csv-log-handoff.md)**.
     Contract should move **254 → 268**; if it does not, the symbols missed
     `_cycle_symbols()`, which is that check's documented blind spot.
-  - **The technician manual says nothing about the file log.** Worth a short
-    section on the checkbox and the FTP path. Left undone deliberately: those
-    manuals ship EN + Hebrew from one content model and inventing the Hebrew
-    unreviewed was not the right call.
+  - ~~**The technician manual says nothing about the file log.**~~ **DONE
+    2026-08-12** — new section **9 · Log to file (CSV)**: how to tick File log,
+    the FTP path, what the four columns hold, rotation and retention, and that
+    the panel can *switch it on but not show its status* (a write failure does
+    surface as one ERR in the Log list). **English only, by operator decision** —
+    the Hebrew slots carry the same English wrapped in `ltr()`, because
+    `_bi`/`Steps`/`Note` hardcode `dir="rtl"` and unwrapped English there would
+    render right-aligned with reversed number runs. Still a translation task.
 
   Retrieval is `ftp://<panel-ip>/Logs/` — the panel's anonymous FTP root **is**
   the PLC's `\Hard Disk\`. `scripts/read_log_csv.py` fetches and validates it.

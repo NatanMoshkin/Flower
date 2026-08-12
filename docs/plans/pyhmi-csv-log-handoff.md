@@ -154,7 +154,6 @@ decision rather than a view option.
 - ~~**`nConnectFails` is not on `Robot.TcVIS`.**~~ **DONE 2026-08-12** — a
   *Failed connects* readout now sits at y=298 in the Robot page's left status
   column, matching FlowerPyHmi's label so the two HMIs read alike.
-- **The technician manual says nothing about the file log.** Worth a short
-  section — how to tick File log, and the FTP path to fetch it. Left undone
-  deliberately: those manuals ship **English + Hebrew** from one content model,
-  and inventing the Hebrew was not something to do unreviewed.
+- ~~**The technician manual says nothing about the file log.**~~ **DONE
+  2026-08-12** — section 9, *Log to file (CSV)*. English only by operator
+  decision; the Hebrew is still outstanding as a translation task.

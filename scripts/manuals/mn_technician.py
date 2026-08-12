@@ -404,8 +404,131 @@ def blocks():
              "אף אחד מהם למכונה עם אוויר מחובר.</strong>"),
 
         # ---------------------------------------------------------------- 9
-        H("9 &middot; Commissioning notes",
-          "9 &middot; הערות הרצה ראשונית", anchor="commissioning"),
+        H("9 &middot; Log to file (CSV)",
+          "9 &middot; Log to file (CSV) <span class=\"ltr\">(English only)</span>",
+          anchor="filelog"),
+        Note("info", "This section is in English only",
+             "\u05d4\u05e4\u05e8\u05e7 \u05d4\u05d6\u05d4 \u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea \u05d1\u05dc\u05d1\u05d3",
+             "The rest of section 9 has not been translated yet.",
+             ltr("The rest of section 9 has not been translated yet.")),
+        P("The Log page keeps only the 20 newest events and loses everything on "
+          "power-down. The panel can also write the log to its own Compact Flash, "
+          "so a fault overnight with no laptop attached still leaves a record you "
+          "can read the next morning. It is <strong>off by default</strong> "
+          "because writing to the card costs flash life.",
+          ltr("The Log page keeps only the 20 newest events and loses everything "
+              "on power-down. The panel can also write the log to its own Compact "
+              "Flash, so a fault overnight with no laptop attached still leaves a "
+              "record you can read the next morning. It is <strong>off by "
+              "default</strong> because writing to the card costs flash life.")),
+        Steps([
+            ("<strong>Turn it on.</strong> Tick <strong>File log</strong> on the "
+             "Log page. That is the only control on the panel, and the setting "
+             "survives a power cycle.",
+             ltr("<strong>Turn it on.</strong> Tick <strong>File log</strong> on "
+                 "the Log page. That is the only control on the panel, and the "
+                 "setting survives a power cycle.")),
+            ("<strong>The panel writes</strong> "
+             "<code>\\Hard Disk\\Logs\\flower-YYYY-MM-DD.csv</code>. There is no "
+             "file viewer on the panel, so the file is for copying off, not for "
+             "reading here.",
+             ltr("<strong>The panel writes</strong> "
+                 "<code>\\Hard Disk\\Logs\\flower-YYYY-MM-DD.csv</code>. There is "
+                 "no file viewer on the panel, so the file is for copying off, "
+                 "not for reading here.")),
+            ("<strong>Fetch it over FTP.</strong> Type "
+             "<code>ftp://&lt;panel-ip&gt;/Logs/</code> into Windows Explorer "
+             "&mdash; for example <code>ftp://192.168.1.100/Logs/</code>. No user "
+             "name or password. Drag the file off and open it in Excel.",
+             ltr("<strong>Fetch it over FTP.</strong> Type "
+                 "<code>ftp://&lt;panel-ip&gt;/Logs/</code> into Windows Explorer "
+                 "&mdash; for example <code>ftp://192.168.1.100/Logs/</code>. No "
+                 "user name or password. Drag the file off and open it in "
+                 "Excel.")),
+            ("<strong>Untick it when you are done</strong> unless the machine is "
+             "meant to keep logging.",
+             ltr("<strong>Untick it when you are done</strong> unless the machine "
+                 "is meant to keep logging.")),
+        ]),
+        Note("warn", "The panel can switch it on but cannot show you whether it is working",
+             "\u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea",
+             "The checkbox is the only file-log control on the panel. The status "
+             "fields &mdash; current file, bytes written, files on disk, and any "
+             "error &mdash; are only on FlowerPyHmi or over ADS. What the panel "
+             "<em>does</em> show is a failure: a write error puts one "
+             "<strong>ERR</strong> line in the Log list, so if logging has stopped "
+             "working you will see it there.",
+             ltr("The checkbox is the only file-log control on the panel. The "
+                 "status fields &mdash; current file, bytes written, files on disk, "
+                 "and any error &mdash; are only on FlowerPyHmi or over ADS. What "
+                 "the panel <em>does</em> show is a failure: a write error puts one "
+                 "<strong>ERR</strong> line in the Log list, so if logging has "
+                 "stopped working you will see it there.")),
+        Table([("Column", "Column"), ("Holds", "Holds")],
+              [[("<code>time</code>", "<code>time</code>"),
+                ("Panel clock, <code>HH:MM:SS</code>. Reads "
+                 "<code>--:--:--</code> if the panel clock is not set.",
+                 "Panel clock, <code>HH:MM:SS</code>. Reads "
+                 "<code>--:--:--</code> if the panel clock is not set.")],
+               [("<code>severity</code>", "<code>severity</code>"),
+                ("<code>INFO</code>, <code>WARN</code> or <code>ERR</code>. "
+                 "<code>DBG</code> is never written to the file, even with Debug "
+                 "ticked &mdash; the 1 Hz robot trace would bury it.",
+                 "<code>INFO</code>, <code>WARN</code> or <code>ERR</code>. "
+                 "<code>DBG</code> is never written to the file, even with Debug "
+                 "ticked &mdash; the 1 Hz robot trace would bury it.")],
+               [("<code>source</code>", "<code>source</code>"),
+                ("Which part reported it, e.g. <code>Robot</code>, "
+                 "<code>Persist</code>, <code>LogCsv</code>.",
+                 "Which part reported it, e.g. <code>Robot</code>, "
+                 "<code>Persist</code>, <code>LogCsv</code>.")],
+               [("<code>message</code>", "<code>message</code>"),
+                ("The same text the Log page shows.",
+                 "The same text the Log page shows.")]]),
+        Note("info", "One file a day, and old ones are deleted for you",
+             "\u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea",
+             "A new file starts each day. If one day gets busy the file rolls at "
+             "512 KB into <code>flower-YYYY-MM-DD_002.csv</code>, "
+             "<code>_003</code> and so on. Once the folder passes 16 MB the "
+             "oldest files are deleted automatically, so it cannot fill the card. "
+             "Those three limits are adjustable, but only from FlowerPyHmi.",
+             ltr("A new file starts each day. If one day gets busy the file rolls "
+                 "at 512 KB into <code>flower-YYYY-MM-DD_002.csv</code>, "
+                 "<code>_003</code> and so on. Once the folder passes 16 MB the "
+                 "oldest files are deleted automatically, so it cannot fill the "
+                 "card. Those three limits are adjustable, but only from "
+                 "FlowerPyHmi.")),
+        Note("warn", "A row saying &ldquo;entries lost&rdquo; is real, and is telling you the truth",
+             "\u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea",
+             "Under a heavy burst the machine can produce log entries faster than "
+             "they reach the card, and the oldest are overwritten before they are "
+             "written out. When that happens the file itself gets a line like "
+             "<code>312 entries lost - CSV writer fell behind the ring</code> at "
+             "the point where the gap is. Treat it as a genuine hole in the record, "
+             "not as a fault in the logger.",
+             ltr("Under a heavy burst the machine can produce log entries faster "
+                 "than they reach the card, and the oldest are overwritten before "
+                 "they are written out. When that happens the file itself gets a "
+                 "line like <code>312 entries lost - CSV writer fell behind the "
+                 "ring</code> at the point where the gap is. Treat it as a genuine "
+                 "hole in the record, not as a fault in the logger.")),
+        Note("danger", "Never point the log folder outside <code>\\Hard Disk\\</code>",
+             "\u05d1\u05d0\u05e0\u05d2\u05dc\u05d9\u05ea",
+             "The folder is set by <code>sDir</code> and must stay under "
+             "<code>\\Hard Disk\\</code>, which is the Compact Flash. "
+             "<code>\\Temp\\</code> and the drive root <code>\\</code> also accept "
+             "files, but they live in RAM and are <strong>emptied on every "
+             "restart</strong> &mdash; so logging would appear to work perfectly "
+             "and then lose everything on the one event you wanted it for.",
+             ltr("The folder is set by <code>sDir</code> and must stay under "
+                 "<code>\\Hard Disk\\</code>, which is the Compact Flash. "
+                 "<code>\\Temp\\</code> and the drive root <code>\\</code> also "
+                 "accept files, but they live in RAM and are <strong>emptied on "
+                 "every restart</strong> &mdash; so logging would appear to work "
+                 "perfectly and then lose everything on the one event you wanted "
+                 "it for.")),
+        H("10 &middot; Commissioning notes",
+          "10 &middot; הערות הרצה ראשונית", anchor="commissioning"),
         UL([("<strong>The robot IP is persistent.</strong> Changing the default "
              "in the source does <em>not</em> retarget a panel that has already "
              "run — the stored value wins. Use the Robot screen.",
