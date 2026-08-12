@@ -1,15 +1,16 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PHASES 0-2 DONE AND VERIFIED. PHASE 3 WRITTEN (rotation +
-> retention), NOT YET COMPILED. PHASE 4 NOT BUILT.**
+> **STATUS: PHASES 0-3 DONE AND VERIFIED ON THE PANEL. PHASE 4 NOT BUILT.**
 > Written 2026-08-07. Phase 0 ran on the panel 2026-08-10 and the gate **passed**
 > — file I/O works on WinCE 7 ARM, `\Hard Disk\` is writable, and the throwaway
 > spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
 > verified on the panel. Phase 2 (`FB_LogCsvWriter`) is **built, activated and
 > verified on hardware** — 44 rows pulled off the card over FTP, byte-exact
 > against `uiBytesInFile`, CRLF throughout, valid RFC 4180, no DBG rows.
-> Phase 3 (rotation + retention) is written but **not yet compiled**. Phase 4
-> is still intent, not behaviour — do not read that section as documentation. When the feature ships, strike this file through and remove its
+> Phase 3 (rotation + retention) is **built and verified on the panel** — 9 parts
+> rolled at a 1 KB cap with at most 40 bytes of overshoot, and a seeded set of
+> 11 files pruned to exactly the 2 newest. Phase 4 is still intent, not
+> behaviour — do not read that section as documentation. When the feature ships, strike this file through and remove its
 > entry from `docs/index.html`.
 >
 > Open work lives in the **Active** section of `CLAUDE.md`.
@@ -421,8 +422,32 @@ abandoning the file.
 > 2 files, never deletes the open file, and reports `bEOE = FALSE` (more files than
 > the 64-entry buffer) rather than silently doing nothing.
 >
-> **`bEnabled` is still FALSE** pending a build and an on-panel test. The reason
-> that matters was measured on the panel:
+> ### Verified on the panel 2026-08-10/12
+>
+> **Retention.** Seeded `flower-2026-08-01..09.csv` over FTP, set the cap to
+> 1 MB / 512 KB = **2 files**, enabled logging. The writer created
+> `flower-2026-08-12.csv` (date roll), swept, and logged
+> `log retention: 11 files, deleting 9 oldest`. Survivors were **exactly** the two
+> newest by name, the open file among them, and the 9 deleted were **exactly** the
+> oldest 9. `uiFilesOnDisk` = 2, no error.
+>
+> **Rotation.** Cap set to 1 KB with a 2 s flush. Rolled through
+> `…_002` … `…_009`; every closed part measured **1043-1064 bytes**, i.e. between
+> 19 and 40 bytes past the 1024 cap — the "bounded by one row" property, since a
+> `STOP pressed` row is ~40 bytes. Parts sorted chronologically, underscore
+> separator throughout.
+>
+> **Every part independently well-formed:** each of the 10 files pulled off the
+> card parsed as CSV with **exactly one header at row 0**, 4 fields on every row,
+> CRLF throughout, zero bare LF and zero `\r\r\n`.
+>
+> Test artifacts were deleted from the card afterwards; `\Hard Disk\Logs\` is
+> empty and the directory kept.
+>
+> **`bEnabled` is left FALSE** — both gates are now closed, so this is now a
+> commissioning decision rather than a blocker. Turning it on costs roughly the
+> traffic the machine actually logs, bounded by `uiMaxFileKB` per file and
+> `uiMaxTotalMB` overall. The reason the connect-failure guard mattered:
 >
 > - **95% of the log was one repeated line** — `Connect failed 192.168.1.11:6001
 >   err 1861`, 20 of 21 rows, because no robot is attached to this bench and

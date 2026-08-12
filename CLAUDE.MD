@@ -78,7 +78,7 @@
 
 ---
 
-- **Durable CSV log on the PLC itself.** Planned 2026-08-07, **not started**.
+- ~~**Durable CSV log on the PLC itself.**~~ **DONE 2026-08-12 — Phases 0-3 built and VERIFIED ON THE PANEL.**
   Full plan: **[`docs/plans/log-csv-file.md`](docs/plans/log-csv-file.md)** —
   also the first link on `docs/index.html`. Read it before touching `GVL_Log`.
 
