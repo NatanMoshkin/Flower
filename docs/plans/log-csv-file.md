@@ -7,8 +7,9 @@
 > spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
 > verified on the panel. Phase 2 (`FB_LogCsvWriter`) is **built, activated and
 > verified on hardware** — 44 rows pulled off the card over FTP, byte-exact
-> against `uiBytesInFile`, CRLF throughout, valid RFC 4180, no DBG rows. Phases 3-4 are still intent, not behaviour — do not read those
-> sections as documentation. When the feature ships, strike this file through and remove its
+> against `uiBytesInFile`, CRLF throughout, valid RFC 4180, no DBG rows.
+> Phase 3 (rotation + retention) is written but **not yet compiled**. Phase 4
+> is still intent, not behaviour — do not read that section as documentation. When the feature ships, strike this file through and remove its
 > entry from `docs/index.html`.
 >
 > Open work lives in the **Active** section of `CLAUDE.md`.
@@ -112,10 +113,17 @@ were wrong.
 **CORRECTION 1 — the retention FBs do not exist under the names used below.**
 `FB_FileFindFirst` / `FB_FileFindNext` / `FB_FileFindClose` are in **neither**
 library. Phase 3 must use `Tc2_Utilities.FB_EnumFindFileList` and
-`Tc2_Utilities.FB_EnumFindFileEntry`; `ST_FindFileEntry` is what carries
-`nFileSize` / `sFileName` / `bDirectory` / `bReadOnly`. Also in `Tc2_Utilities`
-and worth a look before hand-rolling anything: `FB_FileProperties` (size of one
-named file, which may be all the retention sweep needs) and `FB_FileRingBuffer`.
+`Tc2_Utilities.FB_EnumFindFileEntry`.
+
+**And this correction was itself half wrong — fixed 2026-08-10 from the IDE.**
+It claimed `ST_FindFileEntry` carries `nFileSize` / `bDirectory` / `bReadOnly`.
+The library browser shows the real members are `sFileName : T_MaxString`,
+`sAlternateFileName`, `fileAttributes : ST_FileAttributes`,
+**`fileSize : T_ULARGE_INTEGER`**, `creationTime`, `lastAccessTime`,
+`lastWriteTime`. `nFileSize` and `bDirectory` *do* appear in the library's
+string table — they belong to other types — which is precisely how a
+plausible-looking guess gets made from pooled metadata. Reading the pooled
+names is not the same as reading a signature.
 
 **CORRECTION 2 — every file reference must be namespace-qualified.** This project
 references `Tc2_System` **and** `Tc2_Utilities`, and **both declare**
