@@ -151,9 +151,25 @@ ST_HmiPistonAutoCfg.bContinuous is a DIFFERENT field and is still live.
 
 THINGS THAT SURPRISE PEOPLE
 ---------------------------
-- The panel log is RAM ONLY. No file I/O anywhere in the PLC. Every entry is
-  lost on power cycle / reset / download; aLog keeps the last 256 and the Logs
-  page shows the newest 20. Use FlowerPyHmi if a durable record is needed.
+- The panel log is RAM by default, but it CAN now be written to the Compact
+  Flash. aLog keeps the last 256 entries and the Logs page shows the newest 20;
+  those are lost on power cycle / reset / download.
+  Tick "File log" on the Logs page (GVL_HmiPersistent.stLogFileCfg.bEnabled,
+  PERSISTENT, default OFF) and FB_LogCsvWriter appends INFO-and-above to
+  \Hard Disk\Logs\flower-YYYY-MM-DD.csv. DBG is never written -- it would bury
+  the file in 1 Hz robot keep-alives and burn the card.
+  Files roll on a new day and at uiMaxFileKB (512 KB), as
+  flower-YYYY-MM-DD_002.csv and so on; the directory is pruned oldest-first to
+  uiMaxTotalMB (16). Entries are buffered and flushed every uiFlushSec (10 s) --
+  that interval is the flash-wear control, do NOT make it write per entry.
+- GET THE CSV OFF THE PANEL OVER FTP. The panel runs an anonymous FTP server
+  whose root IS the PLC's \Hard Disk\, so the logs are at
+  ftp://<panel-ip>/Logs/ -- e.g. ftp://192.168.1.100/Logs/ on the dev panel.
+  Paste that into Explorer. There is no viewer on the panel itself.
+  scripts/read_log_csv.py fetches and validates the file from a laptop.
+  NOTE \Temp\ and the device root \ are ALSO writable and are NOT persistent --
+  they are the WinCE RAM object store and lose their contents on restart.
+  Never point sDir at either; only \Hard Disk\ survives.
 - Log timestamps come from the panel RTC. Unset clock reads '--:--:--'.
 - Persistent values flush ~2 s AFTER editing stops. Power off sooner and the
   edit is gone. Each flush is logged.

@@ -78,7 +78,25 @@
 
 ---
 
-- ~~**Durable CSV log on the PLC itself.**~~ **DONE 2026-08-12 — Phases 0-3 built and VERIFIED ON THE PANEL.**
+- ~~**Durable CSV log on the PLC itself.**~~ **DONE 2026-08-12 — Phases 0-3 built
+  and VERIFIED ON THE PANEL.** Panel-side Phase 4 done too: a **File log**
+  checkbox on `Logs.TcVIS` (`stLogFileCfg.bEnabled`), and `readme.txt` no longer
+  claims the log is RAM only.
+
+  **Two follow-ups, both recorded rather than silently skipped:**
+
+  - **FlowerPyHmi has not been touched** — separate repo. Full spec, with all 14
+    symbols checked against the PLC source, in
+    **[`docs/plans/pyhmi-csv-log-handoff.md`](docs/plans/pyhmi-csv-log-handoff.md)**.
+    Contract should move **254 → 268**; if it does not, the symbols missed
+    `_cycle_symbols()`, which is that check's documented blind spot.
+  - **The technician manual says nothing about the file log.** Worth a short
+    section on the checkbox and the FTP path. Left undone deliberately: those
+    manuals ship EN + Hebrew from one content model and inventing the Hebrew
+    unreviewed was not the right call.
+
+  Retrieval is `ftp://<panel-ip>/Logs/` — the panel's anonymous FTP root **is**
+  the PLC's `\Hard Disk\`. `scripts/read_log_csv.py` fetches and validates it.
   Full plan: **[`docs/plans/log-csv-file.md`](docs/plans/log-csv-file.md)** —
   also the first link on `docs/index.html`. Read it before touching `GVL_Log`.
 

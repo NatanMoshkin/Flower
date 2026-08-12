@@ -9,16 +9,31 @@ from mn_render import H, Links, Note, P, ltr, page
 
 LIVE = [
     ("http://127.0.0.1:8765/docs/viewer.html?doc=../docs/plans/log-csv-file.md",
-     "PLAN: CSV log file on the PLC", "תכנית: קובץ לוג CSV בבקר",
-     "Implementation plan for writing the log to a CSV file on the panel itself, "
-     "so a record survives a power cycle with no laptop attached. "
-     "NOT BUILT YET — this describes what is intended, not how the machine behaves. "
+     "CSV log file on the PLC", "קובץ לוג CSV בבקר",
+     "The log written to a CSV file on the panel itself, so a record survives a "
+     "power cycle with no laptop attached. BUILT AND VERIFIED ON THE PANEL "
+     "(phases 0–3). Tick <strong>File log</strong> on the Logs page to enable it — "
+     "it is OFF by default — then fetch the file over FTP from "
+     + ltr("ftp://&lt;panel-ip&gt;/Logs/") + ". "
      "Needs the local server, like the CLAUDE.md link below.",
-     "תכנית יישום לכתיבת הלוג לקובץ CSV בבקר עצמו, "
-     "כדי שהתיעוד ישרוד כיבוי חשמל ללא מחשב מחובר. "
-     "טרם יושם — זה מתאר את המתכנן, לא את ההתנהגות הנוכחית. "
+     "הלוג נכתב לקובץ CSV בבקר עצמו, כדי שהתיעוד ישרוד כיבוי חשמל ללא מחשב "
+     "מחובר. יושם ואומת על הפנל (שלבים 0–3). סמן <strong>File log</strong> "
+     "במסך הלוג כדי להפעיל — כברירת מחדל כבוי — ואז הורד את הקובץ ב-FTP מ"
+     + ltr("ftp://&lt;panel-ip&gt;/Logs/") + ". "
      "דורש את השרת המקומי, כמו הקישור ל-CLAUDE.md מתחת.",
-     "data", "plan — not built", "תכנית — טרם יושם"),
+     "live", "built &amp; verified", "יושם ואומת"),
+    ("http://127.0.0.1:8765/docs/viewer.html?doc=../docs/plans/pyhmi-csv-log-handoff.md",
+     "HANDOFF: show the CSV log in FlowerPyHmi",
+     "העברה: הצגת לוג ה-CSV ב-FlowerPyHmi",
+     "The web-HMI half of the file log, still to do. FlowerPyHmi is a SEPARATE "
+     "repository, so nothing keeps its symbol contract in step automatically. "
+     "Lists the 14 PLC symbols to poll, the routes to add, and the three things "
+     "not to get wrong. Every symbol in it was checked against the PLC source.",
+     "החצי של ה-HMI לקובץ הלוג, טרם בוצע. FlowerPyHmi הוא מאגר נפרד, "
+     "ולכן שום דבר לא מסנכרן את חוזה הסמלים אוטומטית. "
+     "המסמך מפרט את 14 הסמלים לקריאה, את הנתיבים להוספה, ושלוש נקודות "
+     "שחשוב לא לטעות בהן.",
+     "data", "not started", "טרם התחיל"),
     ("http://127.0.0.1:8765/docs/viewer.html?doc=../CLAUDE.md",
      "CLAUDE.md — decisions &amp; open work", "CLAUDE.md — החלטות ועבודה פתוחה",
      "The live source of truth: the TODO list grouped by state, every "
