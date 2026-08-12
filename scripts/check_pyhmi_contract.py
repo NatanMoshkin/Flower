@@ -114,6 +114,14 @@ def pyhmi_symbols():
     read += [ma.AUTO_MODE_SYMBOL]
     read += [ma.PLATE_SEN_L_SYMBOL, ma.PLATE_SEN_R_SYMBOL]
     read += [pl.LOG_ENABLED_SYMBOL, pl.LOG_DEBUG_SYMBOL, pl.LOG_WRITE_IDX_SYMBOL]
+    # The CSV file log (2026-08-12). 14 symbols: 8 status + 5 config + sToday.
+    # Every one is also in FlowerPyHmi's _cycle_symbols(), which is what this
+    # list mirrors -- a symbol read outside that method is invisible here, the
+    # blind spot that let the stBridgeCfg removal report 253/253 both before and
+    # after.
+    read += [pl.logfile_st_symbol(f.name) for f in pl.LOGFILE_ST_FIELDS]
+    read += [pl.logfile_cfg_symbol(f.name) for f in pl.LOGFILE_CFG_FIELDS]
+    read += [pl.LOGFILE_TODAY_SYMBOL]
     for p in pi.PISTONS:
         read += [p.field_symbol(f.name) for f in pi.PISTON_FIELDS if f.readable]
     for a in pa.AUTO_PISTONS:
