@@ -46,21 +46,34 @@
    file settled it. Do not change it without re-measuring.
 
    ---------------------------------------------------------------------------
-   ROTATION IS IMPLEMENTED HERE. RETENTION IS NOT.
+   ROTATION AND RETENTION (Phase 3).
    ---------------------------------------------------------------------------
-   Files roll on a new day (back to part 1) and on uiMaxFileKB within a day
-   (part 2, 3, ...). So no single file grows without bound.
+   ROTATION: files roll on a new day (back to part 1) and on uiMaxFileKB within a
+   day (part 2, 3, ...), so no single file grows without bound. See FileNameFor for
+   why the part separator must be '_' and not '-'.
 
-   uiMaxTotalMB IS NOT ENFORCED YET, and the directory therefore still grows
-   without limit over time. Deleting oldest-first needs to know what is in the
-   directory, and the enumeration API could not be verified for this target:
-   FB_EnumFindFileList / FB_EnumFindFileEntry exist in Tc2_Utilities by name, but
-   their parameter lists are not recoverable from the repo, the installed
-   .compiled-library, or its metadata -- and this project's rule is not to build
-   on an unverified target API. The plan's original names for these
-   (FB_FileFindFirst / Next / Close) turned out not to exist at all, which is why
-   the rule is there. Until retention lands, keep bEnabled FALSE for unattended
-   running, or expect to clear \Hard Disk\Logs\ by hand over FTP.
+   RETENTION: on every file CREATION, states 60-62 enumerate the directory with
+   Tc2_Utilities.FB_EnumFindFileList and delete oldest-by-name until the count is
+   within the cap. It runs from state 0 with no file open, never on the write path.
+
+   THE CAP IS BY COUNT, NOT BY SUMMED BYTES, and that is a deliberate choice.
+   Every file is already capped at uiMaxFileKB, so N files occupy at most
+   N * uiMaxFileKB -- keeping (uiMaxTotalMB * 1024 / uiMaxFileKB) files therefore
+   enforces uiMaxTotalMB, and errs toward using LESS than the ceiling, which is the
+   safe direction for a disk limit. The alternative was to sum
+   ST_FindFileEntry.fileSize, which is a T_ULARGE_INTEGER: 64-bit, and its internal
+   shape (struct of two DWORDs versus a single ULINT) was NOT among the things
+   verified in the library browser. Summing it would have been a guess, and the
+   count arithmetic needs no guess at all.
+
+   THESE SIGNATURES WERE READ FROM THE IDE, NOT REMEMBERED, and two of the
+   assumptions this file would otherwise have shipped were wrong:
+     * FB_EnumFindFileList has NO ePath input. Its sibling FB_EnumFindFileEntry
+       does, which is exactly the sort of asymmetry that does not get guessed.
+     * the size member is fileSize, not nFileSize. 'nFileSize' does appear in the
+       library's string table, but it belongs to something else.
+   The plan's original names for this family -- FB_FileFindFirst / Next / Close --
+   do not exist in either library at all.
 
    ---------------------------------------------------------------------------
    NEVER FALL BACK TO \Temp\ OR THE DEVICE ROOT \.
@@ -83,6 +96,16 @@ VAR CONSTANT
     // Parts per day. Zero-padded to 3 digits, so 999 is the naming limit; a day
     // that produced 999 files is a fault, not a case to keep absorbing.
     MAX_PARTS   : UDINT := 999;
+    // Enumeration buffer, in ST_FindFileEntry entries. The default config keeps
+    // 16 MB / 512 KB = 32 files, so 64 is 2x headroom. If the directory ever holds
+    // more than this, FB_EnumFindFileList reports bEOE = FALSE and retention works
+    // on the first 64 it saw -- correct but slower to converge, and it says so in
+    // the log rather than silently doing nothing.
+    MAX_FIND    : INT   := 64;
+    // Used only when uiMaxFileKB = 0, i.e. no per-file size cap. Without a per-file
+    // bound a COUNT cannot bound bytes at all, so retention falls back to a plain
+    // file-count limit and logs that it is doing so.
+    NO_CAP_FILES : UDINT := 64;
     HDR         : STRING(40) := 'time,severity,source,message';
     E_NOTFOUND  : UDINT := 1804;        // ADS "file not found", verified on the panel
 END_VAR
@@ -142,6 +165,36 @@ VAR
     tonRetry    : TON;
     fbTrigOff   : F_TRIG;
 END_VAR
+VAR
+    // ---------------------------------------------------------------- //
+    // RETENTION. Runs only when a new file has just been created, never on the
+    // write path, and only while no file is open.
+    //
+    // Signatures verified in the TcXaeShell library browser 2026-08-10 rather
+    // than guessed -- and two of the guesses would have been WRONG:
+    // FB_EnumFindFileList has NO ePath input (its sibling FB_EnumFindFileEntry
+    // does), and the size member is fileSize : T_ULARGE_INTEGER, not nFileSize.
+    // ---------------------------------------------------------------- //
+    fbEnum      : Tc2_Utilities.FB_EnumFindFileList;
+    fbDelete    : Tc2_System.FB_FileDelete;
+
+    aFindList   : ARRAY[0..63] OF Tc2_Utilities.ST_FindFileEntry;
+    abGone      : ARRAY[0..63] OF BOOL;   // marked as we delete, so one enumeration serves the whole sweep
+
+    bRetentionDue : BOOL;       // a new file was created -> sweep once
+    nFound        : INT;        // entries FB_EnumFindFileList actually returned
+    nMaxFiles     : UDINT;      // how many we are allowed to keep
+    nToDelete     : INT;
+    nOldest       : INT;        // index of the oldest survivor, -1 = none
+    // STRING(255) to match ST_FindFileEntry.sFileName, which is T_MaxString. Our
+    // own names are ~28 characters, but a narrower target would TRUNCATE any
+    // stray long name that happened to match flower-*.csv -- and the delete would
+    // then be aimed at a filename that does not exist. It would fail safe (WARN,
+    // sweep abandoned) rather than delete the wrong file, but matching the source
+    // width removes the question.
+    sOldest       : STRING(255);
+    j             : INT;
+END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[// ------------------------------------------------------------------ //
@@ -197,7 +250,13 @@ CASE eStep OF
         GVL_Log.stLogFile.eState := E_LogFileState.OFF;
     END_IF
 
-    IF (GVL_HmiPersistent.stLogFileCfg.bEnabled OR bClosing)
+    // RETENTION FIRST while idle: no file is open at this point, and a sweep that
+    // has to delete several files must not sit between a flush and its close.
+    IF bRetentionDue AND GVL_HmiPersistent.stLogFileCfg.bEnabled THEN
+        bRetentionDue := FALSE;
+        eStep := 60;
+
+    ELSIF (GVL_HmiPersistent.stLogFileCfg.bEnabled OR bClosing)
        AND (udiPending > 0)
        AND (tonFlush.Q OR (udiPending >= HIGH_WATER) OR bClosing) THEN
 
@@ -344,6 +403,10 @@ CASE eStep OF
                 sLastFile := sFileName;
                 GVL_Log.stLogFile.sCurrentFile := sFileName;
                 GVL_Log.stLogFile.uiBytesInFile := 0;
+                // A file was CREATED, so the directory grew -> a retention sweep
+                // is owed. Deferred to state 0 rather than run here, so it never
+                // happens with a file open or on the write path.
+                bRetentionDue := TRUE;
                 eStep := 25;
             ELSE
                 sLastFile := sFileName;
@@ -489,6 +552,151 @@ CASE eStep OF
             ELSE
                 tonFlush(IN := FALSE);  // restart the quiet interval
                 bClosing := FALSE;
+                eStep := 0;
+            END_IF
+        END_IF
+    END_IF
+
+// ---------------- 60: enumerate the log directory ---------------- //
+// ONE call returns the whole list plus nFindFiles. That is what made asking for
+// the verified signature worth it: the fallback design would have had to probe
+// several hundred candidate filenames one at a time.
+//
+// FB_EnumFindFileList has NO ePath input -- unlike FB_EnumFindFileEntry -- so the
+// path must be absolute, which ours is. eCmd is left at its default
+// (eEnumCmd_First) deliberately: not naming the enumerator avoids depending on a
+// spelling that was never verified.
+60:
+    GVL_Log.stLogFile.eState := E_LogFileState.ROTATING;
+    fbEnum(sPathName  := CONCAT(GVL_HmiPersistent.stLogFileCfg.sDir, 'flower-*.csv'),
+           pFindList  := ADR(aFindList),
+           cbFindList := SIZEOF(aFindList),
+           bExecute   := TRUE,
+           tTimeout   := FILE_TO);
+    IF NOT fbEnum.bBusy THEN
+        fbEnum(bExecute := FALSE);
+        IF fbEnum.bError THEN
+            // A FAILED SWEEP MUST NOT FAIL THE WRITER. Logging still works with a
+            // directory we cannot enumerate -- it just stops being pruned. Report
+            // once and carry on, rather than dropping into FAILED and stopping the
+            // log, which would be a worse outcome than an oversized directory.
+            IF NOT bErrLogged THEN
+                bErrLogged := TRUE;
+                F_LogEvent(eSev := E_LogSev.WARN, sSource := 'LogCsv',
+                           sMsg  := CONCAT('retention enumerate failed, err ',
+                                           UDINT_TO_STRING(fbEnum.nErrID)));
+            END_IF
+            eStep := 0;
+        ELSE
+            nFound := UDINT_TO_INT(fbEnum.nFindFiles);
+            IF nFound > MAX_FIND THEN
+                nFound := MAX_FIND;     // buffer bound; bEOE says there were more
+            END_IF
+            FOR j := 0 TO MAX_FIND - 1 DO
+                abGone[j] := FALSE;
+            END_FOR
+            GVL_Log.stLogFile.uiFilesOnDisk := INT_TO_UDINT(nFound);
+
+            IF NOT fbEnum.bEOE THEN
+                // More files than the buffer holds. The sweep still prunes, using
+                // the ones it saw, and converges over later rotations -- but say so
+                // rather than looking like it did nothing.
+                F_LogEvent(eSev := E_LogSev.WARN, sSource := 'LogCsv',
+                           sMsg  := 'log dir has more files than the scan buffer holds');
+            END_IF
+
+            // HOW MANY MAY WE KEEP. Every file is capped at uiMaxFileKB, so N files
+            // occupy at most N * uiMaxFileKB -- a COUNT cap therefore enforces the
+            // MB cap, and errs toward using LESS than the ceiling, which is the safe
+            // direction for a disk limit. It also avoids summing
+            // ST_FindFileEntry.fileSize, a T_ULARGE_INTEGER whose internal shape was
+            // NOT verified in the library browser.
+            IF GVL_HmiPersistent.stLogFileCfg.uiMaxFileKB > 0 THEN
+                nMaxFiles := (GVL_HmiPersistent.stLogFileCfg.uiMaxTotalMB * 1024)
+                             / GVL_HmiPersistent.stLogFileCfg.uiMaxFileKB;
+            ELSE
+                // No per-file cap means a count cannot bound bytes at all. Fall back
+                // to a plain file limit and say so, rather than pretending the MB
+                // cap is being honoured.
+                nMaxFiles := NO_CAP_FILES;
+                F_LogEvent(eSev := E_LogSev.WARN, sSource := 'LogCsv',
+                           sMsg  := 'uiMaxFileKB is 0, retention limits file COUNT only');
+            END_IF
+            // Never prune below two: the file just created plus one predecessor to
+            // actually read. A config computing 0 or 1 would otherwise delete the
+            // log somebody is standing there to look at.
+            IF nMaxFiles < 2 THEN
+                nMaxFiles := 2;
+            END_IF
+
+            nToDelete := nFound - UDINT_TO_INT(nMaxFiles);
+            IF nToDelete > 0 THEN
+                F_LogEvent(eSev := E_LogSev.INFO, sSource := 'LogCsv',
+                           sMsg  := CONCAT(CONCAT('log retention: ',
+                                   CONCAT(INT_TO_STRING(nFound), ' files, deleting ')),
+                                   CONCAT(INT_TO_STRING(nToDelete), ' oldest')));
+                eStep := 61;
+            ELSE
+                eStep := 0;
+            END_IF
+        END_IF
+    END_IF
+
+// ---------------- 61: pick the oldest survivor ---------------- //
+// OLDEST BY NAME, which is correct only because FileNameFor makes the names sort
+// chronologically -- see the underscore-separator note there. Working from the one
+// enumeration and marking entries in abGone avoids re-reading the directory per
+// delete.
+61:
+    nOldest := -1;
+    sOldest := '';
+    FOR j := 0 TO nFound - 1 DO
+        IF NOT abGone[j] THEN
+            // NEVER the file we are writing. It is the newest so it would not
+            // normally win, but a config that prunes to 2 makes that margin thin.
+            IF aFindList[j].sFileName <> sLastFile THEN
+                IF (nOldest < 0) OR (aFindList[j].sFileName < sOldest) THEN
+                    nOldest := j;
+                    sOldest := aFindList[j].sFileName;
+                END_IF
+            END_IF
+        END_IF
+    END_FOR
+
+    IF (nOldest < 0) OR (nToDelete <= 0) THEN
+        eStep := 0;                     // nothing eligible left
+    ELSE
+        eStep := 62;
+    END_IF
+
+// ---------------- 62: delete it ---------------- //
+62:
+    fbDelete(sPathName := CONCAT(GVL_HmiPersistent.stLogFileCfg.sDir, sOldest),
+             ePath     := Tc2_System.PATH_GENERIC,
+             bExecute  := TRUE,
+             tTimeout  := FILE_TO);
+    IF NOT fbDelete.bBusy THEN
+        fbDelete(bExecute := FALSE);
+        IF fbDelete.bError THEN
+            // Abandon the sweep, keep logging. Marking it gone anyway would loop
+            // forever on a file that cannot be removed.
+            IF NOT bErrLogged THEN
+                bErrLogged := TRUE;
+                F_LogEvent(eSev := E_LogSev.WARN, sSource := 'LogCsv',
+                           sMsg  := CONCAT(CONCAT('retention delete failed ', sOldest),
+                                    CONCAT(' err ', UDINT_TO_STRING(fbDelete.nErrId))));
+            END_IF
+            eStep := 0;
+        ELSE
+            abGone[nOldest] := TRUE;
+            nToDelete := nToDelete - 1;
+            IF GVL_Log.stLogFile.uiFilesOnDisk > 0 THEN
+                GVL_Log.stLogFile.uiFilesOnDisk :=
+                    GVL_Log.stLogFile.uiFilesOnDisk - 1;
+            END_IF
+            IF nToDelete > 0 THEN
+                eStep := 61;            // next oldest
+            ELSE
                 eStep := 0;
             END_IF
         END_IF

@@ -1,7 +1,7 @@
 # Durable CSV log on the PLC itself — implementation plan
 
-> **STATUS: PHASES 0-2 DONE AND VERIFIED. PHASE 3 SPLIT — ROTATION WRITTEN,
-> RETENTION BLOCKED. PHASE 4 NOT BUILT.**
+> **STATUS: PHASES 0-2 DONE AND VERIFIED. PHASE 3 WRITTEN (rotation +
+> retention), NOT YET COMPILED. PHASE 4 NOT BUILT.**
 > Written 2026-08-07. Phase 0 ran on the panel 2026-08-10 and the gate **passed**
 > — file I/O works on WinCE 7 ARM, `\Hard Disk\` is writable, and the throwaway
 > spike has been **deleted**. Phase 1 (config, status, `sToday`) is activated and
@@ -361,45 +361,60 @@ abandoning the file.
 
 ## Phase 3 — rotation and retention
 
-> **SPLIT IN TWO 2026-08-10. Rotation is written; retention is blocked on an
-> unverifiable API.**
+> **WRITTEN 2026-08-10, not yet compiled.**
 >
-> **Rotation — WRITTEN, not yet compiled.** Files roll on a new day (back to part
-> 1) and on `uiMaxFileKB` within a day. Naming is
-> `flower-2026-08-10.csv`, `flower-2026-08-10_002.csv`, … — **underscore, not
-> hyphen**, and that is load-bearing rather than cosmetic: `-` is `0x2D` and `.`
-> is `0x2E`, so with a hyphen `…-002.csv` sorts *before* `….csv` and oldest-by-name
-> would delete part 2 ahead of part 1. `_` is `0x5F`, above `.`, so plain string
-> sort is exactly chronological. Found by generating the names and asserting the
-> list equals its own sort — the hyphen version failed that check.
+> **Rotation.** Files roll on a new day (back to part 1) and on `uiMaxFileKB`
+> within a day. Naming is `flower-2026-08-10.csv`, `flower-2026-08-10_002.csv`, …
+> — **underscore, not hyphen**, and that is load-bearing rather than cosmetic:
+> `-` is `0x2D` and `.` is `0x2E`, so with a hyphen `…-002.csv` sorts *before*
+> `….csv` and oldest-by-name would delete part 2 ahead of part 1. `_` is `0x5F`,
+> above `.`, so plain string sort is exactly chronological. Found by generating the
+> names and asserting the list equals its own sort — the hyphen version failed
+> that check.
 >
-> Also fixed while here: `uiBytesInFile` is volatile, so after a restart it reads
-> 0 for a file that may already be near the cap, and appending would let that file
-> reach twice `uiMaxFileKB`. Reading its real size needs `FB_FileProperties` or
-> seek/tell, **neither of which could be verified for this target** — so instead
-> the writer never appends to a file it did not create this session: state 12
-> skips forward to the first part that does not exist. The byte count is then
-> exact by construction, at a cost of one extra file per restart.
+> The size roll is checked **after each row**, so overshoot is one row (~71 bytes)
+> rather than a whole flush. `uiMaxFileKB = 0` means no cap and is guarded —
+> without that, zero would roll on every row and produce one file per entry.
 >
-> **Retention — BLOCKED, and deliberately not guessed at.**
-> `FB_EnumFindFileList` / `FB_EnumFindFileEntry` exist in `Tc2_Utilities` by name,
-> but their parameter lists are **not recoverable** from the repo, the installed
-> `.compiled-library`, or its metadata (only pooled names and GUIDs are stored).
-> The rule in Phase 0 above is not to build on an unverified target API, and it
-> was already vindicated once here when this plan's own
-> `FB_FileFindFirst`/`Next`/`Close` turned out not to exist at all.
+> Also fixed here: `uiBytesInFile` is volatile, so after a restart it reads 0 for a
+> file that may already be near the cap. Rather than append to a file whose size is
+> unknown — getting it needs `FB_FileProperties` or seek/tell, neither verified —
+> state 12 skips forward to the first part that does not exist. The byte count is
+> then exact by construction, for one extra file per restart.
 >
-> **To unblock:** open the library browser in TcXaeShell, look at
-> `Tc2_Utilities → FB_EnumFindFileList` and `FB_EnumFindFileEntry`, and record
-> their VAR_INPUT/VAR_OUTPUT names here. One look settles it. The alternative —
-> a count-based cap (`uiMaxTotalMB * 1024 / uiMaxFileKB` files, delete oldest by
-> name) — needs only the *verified* primitives `FB_FileOpen(MODEREAD)` for
-> existence and `FB_FileDelete`, and is the fallback if the signatures cannot be
-> obtained.
+> **Retention.** On every file *creation*, states 60-62 enumerate with
+> `Tc2_Utilities.FB_EnumFindFileList` and delete oldest-by-name until the count is
+> within cap. Runs from state 0 with no file open, never on the write path.
 >
-> **Until retention lands, `uiMaxTotalMB` is NOT enforced** and the directory grows
-> without limit. `bEnabled` is therefore still FALSE. The reason that matters was
-> measured on the panel:
+> **The signatures were read out of the TcXaeShell library browser, and two
+> assumptions would have been wrong:**
+>
+> | | verified |
+> |---|---|
+> | `FB_EnumFindFileList` | `sNetId, sPathName, eCmd, pFindList, cbFindList, bExecute, tTimeout` → `bBusy, bError, nErrID, bEOE, nFindFiles`. **No `ePath`** — its sibling `FB_EnumFindFileEntry` has one, which is not an asymmetry anybody guesses. |
+> | `ST_FindFileEntry` | `sFileName : T_MaxString`, `sAlternateFileName`, `fileAttributes`, **`fileSize : T_ULARGE_INTEGER`** (not `nFileSize`), `creationTime`, `lastAccessTime`, `lastWriteTime` |
+>
+> `nFileSize` *does* appear in the library's string table — it just belongs to
+> something else. And this plan's original names for the family,
+> `FB_FileFindFirst`/`Next`/`Close`, do not exist in either library at all.
+>
+> **THE CAP IS BY COUNT, NOT SUMMED BYTES.** Every file is already capped at
+> `uiMaxFileKB`, so N files occupy at most N × `uiMaxFileKB`; keeping
+> `uiMaxTotalMB * 1024 / uiMaxFileKB` files therefore enforces `uiMaxTotalMB` and
+> errs toward using *less* than the ceiling — the safe direction for a disk limit.
+> The alternative was summing `fileSize`, whose 64-bit `T_ULARGE_INTEGER` shape
+> (struct of two DWORDs vs. a single `ULINT`) was *not* among what the library
+> browser showed. The count arithmetic needs no guess; verified across the
+> configuration range.
+>
+> **Failure policy: a broken sweep must never break logging.** An enumerate or
+> delete error logs one WARN and abandons the sweep, leaving the writer running —
+> an oversized directory is a better outcome than a stopped log. Never prunes below
+> 2 files, never deletes the open file, and reports `bEOE = FALSE` (more files than
+> the 64-entry buffer) rather than silently doing nothing.
+>
+> **`bEnabled` is still FALSE** pending a build and an on-panel test. The reason
+> that matters was measured on the panel:
 >
 > - **95% of the log was one repeated line** — `Connect failed 192.168.1.11:6001
 >   err 1861`, 20 of 21 rows, because no robot is attached to this bench and
