@@ -73,8 +73,9 @@
   retarget path got exercised as a side effect and logged
   `Endpoint changed, redialling` — that still works too.
 
-  Still to do: surface `nConnectFails` on the panel's own `Robot.TcVIS` — clone a
-  proven readout block, per the standing VISU rule. FlowerPyHmi already shows it.
+  **Now on the panel too (2026-08-12):** a **Failed connects** readout on
+  `Robot.TcVIS` at y=298 in the left status column, cloned from the
+  `Packets Tx` label + value pair. Both HMIs show the count.
 
 ---
 

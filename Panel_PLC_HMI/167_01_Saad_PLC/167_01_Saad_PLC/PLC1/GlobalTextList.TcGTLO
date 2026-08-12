@@ -666,6 +666,11 @@
               <l n="LanguageTexts" t="ArrayList" />
             </o>
             <o>
+              <v n="TextID">"1305"</v>
+              <v n="TextDefault">"Failed connects"</v>
+              <l n="LanguageTexts" t="ArrayList" />
+            </o>
+            <o>
               <v n="TextID">"550"</v>
               <v n="TextDefault">"Pistons Manual"</v>
               <l n="LanguageTexts" t="ArrayList" />

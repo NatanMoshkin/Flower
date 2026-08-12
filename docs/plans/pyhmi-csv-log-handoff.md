@@ -1,9 +1,15 @@
 # FlowerPyHmi — surface the PLC's CSV file log
 
-> **STATUS: NOT STARTED.** Written 2026-08-12 as a handoff for a separate session,
-> because FlowerPyHmi is a **different git repo**
-> (`167_01_Saad_Flower/FlowerPyHmi`) and nothing keeps its symbol contract in step
-> automatically.
+> **STATUS: IN PROGRESS in the FlowerPyHmi working tree, not yet committed there
+> (observed 2026-08-12).** All five work items below appear to be implemented and
+> `check_pyhmi_contract.py` reads **268/268** — the exact number this document
+> predicted. Treat the sections below as the spec that was worked from rather than
+> as outstanding work, and check that repo's own git state for what has actually
+> landed.
+>
+> Written as a handoff for a separate session because FlowerPyHmi is a **different
+> git repo** (`167_01_Saad_Flower/FlowerPyHmi`) and nothing keeps its symbol
+> contract in step automatically.
 >
 > The PLC side is **done and verified on the panel** — Phases 0–3 of
 > [`log-csv-file.md`](log-csv-file.md). This document is only the web-HMI half.
@@ -145,9 +151,9 @@ decision rather than a view option.
 
 ## Also outstanding on the panel side, unrelated to this
 
-- **`nConnectFails` is not on `Robot.TcVIS`.** FlowerPyHmi already shows it as
-  *Failed connects*; the panel does not. Needs a cloned readout block per the
-  VISU rule.
+- ~~**`nConnectFails` is not on `Robot.TcVIS`.**~~ **DONE 2026-08-12** — a
+  *Failed connects* readout now sits at y=298 in the Robot page's left status
+  column, matching FlowerPyHmi's label so the two HMIs read alike.
 - **The technician manual says nothing about the file log.** Worth a short
   section — how to tick File log, and the FTP path to fetch it. Left undone
   deliberately: those manuals ship **English + Hebrew** from one content model,
