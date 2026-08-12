@@ -339,7 +339,9 @@ Called from `MAIN` immediately after `fbPersistentSave();` (line ~537), the same
 **Drain.** Own `udiLastReadIdx`. `pending := nWriteIdx - udiLastReadIdx`. If
 `pending > 256` the writer fell behind: add the shortfall to `udiEntriesDropped`,
 emit **one synthetic CSV row recording the loss**, and skip to `nWriteIdx - 256`.
-Silent loss is the one outcome to avoid.
+Silent loss is the one outcome to avoid. The mechanism is described in full in
+[Ring overflow](#ring-overflow--how-loss-is-made-visible-rather-than-prevented)
+below.
 
 **Filter.** Skip `eSev = DBG` unconditionally — independent of
 `GVL_Log.bDebugMode`, which still governs the on-screen ring.
@@ -367,6 +369,101 @@ a full disk cannot flush the 20-entry ring in seconds.
 
 **Turning `bEnabled` off** flushes what is buffered and closes cleanly rather than
 abandoning the file.
+
+## Ring overflow — how loss is made VISIBLE rather than prevented
+
+**As built and verified. This section describes behaviour, not intent.**
+
+The framing matters: this does **not** prevent entries being lost. Preventing it
+would mean the PLC blocking on file I/O, which is never acceptable in a 10 ms task.
+What it does is make loss impossible to miss.
+
+### What it defends against
+
+`GVL_Log.aLog` is a fixed **256-entry ring**. `F_LogEvent` writes slot
+`nWriteIdx MOD 256` and increments `nWriteIdx` — it never checks whether anyone
+read that slot. There is no back-pressure, by design. So a writer that falls more
+than 256 entries behind has older entries overwritten *underneath it*.
+
+### Layer 1 — try not to fall behind
+
+```
+tonFlush(IN := (udiPending > 0) AND bEnabled, PT := uiFlushSec * 1000)
+...
+IF ... AND (tonFlush.Q OR (udiPending >= HIGH_WATER) OR bClosing) THEN
+```
+
+A flush normally waits for the `uiFlushSec` timer. `HIGH_WATER = 200` is the safety
+valve: at 200 of 256 pending, flush **now** regardless of the timer. That leaves 56
+entries of headroom, and the writer drains roughly one row per PLC scan (~100/s).
+
+### Layer 2 — detect it exactly
+
+```
+udiPending := GVL_Log.nWriteIdx - udiLastRead;
+IF udiPending > RING THEN
+    udiLostNow := udiPending - RING;
+```
+
+`nWriteIdx` and `udiLastRead` are **monotonic counters, not modular indices** —
+that is what makes this subtraction meaningful. If more than 256 accumulated then
+*exactly* `udiPending - 256` entries were overwritten. A computed count, not an
+estimate.
+
+### Layer 3 — resynchronise honestly
+
+```
+udiLastRead := GVL_Log.nWriteIdx - RING;
+```
+
+Skip forward to the oldest slot still valid. **This is not tidying up.** Without
+it the writer would keep reading slots that now hold *newer* entries and emit them
+as though they were the old ones — writing records out of order with nothing
+indicating it. The resync is what keeps the file's ordering trustworthy.
+
+### Layer 4 — put the gap in the file itself
+
+```
+"14:23:07","WARN","LogCsv","312 entries lost - CSV writer fell behind the ring"
+```
+
+`udiEntriesDropped` in the status struct only helps someone who thinks to read that
+symbol. The person who matters is reading the **CSV a week later**, reconstructing
+a fault, and they need to know there is a hole between two rows. The row is emitted
+at the position in the file where the gap is, so the file is self-describing.
+
+### The same principle on the write path
+
+The cursor advances **only after a confirmed write**:
+
+```
+IF fbPuts.bError THEN  Fail(...)
+ELSE                   udiLastRead := udiLastRead + 1;
+```
+
+Advance-then-write would drop an entry permanently and invisibly on any write
+error. This way it stays pending and is retried after the backoff.
+
+### Two limitations, stated plainly
+
+**The count can overstate.** `udiPending` counts *all* ring slots, including DBG
+entries the writer would have filtered out anyway. So `udiEntriesDropped` means
+"ring entries overwritten", not "CSV rows lost". It errs toward over-reporting,
+which is the right direction for a data-loss counter, but the two numbers are not
+the same.
+
+**Overflow is only checked at the start of a flush** (state 0). If the ring laps
+*during* a long flush it is not noticed until the next idle pass, and those rows
+would be written from slots that have since been overwritten — out of order, with
+no loss row. Since the writer drains ~1 row per scan, that needs the machine to
+sustain more than one log entry per scan; `HIGH_WATER` cannot help because a flush
+is already running. This is the realistic overflow path and the one gap in the
+coverage.
+
+**Never observed in practice.** `udiEntriesDropped` read 0 through every panel
+test, including the rotation run that generated traffic deliberately. So this is
+tested logic on an untested path — to exercise it for real, see verification
+step 6: point `sDir` at a bad path, generate more than 256 entries, restore.
 
 ## Phase 3 — rotation and retention
 

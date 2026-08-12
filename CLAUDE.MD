@@ -223,6 +223,33 @@
 
 ### Standing constraints — not tasks, but read before committing
 
+- **A DUT member's comment is downloaded over ADS on every symbol resolve. Keep
+  member comments SHORT.** Found 2026-08-12 on this panel.
+
+  TwinCAT ships a symbol's declaration comment inside its **ADS symbol-info
+  reply**, and pyads' receive buffer is **798 bytes**. `ST_HmiLogFileCfg.sDir`
+  carried a ~2.8 kB explanatory comment, which produced a **2967-byte** reply and
+  failed symbol-info resolution.
+
+  **The consequence is not an error — it is a silent performance cliff.**
+  `read_list_by_name` resolves every name in a sum-up up front, so one
+  unresolvable symbol drops out of the batch and onto its own round trip:
+  **+88 ms on a 100 ms cycle**, taking FlowerPyHmi's `/events` from **3.3 Hz to
+  2.62 Hz**. Nothing reports a fault; the HMI just gets slower.
+
+  FlowerPyHmi caps how many such symbols it will carry (**5**), and three are
+  already spending that budget: `GVL_HMI.bAutoMode` (1400 B),
+  `GVL_Robot.stParams.nStateOut` (991 B) and `GVL_Robot.stRobot.nConnectFails`
+  (817 B).
+
+  **The rule is not "write less".** It is "write it where an ADS client will not
+  download it ten times a second" — the *type's* comment block is free, a
+  *member's* is not. Put the reasoning in the DUT header or in `docs/`, and leave
+  a one-line pointer on the field. `ST_HmiLogFileCfg` is the worked example.
+
+---
+
+
 - **An ADS round trip to the panel costs ~90 ms. To a local runtime it costs
   ~0.02 ms.** Measured 2026-08-10 against the CP6606 over the LAN. That is a
   **4500× difference**, and every test harness here was written against a local
