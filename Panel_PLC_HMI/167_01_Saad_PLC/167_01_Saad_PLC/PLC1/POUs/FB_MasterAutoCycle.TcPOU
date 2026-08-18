@@ -33,6 +33,12 @@
    force-clears it every scan) -- it was the last path that could start motion
    with nothing external gating it.
 
+   BENCH-BUILD EXCEPTION (2026-08-13, gated 2026-08-17): bTempTestContinuesAutoRun
+   deliberately re-opens exactly that path, for log-file soak testing. It is kept
+   for reuse on the next project rather than deleted, and it is therefore gated
+   behind the VAR CONSTANT bBenchBuild, which is FALSE in any build that goes on
+   a machine. Read bBenchBuild's comment before changing either.
+
    Sequence (all 3 Sep/Push pairs move in parallel; both grips move together):
 
      NOT_HOMED               In Automatic, NOT armed. Entered on power-up (the
@@ -176,6 +182,31 @@ VAR_INPUT
        in Manual. *)
     bMachineAuto          : BOOL;
 
+    (* BENCH SOAK FLAG -- log-file testing only. Wired by MAIN from
+       GVL_HMI.bTempTestContinuesAutoRun, ticked online from the IDE. No HMI
+       control by decision: an operator must not be able to reach it.
+
+       While TRUE -- AND the build is a bench build, see bBenchBuild -- the
+       machine self-arms out of NOT_HOMED and starts another bulb every time it
+       reaches IDLE, with no operator START, no robot CMD:1 and no sim flag. So
+       the log ring and the CSV fill continuously and rotation / retention can
+       actually be exercised on a panel.
+
+       LEVEL, not an edge, unlike every other term it is OR-ed into. That is the
+       point: it has to re-fire on each arrival in IDLE.
+
+       Three things it deliberately does NOT do, even on a bench build:
+         - it does not bypass bMachineAuto, so Manual is still the hard stop;
+         - it does not touch ERR, so a fault still ends the run (with bNoSensors
+           AND bBypassPlateSensors set, no error code is reachable, so a soak
+           should not fault at all -- if it does, that is a real finding);
+         - it does not persist. GVL_HMI is plain VAR_GLOBAL, so the FALSE
+           initialiser is re-applied on every cold boot and every download.
+
+       NOTHING downstream reads this input directly. It is gated into
+       bTempTestRun in Section 0a and every use site reads that. *)
+    bTempTestContinuesAutoRun : BOOL;
+
     (* Per-pair sensor state. MAIN wires each element from stSepSolK/stPushSolK.bIs*. *)
     bSepIsExtended        : ARRAY[1..3] OF BOOL;
     bSepIsRetracted       : ARRAY[1..3] OF BOOL;
@@ -226,6 +257,10 @@ VAR
     fbTrigStartAssembly   : R_TRIG;
     fbTrigStartCycle      : R_TRIG;
 
+    (* TEMPORARY -- mode-change log for the CSV soak-test flag. Delete with it. *)
+    fbTrigTempTestOn      : R_TRIG;
+    fbTrigTempTestOff     : F_TRIG;
+
     (* Rising-edge detectors for per-step Sim flags. *)
     fbSim_Idle            : R_TRIG;
     fbSim_InitPushRet     : R_TRIG;
@@ -274,6 +309,38 @@ VAR
     bAllGripExtended      : BOOL;
     bAllGripRetracted     : BOOL;
     bPlateOk              : BOOL;
+
+    (* Gated form of bTempTestContinuesAutoRun: the raw flag AND bBenchBuild.
+       Every use site reads THIS and never the raw input, so the gate has exactly
+       one application point and a future use site cannot forget it. *)
+    bTempTestRun          : BOOL;
+END_VAR
+
+VAR CONSTANT
+    (* BENCH-BUILD GATE for bTempTestContinuesAutoRun. FALSE in every build that
+       goes on a production machine. Set TRUE only in an IDE session driving a
+       bench panel, and set it back before the build that ships.
+
+       Why a CONSTANT rather than another runtime flag: GVL_HMI carries
+       TcHmiSymbol.AddSymbol, so everything in it is writable over ADS by
+       FlowerPyHmi, by pb_test, or by any laptop with a route. "It is only ever
+       set from the IDE" is a habit, not an interlock -- the same reasoning the
+       CASE ELSE below applies to eStep. A VAR CONSTANT cannot be written at
+       runtime by anything, so while this is FALSE the self-start path is
+       provably unreachable no matter what lands in the GVL field.
+
+       WHY THE PATH MUST NOT SHIP ENABLED. It starts a bulb without the robot's
+       CMD:1, and CMD:1 is the ONLY guarantee the PLC has that the arm is clear
+       of the stand: WAIT_POS2 was retired on exactly that basis (see the header
+       note), so there is no independent check left. CHECK_PLATE is not a
+       substitute -- plate-present says the plate was placed, not that the arm
+       withdrew, and it is an OR on the one confirmed sensor, latched at entry.
+       Second, it self-arms out of NOT_HOMED, which re-opens the Manual->Auto
+       hazard the 2026-07-29 arming model closed: the START press after Manual is
+       the operator confirming they are clear of the machine, and this skips it.
+       Neither of those is fixed by the flag being volatile -- both are reachable
+       inside a single power cycle. *)
+    bBenchBuild : BOOL := FALSE;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[(* ==========================================
@@ -284,6 +351,18 @@ fbTrigStop         (CLK := stHmi.bStop);
 fbTrigReset        (CLK := stHmi.bReset);
 fbTrigStartAssembly(CLK := stHmi.bSimStartAssembly);
 fbTrigStartCycle   (CLK := stHmi.bStartCycle);
+
+(* Bench soak flag. THE GATE IS APPLIED HERE AND NOWHERE ELSE -- everything
+   downstream reads bTempTestRun, so on a production build (bBenchBuild FALSE)
+   it is FALSE whatever an ADS client writes to the GVL field.
+
+   The two edge detectors deliberately watch the RAW flag, not the gated one, so
+   that an attempt to enable it on a production build is still visible in the log
+   instead of vanishing silently. *)
+bTempTestRun := bBenchBuild AND bTempTestContinuesAutoRun;
+
+fbTrigTempTestOn   (CLK := bTempTestContinuesAutoRun);
+fbTrigTempTestOff  (CLK := bTempTestContinuesAutoRun);
 
 fbSim_Idle        (CLK := stHmi.bSimStep_Idle);
 fbSim_InitPushRet (CLK := stHmi.bSimStep_InitPushRet);
@@ -343,6 +422,29 @@ IF fbTrigStartCycle.Q THEN
 END_IF;
 IF bExtStartPulse THEN
     F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name, sMsg := 'External start pulse');
+END_IF;
+
+(* Bench soak flag, mode change. WARN on enable rather than INFO because a CSV
+   read back weeks later has to say plainly that from this line onward the
+   machine was self-running and every bulb below it is a test artefact, not
+   production output.
+
+   The refusal is logged too, and at WARN. On a production build the flag does
+   nothing, and somebody who has just set it and is watching an idle machine
+   needs to be told WHY rather than left to conclude the panel is broken -- this
+   is the one line that says "rebuild with bBenchBuild TRUE". *)
+IF fbTrigTempTestOn.Q THEN
+    IF bBenchBuild THEN
+        F_LogEvent(eSev := E_LogSev.WARN, sSource := stHmi.Name,
+                   sMsg := 'BENCH SOAK continuous auto-run ENABLED');
+    ELSE
+        F_LogEvent(eSev := E_LogSev.WARN, sSource := stHmi.Name,
+                   sMsg := 'Bench soak flag IGNORED - not a bench build');
+    END_IF;
+END_IF;
+IF fbTrigTempTestOff.Q AND bBenchBuild THEN
+    F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name,
+               sMsg := 'BENCH SOAK continuous auto-run disabled');
 END_IF;
 
 IF fbSim_Idle.Q         THEN stHmi.bSimStep_Idle         := FALSE; END_IF;
@@ -545,8 +647,27 @@ CASE stHmi.eStep OF
            retracted the three INIT states self-satisfy on the next scan, so it
            costs nothing per bulb. bHomeThenIdle FALSE routes the chain's exit
            on to CHECK_PLATE and the rest of the cycle. *)
+        (* bTempTestRun is OR-ed in as a LEVEL, so the moment the machine lands
+           back in IDLE it starts the next bulb -- that is what makes a soak
+           self-sustaining. Compile-time FALSE unless bBenchBuild is set, so this
+           term does not exist on a production build. *)
         IF bMachineAuto AND (bExtStartPulse OR fbTrigStartCycle.Q
-                             OR fbTrigStartAssembly.Q OR fbSim_Idle.Q) THEN
+                             OR fbTrigStartAssembly.Q OR fbSim_Idle.Q
+                             OR bTempTestRun) THEN
+            (* Logged per cycle, not just once when the flag goes TRUE, because
+               aRecent is only 20 slots deep -- the enable WARN scrolls out of
+               the panel ring within two bulbs, and without this line the Logs
+               page would show bulb after bulb with nothing saying what started
+               them. In the CSV it is redundant with the WARN; on the panel it is
+               the only answer.
+
+               Gated, not raw: on a production build a genuine robot-started bulb
+               must not be labelled a soak cycle just because someone set the GVL
+               field over ADS. *)
+            IF bTempTestRun THEN
+                F_LogEvent(eSev := E_LogSev.INFO, sSource := stHmi.Name,
+                           sMsg := 'BENCH SOAK auto-run cycle start');
+            END_IF;
             bHomeThenIdle := FALSE;
             stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;
@@ -595,7 +716,18 @@ CASE stHmi.eStep OF
         stHmi.iErrorCode := 0;
         stHmi.sErrorText := '';
 
-        IF bMachineAuto AND fbTrigStart.Q THEN
+        (* bTempTestRun self-arms, so a soak needs no operator START at all: tick
+           the flag online and the machine homes and then cycles.
+
+           THIS IS THE TERM THAT MAKES THE GATE NECESSARY. Skipping the START
+           press also skips the operator confirming they are clear of the
+           machine, so on a Manual -> Auto return it re-opens the hazard the
+           arming model closed. Compile-time FALSE unless bBenchBuild is set.
+
+           No log line here: this fires once per enable, and the enable WARN is
+           the entry immediately before it with Section 3's
+           NOT_HOMED -> INIT_PUSH_RETRACTING right after. *)
+        IF bMachineAuto AND (fbTrigStart.Q OR bTempTestRun) THEN
             bHomeThenIdle := TRUE;
             stHmi.eStep   := E_MasterAutoStep.INIT_PUSH_RETRACTING;
         END_IF;

@@ -5,6 +5,93 @@
 
 ### Active — nothing is blocking these
 
+- **Bench soak self-run (`bTempTestContinuesAutoRun`) — KEPT, behind a
+  compile-time gate.** Added 2026-08-13 for the CSV file-log test (which passed);
+  gated 2026-08-17 and **KEPT for reuse on the next project** instead of being
+  deleted. **BUILT, DOWNLOADED AND VERIFIED ON THE PANEL 2026-08-18** — see the
+  test record at the end of this item. It makes the master cycle self-arm out of
+  `NOT_HOMED` and start another bulb on every arrival in `IDLE` — no operator
+  START, no robot `CMD:1`, no sim flag — so the log ring and the CSV fill
+  continuously and rotation / retention can be exercised on a panel.
+
+  **To use it on a bench:** set `FB_MasterAutoCycle`'s `VAR CONSTANT bBenchBuild
+  := TRUE`, rebuild and download, then tick `GVL_HMI.bTempTestContinuesAutoRun`
+  online from the IDE. **Set `bBenchBuild` back to FALSE before any build that
+  goes on a machine.** Enabling is deliberately a rebuild, not a runtime action.
+
+  **Why a constant and not just "we only set it from the IDE".** `GVL_HMI`
+  carries `TcHmiSymbol.AddSymbol`, so the flag is writable over ADS by
+  FlowerPyHmi, `pb_test`, or any laptop with a route — the same reachability the
+  `CASE ELSE` comment already argues about `eStep`. A `VAR CONSTANT` cannot be
+  written at runtime, so with it FALSE the self-start path is unreachable
+  whatever lands in the GVL field. **Do not "simplify" the gate into another
+  runtime BOOL.**
+
+  **The two hazards the gate exists for** — both reachable inside a single power
+  cycle, so the flag being volatile does not cover either:
+
+  1. **It bypasses the only arm-clear interlock the PLC has.** `WAIT_POS2` was
+     retired precisely because `CMD:1` arrives only after `PerformStandSequence`
+     moves the arm clear, so no independent check remains. Starting without
+     `CMD:1` can close the grippers with the arm still over the fixture.
+     `CHECK_PLATE` is not a substitute: plate-present means the plate was placed,
+     not that the arm withdrew, and it is an OR on the one confirmed sensor,
+     latched at entry.
+  2. **It self-arms out of `NOT_HOMED`**, re-opening the Manual→Auto hazard the
+     2026-07-29 arming model closed — the START press after Manual *is* the
+     operator confirming they are clear.
+
+  Also note that on a production build with `bBypassPlateSensors` FALSE, a
+  missing plate would loop error 9 → `CMD:2` → RECOVER → `IDLE` → restart
+  forever. Another reason it must not ship live.
+
+  What stays true on a bench build: still gated on `bMachineAuto` (Manual is the
+  hard stop), still does **not** touch `ERR` (a fault ends the run), still cannot
+  persist.
+
+  **Five source sites**, all named for the flag: `GVL_HMI.bTempTestContinuesAutoRun`;
+  in `FB_MasterAutoCycle` the `VAR_INPUT`, the `VAR CONSTANT bBenchBuild`, the
+  single gate line `bTempTestRun := bBenchBuild AND …` in Section 0a with its two
+  edge detectors and the 0b mode-change log, and the `IDLE` / `NOT_HOMED` exit
+  conditions; plus MAIN's call-site argument. **The gate is applied in exactly
+  one place** — everything downstream reads `bTempTestRun`, never the raw input,
+  so a new use site cannot forget it.
+
+  **Three things worth knowing when reading the CSV.** Enabling logs one **WARN**
+  (`BENCH SOAK continuous auto-run ENABLED`) rather than INFO, so a file read back
+  later says plainly that everything below it is a test artefact. Each bulb also
+  logs `BENCH SOAK auto-run cycle start` at INFO — redundant in the CSV, but not
+  on the panel: `aRecent` is 20 slots deep, the WARN scrolls out within two bulbs,
+  and without the per-cycle line the Logs page would show bulb after bulb with
+  nothing saying what started them. And setting the flag on a **non**-bench build
+  logs `Bench soak flag IGNORED - not a bench build` at WARN, which is the one
+  line that tells you to rebuild rather than that the panel is broken.
+
+  Expect a fault-free soak only with **both** bench flags set — `bNoSensors`
+  makes the twelve movement codes unreachable and `bBypassPlateSensors` covers
+  error 9. With either clear, a timeout ends the run, and that is a real finding
+  rather than a test-rig problem (see `FLD6` — those paths have never been
+  exercised).
+
+  **Verified on the panel 2026-08-18, both halves of the gate:**
+
+  | Check | Result |
+  |---|---|
+  | Gate holds with `bBenchBuild` FALSE, in `NOT_HOMED` **and** in `IDLE` | **9/9** — no state change, no bulb, one `Bench soak flag IGNORED - not a bench build` WARN, and clearing the flag logs nothing |
+  | Soak runs with `bBenchBuild` TRUE | **13/13** — self-armed out of `NOT_HOMED`, 4 bulbs in 60 s with no start command, resumed after Manual, stopped on clear and rested in `IDLE`, `iErrorCode` 0 throughout |
+  | Unattended endurance | **362 consecutive bulbs, zero faults** (accidental — an earlier harness hung and left it soaking) |
+  | Manual is still the hard stop | `bAutoMode` FALSE parks in `NOT_HOMED` and cycling stops; re-arming resumes it |
+  | CSV fill rate under soak | **+4.2 KB/min ≈ 250 KB/hour** at the 1000 ms step preset — this is the number to size rotation and retention against |
+
+  Log severities confirmed on a **batched** read: `WARN … ENABLED`,
+  `INFO … disabled`, transitions INFO. Read the ring with
+  `read_list_by_name` — reading `sSevText` and `sMsg` as separate ADS calls
+  tears the pair, because the ring shifts between the two ~90 ms round trips and
+  you get one entry's severity beside another's message.
+
+  `bBenchBuild` was set back to **FALSE in source** after the test. The panel
+  still carries the TRUE build until it is rebuilt.
+
 - ~~**A robot that is not there flushes the whole log ring every ~100 s.**~~
   **DONE 2026-08-10 — built, downloaded and VERIFIED ON THE PANEL.** Found the
   same day; pre-existing, not introduced by the CSV work.
@@ -134,9 +221,42 @@
 
 ---
 
-- **Verify TcXaeShell 4024 on the panel can open 4026-saved files.** CLAUDE.md has
-  said "confirm early, not at merge time" since 2026-08-04 and it is still
-  unconfirmed, while the exposure has grown: **26 of 37 PLC source files now carry
+- ~~**Verify TcXaeShell 4024 on the panel can open 4026-saved files.**~~
+  **ANSWERED THE HARD WAY 2026-08-18: NO, IT CANNOT** — and it fails exactly
+  where the item predicted, at panel-deployment time.
+
+  A scripted build ran under the **4026** IDE (the DTE ProgID names the shell,
+  not the TwinCAT version, and there is no `TcXaeShell.DTE.4024`). That silently
+  upgraded all eight `.TcVIS` plus `VisualizationManager.TcVMO` from
+  `3.1.4024.16` to `3.1.4026.19`, and moved `PLC1.plcproj`'s visualization
+  profile to `TwinCAT 3.1 Build 4026.25` with the visu placeholders jumping from
+  the `3.5.13.x` family to `4.7`/`4.8`/`4.9`/`4.10`.
+
+  **The failure is not a refusal to open — it is a dead boot project.** On 4024
+  the placeholders do not resolve (`Identifier 'VisuElems' not defined`,
+  `Visualization Profile not valid`), the visu never links, and the target then
+  reports `Could not link external function <extref>BMPPOOLBEGIN</extref>` and
+  `PLC: Error (hr=0x98410001) loading boot project`. TwinCAT sits in Config
+  `(15,1)` with port 851 on error 6, which looks identical to a botched download.
+
+  **Detection is one command**, worth running after any build:
+  `git status --porcelain -- PLC1/VISU/ PLC1/PLC1.plcproj` — clean means the
+  right IDE version, all ten files dirty means 4026 touched it. Recovery is
+  `git checkout HEAD --` on those files, but verify first that the diff is
+  schema churn and not real VISU work (compare per-page element counts *and* the
+  `VisualElementIdentification` set; on 2026-08-18 they matched exactly, so
+  nothing was lost).
+
+  **Consequence: do not build this project from a 4026 IDE, and do not script
+  the build at all while the automation host defaults to 4026.** Select 4024.75
+  in the toolbar dropdown *before opening the solution* — opening it under 4026
+  is what rewrites the files. Full write-up in the
+  `TwinCAT_Build_Activate_Automation` skill, Trap 6.
+
+  <details><summary>the original item, kept for the exposure count</summary>
+
+  CLAUDE.md said "confirm early, not at merge time" since 2026-08-04 and it was
+  still unconfirmed, while the exposure grew: **26 of 37 PLC source files now carry
   a `3.1.4026.x` `ProductVersion`** (28 of them already on `master`, so this is
   inherited rather than introduced by the current branch). The 11 still on the
   panel's `3.1.4024.16` are the files edited by script — `FB_MasterAutoCycle`,
@@ -146,15 +266,26 @@
   If 4024 refuses a 4026-saved file, it is discovered at panel-deployment time,
   which is the worst moment. One panel-side open-and-build settles it.
 
+  </details>
+
 ---
 
-- **Merge this branch to `master`.** `feat/err-manual-jog-and-io-docs` is **27
-  commits** ahead. The hazard is known and specific: the four bench-config files
-  (`.sln`, `.tsproj`, `PLC1.plcproj`, `VisualizationManager.TcVMO`) are
-  permanently modified in the working tree for Local + TC 4026 and **must not go
-  with it**. Note `PLC1.plcproj` is the awkward one — it is both a bench file and
-  where new VISU pages must be registered, so it needs hunk-level care every time
-  (done that way for `AutoConfig` in `e7859c7`).
+- ~~**Merge this branch to `master`.**~~ **DONE — verified 2026-08-18.**
+  `feat/err-manual-jog-and-io-docs` is fully merged: zero commits on it that are
+  not in `master`, its tip is an ancestor of `master`, and `master` has since
+  moved **22** commits past it. Work now lands directly on `master`. This item
+  had gone stale and was quoted twice as if still open before anyone checked —
+  `git log --oneline master..<branch> | wc -l` settles it in one command.
+
+  **The bench-config hazard is real but is now TWO files, not four.**
+  `PLC1.plcproj` and `VisualizationManager.TcVMO` were restored to their 4024
+  form on 2026-08-18 and a 4024 build leaves them alone, so only
+  `167_01_Saad_PLC.sln` and `167_01_Saad_PLC.tsproj` are still permanently
+  modified. **They go back to four the moment anyone opens the solution in the
+  4026 IDE** — see the 4024/4026 item above. `PLC1.plcproj` remains the awkward
+  one when it *is* dirty, because it is both a bench file and where new VISU
+  pages are registered, so it needs hunk-level care (done that way for
+  `AutoConfig` in `e7859c7`).
 
 ---
 
@@ -227,6 +358,29 @@
 
 
 ### Standing constraints — not tasks, but read before committing
+
+- **The panel's TF6310 licence is a 7-day trial, and it only bites on restart.**
+  Found 2026-08-18. `\Hard Disk\TwinCAT\3.1\Target\License\` on the panel holds
+  two files: the permanent `SYSF1966F72.tclrs` covering TC1000/1100/1200/1250,
+  TF1800 and TF5000 — and a separate `TrialLicense.tclrs` for **TF6310**, which
+  is the one `PLC1.plcproj` needs for `Tc2_TcpIp` / `FB_RobotTcpClient`.
+
+  **A running system does not stop when the trial expires** — the licence is
+  checked on *entering* Run. So the panel keeps working, sometimes for days past
+  expiry, and then the next Activate or power cycle leaves it stuck in Config
+  `(15,1)` with port 851 on error 6. It looks exactly like a bad download, which
+  is what makes it expensive to diagnose.
+
+  **Renewal cannot be automated** — TcXaeShell's License tab requires a
+  five-character captcha. Check the `IssueTime` in `TrialLicense.tclrs` (readable
+  over FTP, no login) before any planned restart, or buy the TF6310 licence and
+  end the recurrence.
+
+  Panel FTP is `192.168.1.100` — note the AmsNetId `5.79.93.36.1.1` is **not**
+  IP-derived, so do not infer one from the other.
+
+---
+
 
 - **A DUT member's comment is downloaded over ADS on every symbol resolve. Keep
   member comments SHORT.** Found 2026-08-12 on this panel.
@@ -321,8 +475,19 @@
   same files as the logic, so it cannot be excluded by path. Check the
   stamp before committing.
 
-  **Unverified risk:** that TcXaeShell 4024 on the panel will still open a
-  project the 4026 IDE has saved. Confirm early, not at merge time.
+  ~~**Unverified risk:** that TcXaeShell 4024 on the panel will still open a
+  project the 4026 IDE has saved. Confirm early, not at merge time.~~
+  **VERIFIED 2026-08-18 — it does NOT.** A 4026-saved project builds on 4024
+  with unresolvable `System_Visu*` placeholders and produces a boot project the
+  panel cannot load. Details in the 4024/4026 item under Active.
+
+  **Current state of this constraint (2026-08-18):** only **two** of the four
+  files are dirty — `.sln` and `.tsproj`. The `.tsproj` is *not* in the 4026
+  bench form described above; it is targeted at the panel
+  (`TcVersion 3.1.4024.75`, `TargetNetId 5.79.93.36.1.1`, and note `HEAD` carries
+  a *different* panel, `5.144.185.110.1.1`, so do not restore it casually).
+  `PLC1.plcproj` and `VisualizationManager.TcVMO` were restored to 4024 form and
+  are clean. Opening the solution in the 4026 IDE puts all four back.
 
 
 ### Done — kept for the reasoning, not for the status

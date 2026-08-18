@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
-<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4026.18">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.16">
   <GVL Name="GVL_HMI" Id="{84707bcf-3378-4833-8d7b-1dd8328a77ca}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
 {attribute 'TcHmiSymbol.AddSymbol'}
@@ -60,6 +60,10 @@ VAR_GLOBAL
     // BOOL rather than E_ControlMode so the classic VISU binds a checkbox
     // directly, matching the per-piston bMode convention.
     bAutoMode      : BOOL := TRUE;
+	// Bench soak (log-file testing): self-arm and restart a bulb on every IDLE.
+	// Inert unless FB_MasterAutoCycle.bBenchBuild is TRUE -- a rebuild, not a
+	// runtime switch. Reasoning is on that constant, not here.
+	bTempTestContinuesAutoRun : BOOL := FALSE;
 END_VAR
 ]]></Declaration>
   </GVL>

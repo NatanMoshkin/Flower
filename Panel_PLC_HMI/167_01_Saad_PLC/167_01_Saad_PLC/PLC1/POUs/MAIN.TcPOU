@@ -250,12 +250,24 @@ ELSIF GVL_Robot.stParams.nRobotCmd = 2 THEN
     GVL_Robot.stParams.nRobotCmd := 0;
 END_IF
 
+(* bTempTestContinuesAutoRun is the BENCH SOAK flag -- ticked online from the
+   IDE, no HMI control. It makes the cycle self-arm and re-start a bulb on every
+   arrival in IDLE, so the log and the CSV fill continuously. Read straight from
+   GVL_HMI here, exactly like bAutoMode, so the FB stays GVL-free.
+
+   Passing it does NOT enable it. The FB gates it behind its VAR CONSTANT
+   bBenchBuild, which is FALSE in any build that goes on a machine, so on a
+   production panel this argument is inert whatever an ADS client writes to the
+   field. Enabling is a rebuild, not a runtime action -- deliberately, because
+   the path bypasses the robot's CMD:1 and that is the only guarantee the PLC has
+   that the arm is clear of the stand. *)
 fbMasterAutoCycle(
-    bExtStartPulse := bRobotStartPulse OR bComboStartPulse,
-    bMachineAuto   := GVL_HMI.bAutoMode,
-    stHmi          := GVL_HMI.stMasterAuto,
-    stCfg          := GVL_HmiPersistent.stMasterAutoCfg,
-    stRobot        := GVL_Robot.stRobot
+    bExtStartPulse            := bRobotStartPulse OR bComboStartPulse,
+    bMachineAuto              := GVL_HMI.bAutoMode,
+    bTempTestContinuesAutoRun := GVL_HMI.bTempTestContinuesAutoRun,
+    stHmi                     := GVL_HMI.stMasterAuto,
+    stCfg                     := GVL_HmiPersistent.stMasterAutoCfg,
+    stRobot                   := GVL_Robot.stRobot
 );
 
 (* Global Auto/Manual hard interlock. The machine-wide bAutoMode is the single
